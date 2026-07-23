@@ -1,0 +1,39 @@
+const fashion = [
+  {
+    id: 1,
+    title: "Nike Air Max",
+    image: "/products/shoes.png",
+    price: "₹5,999",
+    offer: "50% Off",
+  },
+  {
+    id: 2,
+    title: "Levi's Jeans",
+    image: "/products/jeans.png",
+    price: "₹2,499",
+    offer: "Buy 1 Get 1",
+  },
+  {
+    id: 3,
+    title: "Puma T-Shirt",
+    image: "/products/tshirt.png",
+    price: "₹999",
+    offer: "40% Off",
+  },
+  {
+    id: 4,
+    title: "Fastrack Watch",
+    image: "/products/fwatch.png",
+    price: "₹1,799",
+    offer: "35% Off",
+  },
+  {
+    id: 5,
+    title: "Adidas Backpack",
+    image: "/products/bag.png",
+    price: "₹2,199",
+    offer: "30% Off",
+  },
+];
+
+export default fashion;
