@@ -5,7 +5,7 @@ const products: Product[] = [
     id: 1,
     title: "Apple iPhone 16",
     slug: "apple-iphone-16",
-    image: "/products/iphone16.png",
+    image: "/images/mobiles.png",
     price: 79999,
     originalPrice: 89999,
     discount: 11,
@@ -19,7 +19,7 @@ const products: Product[] = [
     id: 2,
     title: "Samsung Galaxy S25 Ultra",
     slug: "samsung-galaxy-s25-ultra",
-    image: "/products/s25ultra.png",
+    image: "/images/mobiles.png",
     price: 99999,
     originalPrice: 109999,
     discount: 9,
@@ -30,4 +30,5 @@ const products: Product[] = [
     stock: 8,
   },
 ];
+
 export default products;

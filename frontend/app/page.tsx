@@ -1,22 +1,33 @@
 import Header from "@/components/layout/Header";
-import Categories from "@/components/home/Categories";
-import Hero from "@/components/home/Hero";
-import FlashSale from "@/components/home/FlashSale";
-import DealsSection from "@/components/home/DealsSection";
-import ElectronicsSection from "@/components/home/ElectronicsSection";
-import FashionSection from "@/components/home/FashionSection";
 import Footer from "@/components/layout/Footer";
+import ProductSearch from "@/components/products/ProductSearch";
+import ProductGrid from "@/components/products/ProductGrid";
 
-export default function Home() {
+import Container from "@mui/material/Container";
+import Typography from "@mui/material/Typography";
+
+export default function ProductsPage() {
   return (
     <>
       <Header />
-      <Categories />
-      <Hero />
-      <FlashSale />
-      <DealsSection />
-      <ElectronicsSection />
-      <FashionSection />
+
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={{
+            fontWeight: 700,
+            mb: 3,
+          }}
+        >
+          All Products
+        </Typography>
+
+        <ProductSearch />
+
+        <ProductGrid />
+      </Container>
+
       <Footer />
     </>
   );
