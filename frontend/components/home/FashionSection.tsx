@@ -6,6 +6,11 @@ import ProductCarousel from "../products/ProductCarousel";
 import fashion from "@/data/fashion";
 
 export default function FashionSection() {
+  const fashionProducts = fashion.map((product) => ({
+    ...product,
+    slug: product.title.toLowerCase().replace(/\s+/g, "-"),
+  }));
+
   return (
     <Container maxWidth="xl" sx={{ mt: 3 }}>
       <Box
@@ -17,7 +22,7 @@ export default function FashionSection() {
       >
         <SectionTitle title="👕 Fashion Picks" />
 
-        <ProductCarousel products={fashion} />
+        <ProductCarousel products={fashionProducts} />
       </Box>
     </Container>
   );

@@ -1,20 +1,8 @@
 "use client";
 
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation } from "swiper/modules";
-
-import "swiper/css";
-import "swiper/css/navigation";
-
+import { Box } from "@mui/material";
 import ProductCard from "./ProductCard";
-
-interface Product {
-  id: number;
-  image: string;
-  title: string;
-  price: string;
-  offer: string;
-}
+import { Product } from "@/types/product";
 
 interface Props {
   products: Product[];
@@ -22,35 +10,34 @@ interface Props {
 
 export default function ProductCarousel({ products }: Props) {
   return (
-    <Swiper
-      modules={[Navigation]}
-      navigation
-      spaceBetween={20}
-      breakpoints={{
-        320: {
-          slidesPerView: 2,
-        },
-        640: {
-          slidesPerView: 3,
-        },
-        900: {
-          slidesPerView: 4,
-        },
-        1200: {
-          slidesPerView: 5,
+    <Box
+      sx={{
+        display: "flex",
+        gap: 3,
+        overflowX: "auto",
+        pb: 2,
+        "&::-webkit-scrollbar": {
+          display: "none",
         },
       }}
     >
       {products.map((product) => (
-        <SwiperSlide key={product.id}>
+        <Box
+          key={product.id}
+          sx={{
+            minWidth: 280,
+            flexShrink: 0,
+          }}
+        >
           <ProductCard
+            slug={product.slug}
             image={product.image}
             title={product.title}
-            price={product.price}
-            offer={product.offer}
+            price={`₹${product.price.toLocaleString()}`}
+            offer={`${product.discount}% OFF`}
           />
-        </SwiperSlide>
+        </Box>
       ))}
-    </Swiper>
+    </Box>
   );
 }

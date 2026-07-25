@@ -5,6 +5,11 @@ import SectionTitle from "./sectiontitle";
 import ProductCarousel from "../products/ProductCarousel";
 import deals from "@/data/deals";
 
+const dealsWithSlug = deals.map((deal) => ({
+  ...deal,
+  slug: deal.id.toString(),
+}));
+
 export default function DealsSection() {
   return (
     <Container maxWidth="xl" sx={{ mt: 3 }}>
@@ -17,7 +22,7 @@ export default function DealsSection() {
       >
         <SectionTitle title="🔥 Top Deals" />
 
-        <ProductCarousel products={deals} />
+        <ProductCarousel products={dealsWithSlug} />
       </Box>
     </Container>
   );

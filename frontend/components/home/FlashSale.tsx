@@ -1,67 +1,40 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Box, Typography, Button, Container } from "@mui/material";
-import FlashOnIcon from "@mui/icons-material/FlashOn";
-import ProductCarousel from "../products/ProductCarousel";
-import deals from "@/data/deals";
+import { Container, Typography, Box } from "@mui/material";
+import ProductCarousel from "@/components/products/ProductCarousel";
+import products from "@/data/products";
 
 export default function FlashSale() {
-  const [timeLeft, setTimeLeft] = useState(5 * 60 * 60); // 5 hours
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 5 * 60 * 60));
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  const hours = String(Math.floor(timeLeft / 3600)).padStart(2, "0");
-  const minutes = String(Math.floor((timeLeft % 3600) / 60)).padStart(2, "0");
-  const seconds = String(timeLeft % 60).padStart(2, "0");
+  const flashProducts = products.filter(
+    (product) => product.discount >= 10
+  );
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 3 }}>
+    <Container maxWidth="xl" sx={{ py: 5 }}>
       <Box
         sx={{
-          bgcolor: "#fff",
-          borderRadius: 2,
-          p: 3,
+          display: "flex",
+          justifyContent: "space-between",
+          mb: 3,
+          alignItems: "center",
         }}
       >
-        <Box
+        <Typography variant="h4" fontWeight={700}>
+          ⚡ Flash Sale
+        </Typography>
+
+        <Typography
+          color="primary"
           sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 3,
+            cursor: "pointer",
+            fontWeight: 600,
           }}
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <FlashOnIcon color="error" />
-            <Typography variant="h5" sx={{ fontWeight: 700 }}>
-              Flash Sale
-            </Typography>
-
-            <Typography
-              sx={{
-                color: "red",
-                fontWeight: 700,
-                ml: 2,
-              }}
-            >
-              {hours}:{minutes}:{seconds}
-            </Typography>
-          </Box>
-
-          <Button variant="contained">
-            View All
-          </Button>
-        </Box>
-
-        <ProductCarousel products={deals} />
+          View All
+        </Typography>
       </Box>
+
+      <ProductCarousel products={flashProducts} />
     </Container>
   );
 }

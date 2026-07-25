@@ -1,6 +1,7 @@
 "use client";
 
-// import Link from "next/link"; // unused - removed
+import Link from "next/link";
+
 import {
   AppBar,
   Toolbar,
@@ -16,10 +17,18 @@ import {
 import SearchIcon from "@mui/icons-material/Search";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
-// '@mui/icons-material/PersonOutline' may not be available in some installs — use 'Person' instead
 import PersonOutlineIcon from "@mui/icons-material/Person";
 
+import useCartStore from "@/store/cartStore";
+
 export default function Navbar() {
+  const items = useCartStore((state) => state.items);
+
+  const cartCount = items.reduce(
+    (total, item) => total + item.quantity,
+    0
+  );
+
   return (
     <AppBar
       position="sticky"
@@ -39,25 +48,28 @@ export default function Navbar() {
       >
         {/* Logo */}
 
-        <Typography
-          variant="h5"
-          sx={{
-            fontWeight: 700,
-            color: "#fff",
+        <Link
+          href="/"
+          style={{
+            textDecoration: "none",
+            color: "inherit",
           }}
         >
-          NextCart
-        </Typography>
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 700,
+              color: "#fff",
+            }}
+          >
+            NextCart
+          </Typography>
+        </Link>
 
         {/* Search */}
 
-        <Box
-          sx={{
-            flex: 1,
-          }}
-        >
+        <Box sx={{ flex: 1 }}>
           <TextField
-            variant="outlined"
             fullWidth
             size="small"
             placeholder="Search for Products, Brands and More"
@@ -100,11 +112,18 @@ export default function Navbar() {
 
         {/* Cart */}
 
-        <IconButton color="inherit">
-          <Badge badgeContent={0} color="error">
-            <ShoppingCartIcon />
-          </Badge>
-        </IconButton>
+        <Link
+          href="/cart"
+          style={{
+            color: "inherit",
+          }}
+        >
+          <IconButton color="inherit">
+            <Badge badgeContent={cartCount} color="error">
+              <ShoppingCartIcon />
+            </Badge>
+          </IconButton>
+        </Link>
 
         {/* Profile */}
 
