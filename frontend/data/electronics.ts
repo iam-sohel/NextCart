@@ -4,4 +4,4 @@ const electronics = products.filter(
   (product) => product.category === "Mobiles"
 );
 
-export default electronics
+export default electronics;

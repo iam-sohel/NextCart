@@ -1,30 +1,57 @@
 "use client";
 
-import Image from "next/image";
-import { Container, Box } from "@mui/material";
+import { Container, Grid, Paper, Typography } from "@mui/material";
+
+const promos = [
+  {
+    title: "Free Shipping",
+    subtitle: "On orders above ₹999",
+    color: "#2563EB",
+  },
+  {
+    title: "Secure Payments",
+    subtitle: "100% Safe & Encrypted",
+    color: "#059669",
+  },
+  {
+    title: "Easy Returns",
+    subtitle: "7-Day Return Policy",
+    color: "#EA580C",
+  },
+];
 
 export default function PromoBanner() {
   return (
-    <Container maxWidth="xl" sx={{ mt: 3 }}>
-      <Box
-        sx={{
-          position: "relative",
-          width: "100%",
-          height: { xs: 180, md: 250 },
-          borderRadius: 2,
-          overflow: "hidden",
-        }}
-      >
-        <Image
-          src="/banners/promo-banner.jpg"
-          alt="Promotion Banner"
-          fill
-          priority
-          style={{
-            objectFit: "cover",
-          }}
-        />
-      </Box>
+    <Container maxWidth="xl" sx={{ py: 5 }}>
+      <Grid container spacing={3}>
+        {promos.map((promo) => (
+          <Grid item key={promo.title} xs={12} md={4}>
+            <Paper
+              elevation={3}
+              sx={{
+                p: 4,
+                borderRadius: 3,
+                color: "#fff",
+                background: promo.color,
+                transition: ".3s",
+                cursor: "pointer",
+
+                "&:hover": {
+                  transform: "translateY(-6px)",
+                },
+              }}
+            >
+              <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                {promo.title}
+              </Typography>
+
+              <Typography sx={{ mt: 1 }}>
+                {promo.subtitle}
+              </Typography>
+            </Paper>
+          </Grid>
+        ))}
+      </Grid>
     </Container>
   );
 }

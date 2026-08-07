@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 
 import {
   Container,
@@ -10,8 +11,9 @@ import {
   Button,
   Divider,
   IconButton,
+  Paper,
+  Box,
 } from "@mui/material";
-import Box from "@mui/material/Box";
 
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
@@ -35,33 +37,44 @@ export default function CartPage() {
     0
   );
 
+  const shipping = 0;
+  const discount = 0;
+  const total = subtotal + shipping - discount;
+
   if (items.length === 0) {
     return (
       <>
         <Header />
 
-        <Container maxWidth="md" sx={{ py: 8, textAlign: "center" }}>
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
+        <Container
+          maxWidth="md"
+          sx={{
+            py: 10,
+            textAlign: "center",
+          }}
+        >
+          <Typography variant="h4" fontWeight={700}>
             Your Cart is Empty
           </Typography>
 
-          <Typography
-            sx={{
-              mt: 2,
-              color: "text.secondary",
-            }}
-          >
-            Looks like you haven&apos;t added anything yet.
+          <Typography sx={{ mt: 2, color: "text.secondary" }}>
+            Looks like you haven't added any products yet.
           </Typography>
 
           <Button
-            component={Link}
-            href="/"
-            variant="contained"
-            sx={{ mt: 4 }}
-          >
-            Continue Shopping
-          </Button>
+  component={Link}
+  href="/checkout"
+  fullWidth
+  variant="contained"
+  size="large"
+  sx={{
+    mt: 4,
+    py: 1.5,
+    borderRadius: 2,
+  }}
+>
+  Proceed to Checkout
+</Button>
         </Container>
 
         <Footer />
@@ -73,9 +86,13 @@ export default function CartPage() {
     <>
       <Header />
 
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, mb: 4 }}>
-          Shopping Cart
+      <Container maxWidth="xl" sx={{ py: 5 }}>
+        <Typography
+          variant="h4"
+          fontWeight={700}
+          sx={{ mb: 4 }}
+        >
+          Shopping Cart ({items.length})
         </Typography>
 
         <Box
@@ -85,65 +102,129 @@ export default function CartPage() {
               xs: "1fr",
               md: "2fr 1fr",
             },
-            gap: 3,
+            gap: 4,
           }}
         >
+          {/* Left Side */}
+
           <Box>
             {items.map((item) => (
-              <Card key={item.id} sx={{ mb: 2 }}>
+              <Card
+                key={item.id}
+                sx={{
+                  mb: 2,
+                  borderRadius: 3,
+                }}
+              >
                 <CardContent>
                   <Box
                     sx={{
                       display: "flex",
-                      justifyContent: "space-between",
+                      gap: 3,
                       alignItems: "center",
                     }}
                   >
-                    <Box>
-                      <Typography variant="h6">
-                        {item.title}
-                      </Typography>
+                    <Link href={`/products/${item.slug}`}>
+                      <Image
+                        src={item.image}
+                        alt={item.title}
+                        width={120}
+                        height={120}
+                        style={{
+                          objectFit: "contain",
+                          cursor: "pointer",
+                        }}
+                      />
+                    </Link>
 
-                      <Typography color="primary">
+                    <Box sx={{ flex: 1 }}>
+                      <Link
+                        href={`/products/${item.slug}`}
+                        style={{
+                          textDecoration: "none",
+                          color: "inherit",
+                        }}
+                      >
+                        <Typography
+                          variant="h6"
+                          fontWeight={700}
+                        >
+                          {item.title}
+                        </Typography>
+                      </Link>
+
+                      <Typography
+                        color="primary"
+                        sx={{
+                          mt: 1,
+                          fontWeight: 700,
+                          fontSize: 24,
+                        }}
+                      >
                         ₹{item.price.toLocaleString()}
                       </Typography>
-                    </Box>
 
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                      }}
-                    >
-                      <IconButton
-                        onClick={() =>
-                          decreaseQuantity(item.id)
-                        }
+                      <Typography
+                        color="text.secondary"
+                        sx={{ mt: 1 }}
                       >
-                        <RemoveIcon />
-                      </IconButton>
-
-                      <Typography>
-                        {item.quantity}
+                        Total: ₹
+                        {(item.price * item.quantity).toLocaleString()}
                       </Typography>
 
-                      <IconButton
-                        onClick={() =>
-                          increaseQuantity(item.id)
-                        }
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                          mt: 3,
+                        }}
                       >
-                        <AddIcon />
-                      </IconButton>
+                        <IconButton
+                          sx={{
+                            border: "1px solid #ddd",
+                          }}
+                          onClick={() =>
+                            decreaseQuantity(item.id)
+                          }
+                        >
+                          <RemoveIcon />
+                        </IconButton>
 
-                      <IconButton
-                        color="error"
-                        onClick={() =>
-                          removeFromCart(item.id)
-                        }
-                      >
-                        <DeleteIcon />
-                      </IconButton>
+                        <Paper
+                          elevation={0}
+                          sx={{
+                            width: 50,
+                            height: 38,
+                            display: "flex",
+                            justifyContent: "center",
+                            alignItems: "center",
+                            border: "1px solid #ddd",
+                          }}
+                        >
+                          {item.quantity}
+                        </Paper>
+
+                        <IconButton
+                          sx={{
+                            border: "1px solid #ddd",
+                          }}
+                          onClick={() =>
+                            increaseQuantity(item.id)
+                          }
+                        >
+                          <AddIcon />
+                        </IconButton>
+
+                        <IconButton
+                          color="error"
+                          onClick={() =>
+                            removeFromCart(item.id)
+                          }
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Box>
                     </Box>
                   </Box>
                 </CardContent>
@@ -151,68 +232,104 @@ export default function CartPage() {
             ))}
           </Box>
 
-          <Card sx={{ height: "fit-content" }}>
+          {/* Order Summary */}
+
+          <Card
+            sx={{
+              height: "fit-content",
+              borderRadius: 3,
+              position: "sticky",
+              top: 90,
+            }}
+          >
             <CardContent>
               <Typography
-                variant="h6"
-                sx={{ fontWeight: 700 }}
-                gutterBottom
+                variant="h5"
+                fontWeight={700}
               >
                 Order Summary
               </Typography>
 
-              <Divider sx={{ my: 2 }} />
+              <Divider sx={{ my: 3 }} />
 
               <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                }}
+                display="flex"
+                justifyContent="space-between"
+                mb={2}
               >
                 <Typography>Subtotal</Typography>
 
-                <Typography>
+                <Typography fontWeight={600}>
                   ₹{subtotal.toLocaleString()}
                 </Typography>
               </Box>
 
               <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  mt: 2,
-                }}
+                display="flex"
+                justifyContent="space-between"
+                mb={2}
+              >
+                <Typography>Discount</Typography>
+
+                <Typography color="success.main">
+                  ₹0
+                </Typography>
+              </Box>
+
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                mb={2}
               >
                 <Typography>Shipping</Typography>
 
-                <Typography color="green">
+                <Typography color="success.main">
                   FREE
                 </Typography>
               </Box>
 
-              <Divider sx={{ my: 2 }} />
+              <Divider sx={{ my: 3 }} />
 
               <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                }}
+                display="flex"
+                justifyContent="space-between"
               >
-                <Typography sx={{ fontWeight: 700 }}>
+                <Typography
+                  variant="h6"
+                  fontWeight={700}
+                >
                   Total
                 </Typography>
 
-                <Typography sx={{ fontWeight: 700 }}>
-                  ₹{subtotal.toLocaleString()}
+                <Typography
+                  variant="h6"
+                  fontWeight={700}
+                >
+                  ₹{total.toLocaleString()}
                 </Typography>
               </Box>
 
               <Button
                 fullWidth
                 variant="contained"
-                sx={{ mt: 3 }}
+                size="large"
+                sx={{
+                  mt: 4,
+                  py: 1.5,
+                  borderRadius: 2,
+                }}
               >
                 Proceed to Checkout
+              </Button>
+
+              <Button
+                component={Link}
+                href="/"
+                fullWidth
+                variant="outlined"
+                sx={{ mt: 2 }}
+              >
+                Continue Shopping
               </Button>
             </CardContent>
           </Card>

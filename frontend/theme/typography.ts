@@ -1,38 +1,40 @@
 const typography = {
-  fontFamily: [
-    "Inter",
-    "Roboto",
-    "Helvetica",
-    "Arial",
-    "sans-serif",
-  ].join(","),
+  fontFamily: "var(--font-inter), Inter, Roboto, Helvetica, Arial, sans-serif",
 
   h1: {
+    fontFamily: "var(--font-sora), Sora, sans-serif",
     fontSize: "3rem",
-    fontWeight: 700,
+    fontWeight: 800,
+    letterSpacing: "-0.02em",
   },
 
   h2: {
+    fontFamily: "var(--font-sora), Sora, sans-serif",
     fontSize: "2.5rem",
     fontWeight: 700,
+    letterSpacing: "-0.02em",
   },
 
   h3: {
+    fontFamily: "var(--font-sora), Sora, sans-serif",
     fontSize: "2rem",
     fontWeight: 700,
   },
 
   h4: {
+    fontFamily: "var(--font-sora), Sora, sans-serif",
     fontSize: "1.75rem",
     fontWeight: 700,
   },
 
   h5: {
+    fontFamily: "var(--font-sora), Sora, sans-serif",
     fontSize: "1.5rem",
-    fontWeight: 600,
+    fontWeight: 700,
   },
 
   h6: {
+    fontFamily: "var(--font-sora), Sora, sans-serif",
     fontSize: "1.25rem",
     fontWeight: 600,
   },
@@ -45,6 +47,7 @@ const typography = {
   subtitle2: {
     fontSize: ".875rem",
     fontWeight: 500,
+    letterSpacing: "0.02em",
   },
 
   body1: {
@@ -53,6 +56,10 @@ const typography = {
 
   body2: {
     fontSize: ".875rem",
+  },
+
+  caption: {
+    letterSpacing: "0.03em",
   },
 
   button: {

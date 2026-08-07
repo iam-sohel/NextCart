@@ -23,4 +23,8 @@ export interface Product {
   featured: boolean;
   bestseller: boolean;
   newArrival: boolean;
+
+  color?: string;
+  warranty?: string;
+  delivery?: string;
 }

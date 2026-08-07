@@ -1,103 +1,73 @@
 "use client";
 
 import Image from "next/image";
-import { Box, Container, Typography } from "@mui/material";
+import categories from "@/data/categories";
 
-const categories = [
-  {
-    title: "Grocery",
-    image: "/categories/grocery.png",
-  },
-  {
-    title: "Mobiles",
-    image: "/categories/mobiles.png",
-  },
-  {
-    title: "Fashion",
-    image: "/categories/fashion.png",
-  },
-  {
-    title: "Electronics",
-    image: "/categories/electronics.png",
-  },
-  {
-    title: "Home",
-    image: "/categories/home.png",
-  },
-  {
-    title: "Appliances",
-    image: "/categories/appliances.png",
-  },
-  {
-    title: "Travel",
-    image: "/categories/travel.png",
-  },
-  {
-    title: "Beauty",
-    image: "/categories/beauty.png",
-  },
-  {
-    title: "Furniture",
-    image: "/categories/furniture.png",
-  },
-  {
-    title: "Toys",
-    image: "/categories/toys.png",
-  },
-];
+import {
+  Container,
+  Typography,
+  Grid,
+  Paper,
+} from "@mui/material";
 
 export default function Categories() {
   return (
-    <Box
-      sx={{
-        bgcolor: "#fff",
-        py: 2,
-        boxShadow: 1,
-      }}
-    >
-      <Container maxWidth="xl">
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            overflowX: "auto",
-            gap: 3,
-          }}
-        >
-          {categories.map((item) => (
-            <Box
-              key={item.title}
+    <Container maxWidth="xl" sx={{ py: 5 }}>
+      <Typography
+        variant="h4"
+        sx={{
+          fontWeight: 700,
+          mb: 4,
+        }}
+      >
+        Shop by Category
+      </Typography>
+
+      <Grid container spacing={3}>
+        {categories.map((category) => (
+          <Grid
+            key={category.slug}
+            size={{
+              xs: 6,
+              sm: 4,
+              md: 3,
+              lg: 2,
+            }}
+          >
+            <Paper
+              elevation={2}
               sx={{
+                p: 3,
                 textAlign: "center",
                 cursor: "pointer",
-                minWidth: 90,
                 transition: ".3s",
+                borderRadius: 3,
 
                 "&:hover": {
-                  transform: "translateY(-5px)",
+                  transform: "translateY(-6px)",
+                  boxShadow: 8,
                 },
               }}
             >
               <Image
-                src={item.image}
-                alt={item.title}
+                src={category.image}
+                alt={category.title}
                 width={70}
                 height={70}
               />
 
               <Typography
                 sx={{
-                  mt: 1,
+                  mt: 2,
                   fontWeight: 600,
-                  fontSize: 14,
                 }}
               >
-                {item.title}
+                {category.title}
               </Typography>
-            </Box>
-          ))}
-        </Box>
-      </Container>
-    </Box>
+            </Paper>
+          </Grid>
+        ))}
+      </Grid>
+    </Container>
   );
 }

@@ -9,7 +9,7 @@ const fashion = [
   {
     id: 2,
     title: "Levi's Jeans",
-    image: "/products/jeans.png",
+    image: "/products/fashion/jeans.png",
     price: "₹2,499",
     offer: "Buy 1 Get 1",
   },
@@ -23,7 +23,7 @@ const fashion = [
   {
     id: 4,
     title: "Fastrack Watch",
-    image: "/products/fwatch.png",
+    image: "/products/electronics/watch.png",
     price: "₹1,799",
     offer: "35% Off",
   },

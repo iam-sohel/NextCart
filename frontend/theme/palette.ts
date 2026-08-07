@@ -1,37 +1,45 @@
 const palette = {
+  mode: "dark" as const,
+
   primary: {
-    main: "#2563EB",
-    light: "#3B82F6",
-    dark: "#1D4ED8",
-    contrastText: "#FFFFFF",
+    main: "#6C8EEF",
+    light: "#93AEF7",
+    dark: "#3F5FC4",
+    contrastText: "#0B1120",
   },
 
   secondary: {
-    main: "#F97316",
-    contrastText: "#FFFFFF",
+    main: "#F5A623",
+    light: "#F8BB4E",
+    dark: "#C9820F",
+    contrastText: "#0B1120",
   },
 
   success: {
-    main: "#16A34A",
+    main: "#2FD48D",
+    light: "rgba(47,212,141,0.12)",
   },
 
   error: {
-    main: "#DC2626",
+    main: "#FF6B5E",
+    light: "rgba(255,107,94,0.12)",
   },
 
   warning: {
-    main: "#F59E0B",
+    main: "#F5A623",
   },
 
   background: {
-    default: "#F8FAFC",
-    paper: "#FFFFFF",
+    default: "#0B1120",
+    paper: "#141B2E",
   },
 
   text: {
-    primary: "#111827",
-    secondary: "#6B7280",
+    primary: "#F1F4FA",
+    secondary: "#8B93A7",
   },
+
+  divider: "#232B41",
 };
 
 export default palette;

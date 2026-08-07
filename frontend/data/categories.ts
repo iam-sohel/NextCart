@@ -1,49 +1,64 @@
-export interface Category {
-  id: number;
-  name: string;
-  image: string;
-}
-
-const categories: Category[] = [
+const categories = [
   {
-    id: 1,
-    name: "Mobiles",
+    title: "Mobiles",
     image: "/categories/mobiles.png",
+    slug: "mobiles",
   },
   {
-    id: 2,
-    name: "Fashion",
+    title: "Fashion",
     image: "/categories/fashion.png",
+    slug: "fashion",
   },
   {
-    id: 3,
-    name: "Electronics",
+    title: "Electronics",
     image: "/categories/electronics.png",
+    slug: "electronics",
   },
   {
-    id: 4,
-    name: "Appliances",
+    title: "Appliances",
     image: "/categories/appliances.png",
+    slug: "appliances",
   },
   {
-    id: 5,
-    name: "Beauty",
+    title: "Home & Kitchen",
+    image: "/categories/home.png",
+    slug: "home-kitchen",
+  },
+  {
+    title: "Beauty",
     image: "/categories/beauty.png",
+    slug: "beauty",
   },
   {
-    id: 6,
-    name: "Gaming",
-    image: "/categories/gaming.png",
-  },
-  {
-    id: 7,
-    name: "Grocery",
+    title: "Grocery",
     image: "/categories/grocery.png",
+    slug: "grocery",
   },
   {
-    id: 8,
-    name: "Furniture",
+    title: "Books",
+    image: "/categories/books.png",
+    slug: "books",
+  },
+  {
+    title: "Sports",
+    image: "/categories/sports.png",
+    slug: "sports",
+  },
+  {
+    title: "Furniture",
     image: "/categories/furniture.png",
+    slug: "furniture",
+  },
+  {
+    title: "Toys",
+    image: "/categories/toys.png",
+    slug: "toys",
+  },
+  {
+    title: "Automotive",
+    image: "/categories/automotive.png",
+    slug: "automotive",
   },
 ];
+
 export default categories;

@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import {
+  Container,
   Box,
   Card,
   CardActionArea,
@@ -15,83 +16,92 @@ import categories from "@/data/categories";
 
 export default function CategoryBar() {
   return (
-    <Box
-      sx={{
-        bgcolor: "#fff",
-        borderRadius: 3,
-        p: 2,
-        mb: 3,
-        overflowX: "auto",
-        boxShadow: 1,
-
-        "&::-webkit-scrollbar": {
-          display: "none",
-        },
-
-        scrollbarWidth: "none",
-      }}
-    >
-      <Stack
-        direction="row"
-        spacing={3}
+    <Container maxWidth="xl" sx={{ mt: 2, mb: 2 }}>
+      <Box
         sx={{
-          minWidth: "max-content",
-          justifyContent: "space-between",
+          bgcolor: "#fff",
+          borderRadius: 3,
+          px: 2,
+          py: 2,
+          boxShadow: 1,
+          overflowX: "auto",
+
+          "&::-webkit-scrollbar": {
+            display: "none",
+          },
+
+          scrollbarWidth: "none",
         }}
       >
-        {categories.map((category) => (
-          <Link
-            key={category.id}
-            href={`/category/${category.name.toLowerCase()}`}
-            style={{
-              textDecoration: "none",
-              color: "inherit",
-            }}
-          >
-            <Card
-              elevation={0}
-              sx={{
-                width: 110,
-                borderRadius: 3,
-                transition: ".25s",
-
-                "&:hover": {
-                  transform: "translateY(-5px)",
-                  boxShadow: 4,
-                },
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{
+            minWidth: "max-content",
+            justifyContent: "space-between",
+          }}
+        >
+          {categories.map((category) => (
+            <Link
+              key={category.slug}
+              href={`/category/${category.slug}`}
+              style={{
+                textDecoration: "none",
+                color: "inherit",
               }}
             >
-              <CardActionArea>
-                <Stack
-                  spacing={1.5}
-                  alignItems="center"
-                
-                  sx={{
-                    p: 2,
-                  }}
-                >
-                  <Image
-                    src={category.image}
-                    alt={category.name}
-                    width={60}
-                    height={60}
-                  />
+              <Card
+                elevation={0}
+                sx={{
+                  width: 110,
+                  borderRadius: 3,
+                  backgroundColor: "transparent",
+                  transition: "0.25s",
 
-                  <Typography
-                    variant="body2"
+                  "&:hover": {
+                    transform: "translateY(-5px)",
+                    boxShadow: 3,
+                  },
+                }}
+              >
+                <CardActionArea>
+                  <Stack
+                    spacing={1}
+                    alignItems="center"
                     sx={{
-                      fontWeight: 600,
-                      textAlign: "center",
+                      py: 2,
+                      px: 1,
                     }}
                   >
-                    {category.name}
-                  </Typography>
-                </Stack>
-              </CardActionArea>
-            </Card>
-          </Link>
-        ))}
-      </Stack>
-    </Box>
+                    <Image
+                      src={category.image}
+                      alt={category.title}
+                      width={60}
+                      height={60}
+                      style={{
+                        objectFit: "contain",
+                      }}
+                    />
+
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 600,
+                        color: "#212121",
+                        textAlign: "center",
+                        fontSize: "0.85rem",
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      {category.title}
+                    </Typography>
+                  </Stack>
+                </CardActionArea>
+              </Card>
+            </Link>
+          ))}
+        </Stack>
+      </Box>
+    </Container>
   );
 }

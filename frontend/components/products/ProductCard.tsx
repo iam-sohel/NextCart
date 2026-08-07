@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useState } from "react";
 
 import {
   Card,
@@ -10,41 +11,90 @@ import {
   Box,
   Button,
   Chip,
-  Rating,
   IconButton,
 } from "@mui/material";
 
+import StarIcon from "@mui/icons-material/Star";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import FavoriteIcon from "@mui/icons-material/Favorite";
+
+import useCartStore from "@/store/cartStore";
+import useWishlistStore from "@/store/wishlistStore";
 
 interface ProductCardProps {
+  id: number;
   slug: string;
   image: string;
   title: string;
-  price: string;
+  price: number;
+  originalPrice?: number;
   offer: string;
   rating?: number;
+  reviews?: number;
   brand?: string;
+  bestseller?: boolean;
+  newArrival?: boolean;
 }
 
 export default function ProductCard({
+  id,
   slug,
   image,
   title,
   price,
+  originalPrice,
   offer,
   rating = 4.5,
+  reviews = 0,
   brand = "NextCart",
+  bestseller = false,
+  newArrival = false,
 }: ProductCardProps) {
+  const [isAdding, setIsAdding] = useState(false);
+  const addToCart = useCartStore((state) => state.addToCart);
+  const { addToWishlist, removeFromWishlist, isInWishlist } =
+    useWishlistStore();
+
+  const isWishlisted = isInWishlist(id);
+
+  const handleAddToCart = () => {
+    setIsAdding(true);
+    addToCart({ id, slug, title, image, price, quantity: 1 });
+    setTimeout(() => setIsAdding(false), 300);
+  };
+
+  const handleWishlistToggle = () => {
+    if (isWishlisted) {
+      removeFromWishlist(id);
+    } else {
+      addToWishlist({
+        id,
+        slug,
+        title,
+        image,
+        price,
+        originalPrice: originalPrice ?? price,
+        brand,
+      });
+    }
+  };
+
   return (
     <Card
+      elevation={1}
       sx={{
         borderRadius: 3,
         overflow: "hidden",
-        transition: ".3s",
+        transition: "transform .25s ease, box-shadow .25s ease",
+        border: "1px solid",
+        borderColor: "divider",
 
         "&:hover": {
           transform: "translateY(-6px)",
-          boxShadow: 8,
+          boxShadow: 3,
+        },
+        "&:hover .product-card-image": {
+          transform: "scale(1.06)",
         },
       }}
     >
@@ -53,89 +103,202 @@ export default function ProductCard({
           href={`/products/${slug}`}
           style={{ textDecoration: "none", color: "inherit" }}
         >
+          {/* Product photo stage — intentionally light, see note above */}
           <Box
             sx={{
               height: 220,
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              bgcolor: "#fafafa",
+              bgcolor: "#F3F1EC",
+              overflow: "hidden",
             }}
           >
-            <Image
-              src={image}
-              alt={title}
-              width={170}
-              height={170}
-              style={{ objectFit: "contain" }}
-            />
+            <Box
+              className="product-card-image"
+              sx={{
+                position: "relative",
+                width: 170,
+                height: 170,
+                transition: "transform .35s ease",
+              }}
+            >
+              <Image
+                src={image}
+                alt={title}
+                fill
+                style={{ objectFit: "contain" }}
+              />
+            </Box>
           </Box>
         </Link>
 
-        <Chip
-          label={offer}
-          color="error"
-          size="small"
+        {/* Badges */}
+        <Box
           sx={{
             position: "absolute",
-            top: 12,
-            left: 12,
-            fontWeight: 700,
+            top: 10,
+            left: 10,
+            display: "flex",
+            flexDirection: "column",
+            gap: 0.5,
           }}
-        />
+        >
+          {bestseller && (
+            <Chip
+              label="Bestseller"
+              size="small"
+              sx={{
+                bgcolor: "secondary.main",
+                color: "secondary.contrastText",
+                fontWeight: 700,
+                fontSize: "0.7rem",
+                height: 22,
+              }}
+            />
+          )}
+          {!bestseller && newArrival && (
+            <Chip
+              label="New"
+              size="small"
+              sx={{
+                bgcolor: "primary.main",
+                color: "primary.contrastText",
+                fontWeight: 700,
+                fontSize: "0.7rem",
+                height: 22,
+              }}
+            />
+          )}
+          <Chip
+            label={offer}
+            size="small"
+            sx={{
+              bgcolor: "error.main",
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: "0.7rem",
+              height: 22,
+            }}
+          />
+        </Box>
 
         <IconButton
+          onClick={handleWishlistToggle}
           sx={{
             position: "absolute",
             top: 8,
             right: 8,
-            bgcolor: "#fff",
+            bgcolor: "#F3F1EC",
+            boxShadow: 1,
+            width: 34,
+            height: 34,
+            "&:hover": { bgcolor: "#F3F1EC" },
           }}
         >
-          <FavoriteBorderIcon />
+          {isWishlisted ? (
+            <FavoriteIcon sx={{ fontSize: 18, color: "error.main" }} />
+          ) : (
+            <FavoriteBorderIcon sx={{ fontSize: 18, color: "#0B1120" }} />
+          )}
         </IconButton>
       </Box>
 
-      <CardContent>
-        <Typography variant="caption" color="text.secondary">
+      <CardContent sx={{ pb: 2 }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+            fontWeight: 600,
+          }}
+        >
           {brand}
         </Typography>
 
-        <Typography
-          sx={{
-            fontWeight: 600,
-            mt: .5,
-            minHeight: 48,
-          }}
+        <Link
+          href={`/products/${slug}`}
+          style={{ textDecoration: "none", color: "inherit" }}
         >
-          {title}
-        </Typography>
+          <Typography
+            sx={{
+              fontWeight: 600,
+              mt: 0.5,
+              minHeight: 44,
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {title}
+          </Typography>
+        </Link>
 
-        <Rating
-          value={rating}
-          precision={0.5}
-          readOnly
-          size="small"
-          sx={{ my: 1 }}
-        />
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, my: 1 }}>
+          <StarIcon sx={{ fontSize: 16, color: "secondary.main" }} />
+          <Typography variant="body2" fontWeight={700}>
+            {rating.toFixed(1)}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            ({reviews.toLocaleString()})
+          </Typography>
+        </Box>
 
-        <Typography
-          variant="h6"
-          sx={{ fontWeight: 700 }}
-        >
-          {price}
-        </Typography>
+        {/* Price tag — signature element */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, mb: 1.5 }}>
+          <Box
+            sx={{
+              position: "relative",
+              display: "inline-flex",
+              bgcolor: "rgba(245,166,35,0.12)",
+              color: "secondary.main",
+              fontWeight: 700,
+              fontVariantNumeric: "tabular-nums",
+              borderRadius: "4px",
+              pl: 2,
+              pr: 1.25,
+              py: 0.5,
+              fontSize: "1.1rem",
+              "&::before": {
+                content: '""',
+                position: "absolute",
+                left: -4,
+                top: "50%",
+                transform: "translateY(-50%)",
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                bgcolor: "background.paper",
+                border: "1px solid rgba(255,255,255,0.08)",
+              },
+            }}
+          >
+            ₹{price.toLocaleString()}
+          </Box>
+
+          {originalPrice && originalPrice > price && (
+            <Typography
+              variant="body2"
+              sx={{
+                textDecoration: "line-through",
+                color: "text.secondary",
+              }}
+            >
+              ₹{originalPrice.toLocaleString()}
+            </Typography>
+          )}
+        </Box>
 
         <Button
           fullWidth
           variant="contained"
-          sx={{
-            mt: 2,
-            borderRadius: 2,
-            textTransform: "none",
-          }}
+          sx={{ borderRadius: 2 }}
+          onClick={handleAddToCart}
+          disabled={isAdding}
         >
-          Add to Cart
+          {isAdding ? "Adding..." : "Add to Cart"}
         </Button>
       </CardContent>
     </Card>

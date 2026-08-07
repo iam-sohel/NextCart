@@ -19,7 +19,7 @@ export default function FlashSale() {
           alignItems: "center",
         }}
       >
-        <Typography variant="h4" fontWeight={700}>
+        <Typography variant="h4" sx={{ fontWeight: 700 }}>
           ⚡ Flash Sale
         </Typography>
 

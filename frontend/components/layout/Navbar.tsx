@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 import {
@@ -20,21 +22,37 @@ import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import PersonOutlineIcon from "@mui/icons-material/Person";
 
 import useCartStore from "@/store/cartStore";
+import useWishlistStore from "@/store/wishlistStore";
 
 export default function Navbar() {
-  const items = useCartStore((state) => state.items);
+  const [searchQuery, setSearchQuery] = useState("");
+  const router = useRouter();
 
-  const cartCount = items.reduce(
-    (total, item) => total + item.quantity,
-    0
-  );
+  const cartItems = useCartStore((state) => state.items);
+  const wishlistItems = useWishlistStore((state) => state.items);
+
+  const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+  const wishlistCount = wishlistItems.length;
+
+  const navigateToSearch = () => {
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
+      setSearchQuery("");
+    }
+  };
+
+  const handleSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") navigateToSearch();
+  };
 
   return (
     <AppBar
       position="sticky"
-      elevation={1}
+      elevation={0}
       sx={{
-        bgcolor: "#2874F0",
+        bgcolor: "background.paper",
+        borderBottom: "1px solid",
+        borderColor: "divider",
       }}
     >
       <Toolbar
@@ -46,42 +64,47 @@ export default function Navbar() {
           gap: 2,
         }}
       >
-        {/* Logo */}
-
-        <Link
-          href="/"
-          style={{
-            textDecoration: "none",
-            color: "inherit",
-          }}
-        >
+        <Link href="/" style={{ textDecoration: "none" }}>
           <Typography
             variant="h5"
             sx={{
-              fontWeight: 700,
-              color: "#fff",
+              fontWeight: 800,
+              color: "secondary.main",
             }}
           >
             NextCart
           </Typography>
         </Link>
 
-        {/* Search */}
-
         <Box sx={{ flex: 1 }}>
           <TextField
             fullWidth
             size="small"
             placeholder="Search for Products, Brands and More"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyPress={handleSearchKey}
             sx={{
-              bgcolor: "#fff",
+              bgcolor: "#1B2440",
               borderRadius: 1,
+              "& .MuiOutlinedInput-root": {
+                color: "text.primary",
+                "& fieldset": { borderColor: "transparent" },
+                "&:hover fieldset": { borderColor: "divider" },
+                "&.Mui-focused fieldset": { borderColor: "primary.main" },
+              },
+              "& .MuiInputBase-input::placeholder": {
+                color: "text.secondary",
+                opacity: 1,
+              },
             }}
             slotProps={{
               input: {
                 endAdornment: (
                   <InputAdornment position="end">
-                    <SearchIcon color="primary" />
+                    <IconButton size="small" onClick={navigateToSearch} edge="end">
+                      <SearchIcon sx={{ color: "text.secondary" }} />
+                    </IconButton>
                   </InputAdornment>
                 ),
               },
@@ -89,45 +112,35 @@ export default function Navbar() {
           />
         </Box>
 
-        {/* Login */}
-
         <Button
           variant="contained"
           sx={{
-            bgcolor: "#fff",
-            color: "#2874F0",
+            bgcolor: "secondary.main",
+            color: "secondary.contrastText",
             fontWeight: 700,
+            "&:hover": { bgcolor: "secondary.dark" },
           }}
         >
           Login
         </Button>
 
-        {/* Wishlist */}
+        <Link href="/wishlist" style={{ color: "inherit" }}>
+          <IconButton sx={{ color: "text.primary" }}>
+            <Badge badgeContent={wishlistCount} color="error">
+              <FavoriteBorderIcon />
+            </Badge>
+          </IconButton>
+        </Link>
 
-        <IconButton color="inherit">
-          <Badge badgeContent={0} color="error">
-            <FavoriteBorderIcon />
-          </Badge>
-        </IconButton>
-
-        {/* Cart */}
-
-        <Link
-          href="/cart"
-          style={{
-            color: "inherit",
-          }}
-        >
-          <IconButton color="inherit">
+        <Link href="/cart" style={{ color: "inherit" }}>
+          <IconButton sx={{ color: "text.primary" }}>
             <Badge badgeContent={cartCount} color="error">
               <ShoppingCartIcon />
             </Badge>
           </IconButton>
         </Link>
 
-        {/* Profile */}
-
-        <IconButton color="inherit">
+        <IconButton sx={{ color: "text.primary" }}>
           <PersonOutlineIcon />
         </IconButton>
       </Toolbar>

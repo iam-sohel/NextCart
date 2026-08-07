@@ -2,12 +2,12 @@
 
 import { Grid } from "@mui/material";
 import ProductCard from "./ProductCard";
-import products, { Product } from "@/data/products";
+import products from "@/data/products";
 
 export default function ProductGrid() {
   return (
     <Grid container spacing={3}>
-      {products.map((product: Product) => (
+      {products.map((product) => (
         <Grid
           key={product.id}
           size={{
@@ -18,7 +18,8 @@ export default function ProductGrid() {
           }}
         >
           <ProductCard
-            slug={product.slug}
+  id={product.id}
+  slug={product.slug}
             image={product.image}
             title={product.title}
             price={`₹${product.price.toLocaleString()}`}
