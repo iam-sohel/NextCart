@@ -7,7 +7,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class NextcartBackendApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(NextcartBackendApplication.class, args);
+		System.out.println("Nextcart Backend Application started.");
+		//SpringApplication.run(NextcartBackendApplication.class, args);
 	}
 
 }
