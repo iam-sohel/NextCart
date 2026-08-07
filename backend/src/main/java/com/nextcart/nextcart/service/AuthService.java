@@ -12,6 +12,7 @@ import com.nextcart.nextcart.entity.User;
 import com.nextcart.nextcart.entity.Role;
 import com.nextcart.nextcart.dto.LoginRequest;
 import com.nextcart.nextcart.dto.LoginResponse;
+import com.nextcart.nextcart.security.JwtUtil;
 
 @Service
 public class AuthService {
@@ -21,17 +22,20 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final ModelMapper modelMapper;
     private final RoleRepository roleRepository;
+    private final JwtUtil jwtUtil;
 
-    public AuthService(UserRepository userRepository,
+ public AuthService(UserRepository userRepository,
                    RoleRepository roleRepository,
                    PasswordEncoder passwordEncoder,
-                   ModelMapper modelMapper) {
+                   ModelMapper modelMapper,
+                   JwtUtil jwtUtil) {
 
-        this.userRepository = userRepository;
-        this.roleRepository = roleRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.modelMapper = modelMapper;
-    }
+    this.userRepository = userRepository;
+    this.roleRepository = roleRepository;
+    this.passwordEncoder = passwordEncoder;
+    this.modelMapper = modelMapper;
+    this.jwtUtil = jwtUtil;
+}
 
 public RegisterResponse register(RegisterRequest request) {
 
@@ -68,6 +72,16 @@ userRepository.save(user);
 }
     
 public LoginResponse login(LoginRequest request) {
-    return new LoginResponse("JWT_TOKEN", "Login successful");
+
+    User user = userRepository.findByEmail(request.getEmail())
+            .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+
+    if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+        throw new RuntimeException("Invalid email or password");
+    }
+
+    String token = jwtUtil.generateToken(user.getEmail());
+
+    return new LoginResponse(token, "Login successful");
 }
 }

@@ -8,8 +8,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/users")
 public class UserController {
 
-    @GetMapping("/me")
-    public String currentUser() {
-        return "Current User";
-    }
+@GetMapping("/me")
+public String currentUser() {
+    return "Authenticated User";
+}
 }
