@@ -43,7 +43,7 @@ export default function WishlistPage() {
             textAlign: "center",
           }}
         >
-          <Typography variant="h4" fontWeight={700}>
+          <Typography variant="h4" sx={{ fontWeight: 700 }}>
             Your Wishlist is Empty
           </Typography>
 
@@ -78,8 +78,7 @@ export default function WishlistPage() {
       <Container maxWidth="xl" sx={{ py: 5 }}>
         <Typography
           variant="h4"
-          fontWeight={700}
-          mb={4}
+          sx={{ fontWeight: 700, mb: 4 }}
         >
           My Wishlist ({items.length})
         </Typography>
@@ -113,15 +112,14 @@ export default function WishlistPage() {
                 <Box sx={{ flex: 1 }}>
                   <Typography
                     variant="h6"
-                    fontWeight={700}
+                    sx={{ fontWeight: 700 }}
                   >
                     {item.title}
                   </Typography>
 
                   <Typography
                     color="primary"
-                    fontWeight={700}
-                    mt={1}
+                    sx={{ fontWeight: 700, mt: 1 }}
                   >
                     ₹{item.price.toLocaleString()}
                   </Typography>
@@ -133,6 +131,7 @@ export default function WishlistPage() {
                   onClick={() =>
                     addToCart({
                       id: item.id,
+                      slug: item.slug,
                       title: item.title,
                       image: item.image,
                       price: item.price,

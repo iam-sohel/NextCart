@@ -19,8 +19,7 @@ export default function ProductOffers() {
     <Paper sx={{ p: 3, mt: 4 }}>
       <Typography
         variant="h6"
-        fontWeight={700}
-        mb={2}
+        sx={{ fontWeight: 700, mb: 2 }}
       >
         Available Offers
       </Typography>

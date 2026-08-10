@@ -6,11 +6,13 @@ export default function searchProducts(query: string) {
   const search = query.toLowerCase();
 
   return products.filter((product) => {
+    const keywords = product.keywords ?? [];
+
     return (
       product.title.toLowerCase().includes(search) ||
       product.brand.toLowerCase().includes(search) ||
       product.category.toLowerCase().includes(search) ||
-      product.keywords.some((keyword) =>
+      keywords.some((keyword) =>
         keyword.toLowerCase().includes(search)
       )
     );

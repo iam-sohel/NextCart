@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Grid,
   Typography,
@@ -55,7 +55,7 @@ export default function ProductDetailsClient({
   return (
     <Grid container spacing={5}>
       {/* Product Image */}
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <Box
           sx={{
             display: "flex",
@@ -78,7 +78,7 @@ export default function ProductDetailsClient({
       </Grid>
 
       {/* Product Info */}
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <Typography variant="caption" color="text.secondary">
           {product.brand}
         </Typography>

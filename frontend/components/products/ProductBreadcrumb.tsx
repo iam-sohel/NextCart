@@ -4,8 +4,10 @@ import Link from "next/link";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import { Breadcrumbs, Typography } from "@mui/material";
 
+import type { Product } from "@/types/product";
+
 interface Props {
-  product: any;
+  product: Product;
 }
 
 export default function ProductBreadcrumb({ product }: Props) {

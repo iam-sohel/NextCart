@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 
 import {
@@ -18,7 +18,6 @@ import {
   Select,
   Button,
   Pagination,
-  CircularProgress,
 } from "@mui/material";
 
 import Header from "@/components/layout/Header";
@@ -28,6 +27,14 @@ import useSearchStore from "@/store/searchStore";
 import products from "@/data/products";
 
 export default function SearchPage() {
+  return (
+    <Suspense fallback={null}>
+      <SearchPageContent />
+    </Suspense>
+  );
+}
+
+function SearchPageContent() {
   const searchParams = useSearchParams();
   const query = searchParams.get("q") || "";
 
@@ -83,7 +90,7 @@ export default function SearchPage() {
 
         <Grid container spacing={3}>
           {/* Sidebar - Filters */}
-          <Grid item xs={12} md={3}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <Card>
               <CardContent>
                 {/* Clear Filters Button */}
@@ -176,7 +183,7 @@ export default function SearchPage() {
           </Grid>
 
           {/* Main Content - Results */}
-          <Grid item xs={12} md={9}>
+          <Grid size={{ xs: 12, md: 9 }}>
             {/* Sorting */}
             {totalResults > 0 && (
               <Box
@@ -214,7 +221,7 @@ export default function SearchPage() {
               <>
                 <Grid container spacing={2} sx={{ mb: 4 }}>
                   {paginatedResults.map((product) => (
-                    <Grid item xs={12} sm={6} md={4} key={product.id}>
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }} key={product.id}>
                       <ProductCard
                         id={product.id}
                         slug={product.slug}

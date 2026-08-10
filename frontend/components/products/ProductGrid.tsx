@@ -18,11 +18,12 @@ export default function ProductGrid() {
           }}
         >
           <ProductCard
-  id={product.id}
-  slug={product.slug}
+            id={product.id}
+            slug={product.slug}
             image={product.image}
             title={product.title}
-            price={`₹${product.price.toLocaleString()}`}
+            price={product.price}
+            originalPrice={product.originalPrice}
             offer={`${product.discount}% OFF`}
             rating={product.rating}
             brand={product.brand}

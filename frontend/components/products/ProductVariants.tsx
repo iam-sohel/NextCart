@@ -21,15 +21,15 @@ const storage = [
 
 export default function ProductVariants() {
   return (
-    <Box mt={4}>
+    <Box sx={{ mt: 4 }}>
       <Typography
         variant="h6"
-        fontWeight={700}
+        sx={{ fontWeight: 700 }}
       >
         Choose Variant
       </Typography>
 
-      <Typography mt={3} mb={1}>
+      <Typography sx={{ mt: 3, mb: 1 }}>
         Color
       </Typography>
 
@@ -45,7 +45,7 @@ export default function ProductVariants() {
         ))}
       </Stack>
 
-      <Typography mt={3} mb={1}>
+      <Typography sx={{ mt: 3, mb: 1 }}>
         Storage
       </Typography>
 

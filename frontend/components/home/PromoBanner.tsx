@@ -25,7 +25,7 @@ export default function PromoBanner() {
     <Container maxWidth="xl" sx={{ py: 5 }}>
       <Grid container spacing={3}>
         {promos.map((promo) => (
-          <Grid item key={promo.title} xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }} key={promo.title}>
             <Paper
               elevation={3}
               sx={{

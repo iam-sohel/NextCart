@@ -9,8 +9,10 @@ import {
   Paper,
 } from "@mui/material";
 
+import type { Product } from "@/types/product";
+
 interface Props {
-  product: any;
+  product: Product;
 }
 
 export default function ProductGallery({
@@ -53,7 +55,7 @@ export default function ProductGallery({
       <Stack
         direction="row"
         spacing={2}
-        mt={2}
+        sx={{ mt: 2 }}
       >
         {(product.images || [product.image]).map(
           (img: string) => (

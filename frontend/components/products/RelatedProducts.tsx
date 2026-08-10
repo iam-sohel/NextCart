@@ -36,11 +36,10 @@ export default function RelatedProducts({
   }
 
   return (
-    <Box mt={8}>
+    <Box sx={{ mt: 8 }}>
       <Typography
         variant="h5"
-        fontWeight={700}
-        mb={3}
+        sx={{ fontWeight: 700, mb: 3 }}
       >
         Related Products
       </Typography>
@@ -87,7 +86,7 @@ export default function RelatedProducts({
                 </Box>
 
                 <Typography
-                  fontWeight={600}
+                  sx={{ fontWeight: 600 }}
                   gutterBottom
                 >
                   {product.title}
@@ -95,8 +94,7 @@ export default function RelatedProducts({
 
                 <Typography
                   color="primary"
-                  fontWeight={700}
-                  mb={2}
+                  sx={{ fontWeight: 700, mb: 2 }}
                 >
                   ₹{product.price.toLocaleString()}
                 </Typography>
