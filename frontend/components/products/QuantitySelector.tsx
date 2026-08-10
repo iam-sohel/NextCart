@@ -15,10 +15,9 @@ export default function QuantitySelector() {
     <Stack
       direction="row"
       spacing={2}
-      alignItems="center"
-      mt={4}
+      sx={{ alignItems: "center", mt: 4 }}
     >
-      <Typography fontWeight={600}>
+      <Typography sx={{ fontWeight: 600 }}>
         Quantity
       </Typography>
 

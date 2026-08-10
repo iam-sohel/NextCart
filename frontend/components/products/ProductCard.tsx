@@ -26,8 +26,8 @@ interface ProductCardProps {
   slug: string;
   image: string;
   title: string;
-  price: number;
-  originalPrice?: number;
+  price: number | string;
+  originalPrice?: number | string;
   offer: string;
   rating?: number;
   reviews?: number;
@@ -59,7 +59,7 @@ export default function ProductCard({
 
   const handleAddToCart = () => {
     setIsAdding(true);
-    addToCart({ id, slug, title, image, price, quantity: 1 });
+    addToCart({ id, slug, title, image, price: Number(price), quantity: 1 });
     setTimeout(() => setIsAdding(false), 300);
   };
 
@@ -72,8 +72,8 @@ export default function ProductCard({
         slug,
         title,
         image,
-        price,
-        originalPrice: originalPrice ?? price,
+        price: Number(price),
+        originalPrice: originalPrice !== undefined ? Number(originalPrice) : Number(price),
         brand,
       });
     }
@@ -238,7 +238,7 @@ export default function ProductCard({
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, my: 1 }}>
           <StarIcon sx={{ fontSize: 16, color: "secondary.main" }} />
-          <Typography variant="body2" fontWeight={700}>
+          <Typography variant="body2" sx={{ fontWeight: 700 }}>
             {rating.toFixed(1)}
           </Typography>
           <Typography variant="caption" color="text.secondary">
@@ -278,7 +278,7 @@ export default function ProductCard({
             ₹{price.toLocaleString()}
           </Box>
 
-          {originalPrice && originalPrice > price && (
+          {originalPrice !== undefined && Number(originalPrice) > Number(price) && (
             <Typography
               variant="body2"
               sx={{
@@ -286,7 +286,7 @@ export default function ProductCard({
                 color: "text.secondary",
               }}
             >
-              ₹{originalPrice.toLocaleString()}
+              ₹{Number(originalPrice).toLocaleString()}
             </Typography>
           )}
         </Box>

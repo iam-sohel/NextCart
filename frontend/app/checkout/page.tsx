@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -48,27 +48,7 @@ export default function CheckoutPage() {
   const shipping = 0;
   const total = subtotal + shipping;
 
-  if (items.length === 0) {
-    return (
-      <>
-        <Header />
-        <Container maxWidth="md" sx={{ py: 10, textAlign: "center" }}>
-          <Typography variant="h4" fontWeight={700}>
-            Your Cart is Empty
-          </Typography>
-          <Typography sx={{ mt: 2, color: "text.secondary" }}>
-            Add items to your cart before checking out.
-          </Typography>
-          <Button component={Link} href="/" variant="contained" size="large" sx={{ mt: 4 }}>
-            Continue Shopping
-          </Button>
-        </Container>
-        <Footer />
-      </>
-    );
-  }
-
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = useCallback(() => {
     if (!fullName || !phone || !addressLine || !city || !state || !pincode) {
       setError("Please fill in all address fields.");
       return;
@@ -103,14 +83,34 @@ export default function CheckoutPage() {
 
     clearCart();
     router.push(`/order-success?orderId=${orderId}`);
-  };
+  }, [items, fullName, phone, addressLine, city, state, pincode, paymentMethod, subtotal, shipping, total, addOrder, clearCart, router]);
+
+  if (items.length === 0) {
+    return (
+      <>
+        <Header />
+        <Container maxWidth="md" sx={{ py: 10, textAlign: "center" }}>
+          <Typography variant="h4" sx={{ fontWeight: 700 }}>
+            Your Cart is Empty
+          </Typography>
+          <Typography sx={{ mt: 2, color: "text.secondary" }}>
+            Add items to your cart before checking out.
+          </Typography>
+          <Button component={Link} href="/" variant="contained" size="large" sx={{ mt: 4 }}>
+            Continue Shopping
+          </Button>
+        </Container>
+        <Footer />
+      </>
+    );
+  }
 
   return (
     <>
       <Header />
 
       <Container maxWidth="xl" sx={{ py: 5 }}>
-        <Typography variant="h4" fontWeight={700} sx={{ mb: 4 }}>
+        <Typography variant="h4" sx={{ fontWeight: 700, mb: 4 }}>
           Checkout
         </Typography>
 
@@ -125,12 +125,12 @@ export default function CheckoutPage() {
           <Box>
             <Card sx={{ borderRadius: 3, mb: 3 }}>
               <CardContent>
-                <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
                   Delivery Address
                 </Typography>
 
                 <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       fullWidth
                       label="Full Name"
@@ -138,7 +138,7 @@ export default function CheckoutPage() {
                       onChange={(e) => setFullName(e.target.value)}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       fullWidth
                       label="Phone Number"
@@ -146,7 +146,7 @@ export default function CheckoutPage() {
                       onChange={(e) => setPhone(e.target.value)}
                     />
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <TextField
                       fullWidth
                       label="Address"
@@ -154,7 +154,7 @@ export default function CheckoutPage() {
                       onChange={(e) => setAddressLine(e.target.value)}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={4}>
+                  <Grid size={{ xs: 12, sm: 4 }}>
                     <TextField
                       fullWidth
                       label="City"
@@ -162,7 +162,7 @@ export default function CheckoutPage() {
                       onChange={(e) => setCity(e.target.value)}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={4}>
+                  <Grid size={{ xs: 12, sm: 4 }}>
                     <TextField
                       fullWidth
                       label="State"
@@ -170,7 +170,7 @@ export default function CheckoutPage() {
                       onChange={(e) => setState(e.target.value)}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={4}>
+                  <Grid size={{ xs: 12, sm: 4 }}>
                     <TextField
                       fullWidth
                       label="Pincode"
@@ -184,7 +184,7 @@ export default function CheckoutPage() {
 
             <Card sx={{ borderRadius: 3 }}>
               <CardContent>
-                <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
                   Payment Method
                 </Typography>
 
@@ -220,7 +220,7 @@ export default function CheckoutPage() {
             }}
           >
             <CardContent>
-              <Typography variant="h5" fontWeight={700}>
+              <Typography variant="h5" sx={{ fontWeight: 700 }}>
                 Order Summary
               </Typography>
 
@@ -239,14 +239,14 @@ export default function CheckoutPage() {
                     style={{ objectFit: "contain" }}
                   />
                   <Box sx={{ flex: 1 }}>
-                    <Typography variant="body2" fontWeight={600}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       {item.title}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                       Qty: {item.quantity}
                     </Typography>
                   </Box>
-                  <Typography variant="body2" fontWeight={600}>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     ₹{(item.price * item.quantity).toLocaleString()}
                   </Typography>
                 </Box>
@@ -254,25 +254,25 @@ export default function CheckoutPage() {
 
               <Divider sx={{ my: 2 }} />
 
-              <Box display="flex" justifyContent="space-between" mb={2}>
+              <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
                 <Typography>Subtotal</Typography>
-                <Typography fontWeight={600}>
+                <Typography sx={{ fontWeight: 600 }}>
                   ₹{subtotal.toLocaleString()}
                 </Typography>
               </Box>
 
-              <Box display="flex" justifyContent="space-between" mb={2}>
+              <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
                 <Typography>Shipping</Typography>
                 <Typography color="success.main">FREE</Typography>
               </Box>
 
               <Divider sx={{ my: 3 }} />
 
-              <Box display="flex" justifyContent="space-between">
-                <Typography variant="h6" fontWeight={700}>
+              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
                   Total
                 </Typography>
-                <Typography variant="h6" fontWeight={700}>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
                   ₹{total.toLocaleString()}
                 </Typography>
               </Box>

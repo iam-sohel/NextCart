@@ -8,7 +8,7 @@ interface Product {
   slug: string;
   title: string;
   image: string;
-  price: string;
+  price: number | string;
   offer: string;
   rating?: number;
   brand?: string;
@@ -62,6 +62,7 @@ export default function ProductRow({
         {products.map((product) => (
           <ProductCard
             key={product.id}
+            id={product.id}
             slug={product.slug}
             image={product.image}
             title={product.title}

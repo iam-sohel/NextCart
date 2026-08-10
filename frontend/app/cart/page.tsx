@@ -53,12 +53,12 @@ export default function CartPage() {
             textAlign: "center",
           }}
         >
-          <Typography variant="h4" fontWeight={700}>
+          <Typography variant="h4" sx={{ fontWeight: 700 }}>
             Your Cart is Empty
           </Typography>
 
           <Typography sx={{ mt: 2, color: "text.secondary" }}>
-            Looks like you haven't added any products yet.
+            Looks like you haven&apos;t added any products yet.
           </Typography>
 
           <Button
@@ -89,8 +89,7 @@ export default function CartPage() {
       <Container maxWidth="xl" sx={{ py: 5 }}>
         <Typography
           variant="h4"
-          fontWeight={700}
-          sx={{ mb: 4 }}
+          sx={{ fontWeight: 700, mb: 4 }}
         >
           Shopping Cart ({items.length})
         </Typography>
@@ -147,7 +146,7 @@ export default function CartPage() {
                       >
                         <Typography
                           variant="h6"
-                          fontWeight={700}
+                          sx={{ fontWeight: 700 }}
                         >
                           {item.title}
                         </Typography>
@@ -245,7 +244,7 @@ export default function CartPage() {
             <CardContent>
               <Typography
                 variant="h5"
-                fontWeight={700}
+                sx={{ fontWeight: 700 }}
               >
                 Order Summary
               </Typography>
@@ -253,21 +252,25 @@ export default function CartPage() {
               <Divider sx={{ my: 3 }} />
 
               <Box
-                display="flex"
-                justifyContent="space-between"
-                mb={2}
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  mb: 2,
+                }}
               >
                 <Typography>Subtotal</Typography>
 
-                <Typography fontWeight={600}>
+                <Typography sx={{ fontWeight: 600 }}>
                   ₹{subtotal.toLocaleString()}
                 </Typography>
               </Box>
 
               <Box
-                display="flex"
-                justifyContent="space-between"
-                mb={2}
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  mb: 2,
+                }}
               >
                 <Typography>Discount</Typography>
 
@@ -277,9 +280,11 @@ export default function CartPage() {
               </Box>
 
               <Box
-                display="flex"
-                justifyContent="space-between"
-                mb={2}
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  mb: 2,
+                }}
               >
                 <Typography>Shipping</Typography>
 
@@ -291,19 +296,21 @@ export default function CartPage() {
               <Divider sx={{ my: 3 }} />
 
               <Box
-                display="flex"
-                justifyContent="space-between"
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                }}
               >
                 <Typography
                   variant="h6"
-                  fontWeight={700}
+                  sx={{ fontWeight: 700 }}
                 >
                   Total
                 </Typography>
 
                 <Typography
                   variant="h6"
-                  fontWeight={700}
+                  sx={{ fontWeight: 700 }}
                 >
                   ₹{total.toLocaleString()}
                 </Typography>

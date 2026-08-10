@@ -2,10 +2,19 @@
 
 import { Box } from "@mui/material";
 import ProductCard from "./ProductCard";
-import { Product } from "@/types/product";
+
+interface CarouselProduct {
+  id: number;
+  slug: string;
+  title: string;
+  image: string;
+  price: number | string;
+  offer?: string;
+  discount?: number;
+}
 
 interface Props {
-  products: Product[];
+  products: CarouselProduct[];
 }
 
 export default function ProductCarousel({ products }: Props) {
@@ -30,11 +39,14 @@ export default function ProductCarousel({ products }: Props) {
           }}
         >
           <ProductCard
+            id={product.id}
             slug={product.slug}
             image={product.image}
             title={product.title}
-            price={`₹${product.price.toLocaleString()}`}
-            offer={`${product.discount}% OFF`}
+            price={typeof product.price === "number"
+              ? `₹${product.price.toLocaleString()}`
+              : product.price}
+            offer={product.offer ?? `${product.discount ?? 0}% OFF`}
           />
         </Box>
       ))}
