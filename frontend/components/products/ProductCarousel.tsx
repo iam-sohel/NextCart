@@ -39,15 +39,13 @@ export default function ProductCarousel({ products }: Props) {
           }}
         >
           <ProductCard
-            id={product.id}
-            slug={product.slug}
-            image={product.image}
-            title={product.title}
-            price={typeof product.price === "number"
-              ? `₹${product.price.toLocaleString()}`
-              : product.price}
-            offer={product.offer ?? `${product.discount ?? 0}% OFF`}
-          />
+  id={product.id}
+  slug={product.slug}
+  image={product.image}
+  title={product.title}
+  price={product.price}
+  offer={product.offer ?? `${product.discount ?? 0}% OFF`}
+/>
         </Box>
       ))}
     </Box>

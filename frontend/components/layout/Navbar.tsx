@@ -23,6 +23,7 @@ import PersonOutlineIcon from "@mui/icons-material/Person";
 
 import useCartStore from "@/store/cartStore";
 import useWishlistStore from "@/store/wishlistStore";
+import useAuthStore from "@/store/authStore";
 
 export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -30,7 +31,10 @@ export default function Navbar() {
 
   const cartItems = useCartStore((state) => state.items);
   const wishlistItems = useWishlistStore((state) => state.items);
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
 
+  const isAuthenticated = Boolean(user);
   const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
   const wishlistCount = wishlistItems.length;
 
@@ -43,6 +47,13 @@ export default function Navbar() {
 
   const handleSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") navigateToSearch();
+  };
+
+  const handleLogout = () => {
+    logout();
+    // Drop the user back on the home page. Cart/wishlist are guest-friendly
+    // and intentionally preserved so a logged-out session can resume later.
+    router.push("/");
   };
 
   return (
@@ -113,6 +124,8 @@ export default function Navbar() {
         </Box>
 
         <Button
+          component={Link}
+          href={isAuthenticated ? "/account" : "/login"}
           variant="contained"
           sx={{
             bgcolor: "secondary.main",
@@ -121,11 +134,11 @@ export default function Navbar() {
             "&:hover": { bgcolor: "secondary.dark" },
           }}
         >
-          Login
+          {isAuthenticated ? "Account" : "Login"}
         </Button>
 
         <Link href="/wishlist" style={{ color: "inherit" }}>
-          <IconButton sx={{ color: "text.primary" }}>
+          <IconButton sx={{ color: "text.primary" }} aria-label="Wishlist">
             <Badge badgeContent={wishlistCount} color="error">
               <FavoriteBorderIcon />
             </Badge>
@@ -133,16 +146,37 @@ export default function Navbar() {
         </Link>
 
         <Link href="/cart" style={{ color: "inherit" }}>
-          <IconButton sx={{ color: "text.primary" }}>
+          <IconButton sx={{ color: "text.primary" }} aria-label="Cart">
             <Badge badgeContent={cartCount} color="error">
               <ShoppingCartIcon />
             </Badge>
           </IconButton>
         </Link>
 
-        <IconButton sx={{ color: "text.primary" }}>
-          <PersonOutlineIcon />
-        </IconButton>
+        {isAuthenticated ? (
+          <Button
+            onClick={handleLogout}
+            variant="text"
+            sx={{
+              color: "text.secondary",
+              fontWeight: 600,
+              minHeight: 36,
+              px: 1.25,
+            }}
+            aria-label="Sign out"
+          >
+            Sign Out
+          </Button>
+        ) : (
+          <IconButton
+            component={Link}
+            href="/login"
+            sx={{ color: "text.primary" }}
+            aria-label="Account"
+          >
+            <PersonOutlineIcon />
+          </IconButton>
+        )}
       </Toolbar>
     </AppBar>
   );

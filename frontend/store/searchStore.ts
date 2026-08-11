@@ -20,7 +20,6 @@ interface SearchStore extends SearchFilters {
   totalPages: number;
   itemsPerPage: number;
 
-  // Actions
   search: (query: string) => void;
   setCategory: (category: string | null) => void;
   setBrand: (brand: string | null) => void;
@@ -30,36 +29,46 @@ interface SearchStore extends SearchFilters {
   clearFilters: () => void;
 }
 
-// Helper function to filter products
 const filterProducts = (
   query: string,
   category: string | null,
   brand: string | null,
   priceRange: { min: number; max: number }
 ): Product[] => {
+  const normalizedQuery = query.trim().toLowerCase();
+
   return products.filter((product) => {
-    // Match query (title, brand, category)
+    const keywords = product.keywords ?? [];
+
     const matchesQuery =
-      query === "" ||
-      product.title.toLowerCase().includes(query.toLowerCase()) ||
-      product.brand.toLowerCase().includes(query.toLowerCase()) ||
-      product.category.toLowerCase().includes(query.toLowerCase());
+      normalizedQuery === "" ||
+      product.title.toLowerCase().includes(normalizedQuery) ||
+      product.brand.toLowerCase().includes(normalizedQuery) ||
+      product.category.toLowerCase().includes(normalizedQuery) ||
+      product.description.toLowerCase().includes(normalizedQuery) ||
+      keywords.some((keyword) =>
+        keyword.toLowerCase().includes(normalizedQuery)
+      );
 
-    // Match category filter
-    const matchesCategory = !category || product.category === category;
+    const matchesCategory =
+      !category || product.category === category;
 
-    // Match brand filter
-    const matchesBrand = !brand || product.brand === brand;
+    const matchesBrand =
+      !brand || product.brand === brand;
 
-    // Match price range
     const matchesPrice =
-      product.price >= priceRange.min && product.price <= priceRange.max;
+      product.price >= priceRange.min &&
+      product.price <= priceRange.max;
 
-    return matchesQuery && matchesCategory && matchesBrand && matchesPrice;
+    return (
+      matchesQuery &&
+      matchesCategory &&
+      matchesBrand &&
+      matchesPrice
+    );
   });
 };
 
-// Helper function to sort products
 const sortProducts = (
   productsToSort: Product[],
   sortBy: string
@@ -70,18 +79,21 @@ const sortProducts = (
     case "price-low":
       sorted.sort((a, b) => a.price - b.price);
       break;
+
     case "price-high":
       sorted.sort((a, b) => b.price - a.price);
       break;
+
     case "rating":
       sorted.sort((a, b) => b.rating - a.rating);
       break;
+
     case "newest":
       sorted.sort((a, b) => b.id - a.id);
       break;
+
     case "relevance":
     default:
-      // Keep original order
       break;
   }
 
@@ -89,22 +101,23 @@ const sortProducts = (
 };
 
 const useSearchStore = create<SearchStore>((set, get) => ({
-  // Initial state
   query: "",
   results: [],
   totalResults: 0,
   totalPages: 0,
   itemsPerPage: 12,
+
   selectedCategory: null,
   selectedBrand: null,
+
   priceRange: {
     min: 0,
     max: 100000,
   },
+
   sortBy: "relevance",
   currentPage: 1,
 
-  // Search action
   search: (query) =>
     set((state) => {
       const filtered = filterProducts(
@@ -113,20 +126,26 @@ const useSearchStore = create<SearchStore>((set, get) => ({
         state.selectedBrand,
         state.priceRange
       );
-      const sorted = sortProducts(filtered, state.sortBy);
+
+      const sorted = sortProducts(
+        filtered,
+        state.sortBy
+      );
+
       const totalResults = sorted.length;
-      const totalPages = Math.ceil(totalResults / state.itemsPerPage);
+      const totalPages = Math.ceil(
+        totalResults / state.itemsPerPage
+      );
 
       return {
         query,
         results: sorted,
         totalResults,
         totalPages,
-        currentPage: 1, // Reset to page 1 when searching
+        currentPage: 1,
       };
     }),
 
-  // Set category filter
   setCategory: (category) =>
     set((state) => {
       const filtered = filterProducts(
@@ -135,20 +154,26 @@ const useSearchStore = create<SearchStore>((set, get) => ({
         state.selectedBrand,
         state.priceRange
       );
-      const sorted = sortProducts(filtered, state.sortBy);
+
+      const sorted = sortProducts(
+        filtered,
+        state.sortBy
+      );
+
       const totalResults = sorted.length;
-      const totalPages = Math.ceil(totalResults / state.itemsPerPage);
+      const totalPages = Math.ceil(
+        totalResults / state.itemsPerPage
+      );
 
       return {
         selectedCategory: category,
         results: sorted,
         totalResults,
         totalPages,
-        currentPage: 1, // Reset to page 1
+        currentPage: 1,
       };
     }),
 
-  // Set brand filter
   setBrand: (brand) =>
     set((state) => {
       const filtered = filterProducts(
@@ -157,20 +182,26 @@ const useSearchStore = create<SearchStore>((set, get) => ({
         brand,
         state.priceRange
       );
-      const sorted = sortProducts(filtered, state.sortBy);
+
+      const sorted = sortProducts(
+        filtered,
+        state.sortBy
+      );
+
       const totalResults = sorted.length;
-      const totalPages = Math.ceil(totalResults / state.itemsPerPage);
+      const totalPages = Math.ceil(
+        totalResults / state.itemsPerPage
+      );
 
       return {
         selectedBrand: brand,
         results: sorted,
         totalResults,
         totalPages,
-        currentPage: 1, // Reset to page 1
+        currentPage: 1,
       };
     }),
 
-  // Set price range filter
   setPriceRange: (min, max) =>
     set((state) => {
       const filtered = filterProducts(
@@ -179,38 +210,48 @@ const useSearchStore = create<SearchStore>((set, get) => ({
         state.selectedBrand,
         { min, max }
       );
-      const sorted = sortProducts(filtered, state.sortBy);
+
+      const sorted = sortProducts(
+        filtered,
+        state.sortBy
+      );
+
       const totalResults = sorted.length;
-      const totalPages = Math.ceil(totalResults / state.itemsPerPage);
+      const totalPages = Math.ceil(
+        totalResults / state.itemsPerPage
+      );
 
       return {
         priceRange: { min, max },
         results: sorted,
         totalResults,
         totalPages,
-        currentPage: 1, // Reset to page 1
+        currentPage: 1,
       };
     }),
 
-  // Set sorting
   setSortBy: (sortBy) =>
     set((state) => {
-      const sorted = sortProducts(state.results, sortBy);
+      const sorted = sortProducts(
+        state.results,
+        sortBy
+      );
 
       return {
         sortBy: sortBy as SearchStore["sortBy"],
         results: sorted,
-        currentPage: 1, // Reset to page 1
+        currentPage: 1,
       };
     }),
 
-  // Set current page
   setPage: (page) =>
     set({
-      currentPage: Math.max(1, Math.min(page, get().totalPages)),
+      currentPage: Math.max(
+        1,
+        Math.min(page, get().totalPages)
+      ),
     }),
 
-  // Clear all filters
   clearFilters: () =>
     set({
       query: "",
