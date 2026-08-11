@@ -1,4 +1,5 @@
 package com.nextcart.nextcart.service;
+
 import com.nextcart.nextcart.repository.RoleRepository;
 
 import org.modelmapper.ModelMapper;
@@ -17,71 +18,108 @@ import com.nextcart.nextcart.security.JwtUtil;
 @Service
 public class AuthService {
 
-
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final ModelMapper modelMapper;
     private final RoleRepository roleRepository;
     private final JwtUtil jwtUtil;
 
- public AuthService(UserRepository userRepository,
-                   RoleRepository roleRepository,
-                   PasswordEncoder passwordEncoder,
-                   ModelMapper modelMapper,
-                   JwtUtil jwtUtil) {
+    public AuthService(
+            UserRepository userRepository,
+            RoleRepository roleRepository,
+            PasswordEncoder passwordEncoder,
+            ModelMapper modelMapper,
+            JwtUtil jwtUtil) {
 
-    this.userRepository = userRepository;
-    this.roleRepository = roleRepository;
-    this.passwordEncoder = passwordEncoder;
-    this.modelMapper = modelMapper;
-    this.jwtUtil = jwtUtil;
-}
-
-public RegisterResponse register(RegisterRequest request) {
-
-    if (userRepository.existsByEmail(request.getEmail())) {
-        throw new RuntimeException("Email already registered");
+        this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.modelMapper = modelMapper;
+        this.jwtUtil = jwtUtil;
     }
 
-    User user = new User();
+    public RegisterResponse register(RegisterRequest request) {
 
-    user.setFirstName(request.getFirstName());
-    user.setLastName(request.getLastName());
-    user.setEmail(request.getEmail());
-    user.setPhone(request.getPhone());
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new RuntimeException("Email already registered");
+        }
 
-    user.setPassword(passwordEncoder.encode(request.getPassword()));
+        User user = new User();
 
-    Role role = roleRepository.findByName("CUSTOMER")
-        .orElseThrow(() -> new RuntimeException("Role CUSTOMER not found"));
+        user.setFirstName(request.getFirstName());
+        user.setLastName(request.getLastName());
+        user.setEmail(request.getEmail());
+        user.setPhone(request.getPhone());
 
-user.setRole(role);
-user.setEnabled(true);
+        user.setPassword(
+                passwordEncoder.encode(request.getPassword())
+        );
 
-userRepository.save(user);
+        Role role = roleRepository.findByName("CUSTOMER")
+                .orElseThrow(() ->
+                        new RuntimeException("Role CUSTOMER not found"));
 
-    RegisterResponse response = new RegisterResponse();
+        user.setRole(role);
+        user.setEnabled(true);
 
-    response.setId(user.getId());
-    response.setFirstName(user.getFirstName());
-    response.setLastName(user.getLastName());
-    response.setEmail(user.getEmail());
-    response.setMessage("User registered successfully");
+        userRepository.save(user);
 
-    return response;
-}
-    
-public LoginResponse login(LoginRequest request) {
+        RegisterResponse response = new RegisterResponse();
 
-    User user = userRepository.findByEmail(request.getEmail())
-            .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+        response.setId(user.getId());
+        response.setFirstName(user.getFirstName());
+        response.setLastName(user.getLastName());
+        response.setEmail(user.getEmail());
+        response.setMessage("User registered successfully");
 
-    if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-        throw new RuntimeException("Invalid email or password");
+        return response;
     }
 
-    String token = jwtUtil.generateToken(user.getEmail());
+    public LoginResponse login(LoginRequest request) {
 
-    return new LoginResponse(token, "Login successful");
-}
+        User user;
+
+        // Login using email
+        if (request.getEmail() != null
+                && !request.getEmail().isBlank()) {
+
+            user = userRepository.findByEmail(request.getEmail())
+                    .orElseThrow(() ->
+                            new RuntimeException(
+                                    "Invalid email or password"));
+        }
+
+        // Login using phone
+        else if (request.getPhone() != null
+                && !request.getPhone().isBlank()) {
+
+            user = userRepository.findByPhone(request.getPhone())
+                    .orElseThrow(() ->
+                            new RuntimeException(
+                                    "Invalid phone or password"));
+        }
+
+        // Neither email nor phone provided
+        else {
+            throw new RuntimeException(
+                    "Email or phone is required");
+        }
+
+        // Verify password
+        if (!passwordEncoder.matches(
+                request.getPassword(),
+                user.getPassword())) {
+
+            throw new RuntimeException(
+                    "Invalid credentials");
+        }
+
+        // Generate JWT
+        String token = jwtUtil.generateToken(user.getEmail());
+
+        return new LoginResponse(
+                token,
+                "Login successful"
+        );
+    }
 }
