@@ -8,6 +8,8 @@ interface WishlistItem {
   image: string;
   price: number;
   slug: string;
+  brand?: string;
+  originalPrice?: number;
 }
 
 interface WishlistStore {

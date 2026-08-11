@@ -8,6 +8,7 @@ import useCartStore from "@/store/cartStore";
 interface Props {
   product: {
     id: number;
+    slug: string;
     title: string;
     image: string;
     price: number;
@@ -26,6 +27,7 @@ export default function ProductActions({
   const handleAddToCart = () => {
     addToCart({
       id: product.id,
+      slug: product.slug,
       title: product.title,
       image: product.image,
       price: product.price,

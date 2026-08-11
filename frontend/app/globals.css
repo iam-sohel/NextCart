@@ -1,23 +1,89 @@
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────────────────────────
+   NEXTCART — GLOBAL CSS VARIABLES
+   ─────────────────────────────────────────────────────────────
+   These CSS variables mirror the MUI palette so non-MUI surfaces
+   (plain HTML, SVG, third-party widgets, future Tailwind utilities)
+   can read the same tokens the theme exposes.
+
+   Keep this file CONSERVATIVE. Component styling should still come
+   from MUI's theme (theme/index.ts). Only define a token here if
+   you're going to read it in plain CSS / SVG / a non-MUI element.
+   ───────────────────────────────────────────────────────────── */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Brand */
+  --nextcart-primary: #F15A29;        /* Orange — CTAs / focus / emphasis */
+  --nextcart-primary-hover: #C8421B;
+  --nextcart-primary-tint: rgba(241, 90, 41, 0.08);
+
+  /* Canvas */
+  --nextcart-background: #F4EFE6;     /* Warm cream — page canvas */
+  --nextcart-surface: #FFFFFF;        /* White — cards / panels / app bar */
+
+  /* Text */
+  --nextcart-text: #1F1B17;           /* Warm dark */
+  --nextcart-muted: #6B6259;          /* Muted warm brown */
+  --nextcart-disabled: rgba(31, 27, 23, 0.38);
+
+  /* Structural */
+  --nextcart-border: #E2D9CC;
+  --nextcart-radius-compact: 4px;
+  --nextcart-radius-default: 6px;
+  --nextcart-radius-soft: 8px;
+
+  /* Backwards-compatible aliases (legacy code may reference these) */
+  --background: var(--nextcart-background);
+  --foreground: var(--nextcart-text);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ─────────────────────────────────────────────────────────────
+   ELEMENT RESETS
+   ───────────────────────────────────────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--nextcart-background);
+  color: var(--nextcart-text);
+  font-family: var(--font-inter), "Inter", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   SMOOTH THEME-CHANGE TRANSITIONS
+   ─────────────────────────────────────────────────────────────
+   These make the page feel calm when theme values change. We only
+   transition colour-like properties (not layout) so transitions are
+   cheap.
+   ───────────────────────────────────────────────────────────── */
+
+body,
+body *,
+body *::before,
+body *::after {
+  transition: background-color 0.18s ease, color 0.18s ease,
+    border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+/* Opt-out: add `no-transitions` to <body> during initial paint to
+   avoid a flash of in-flight transitions. */
+body.no-transitions,
+body.no-transitions *,
+body.no-transitions *::before,
+body.no-transitions *::after {
+  transition: none !important;
 }

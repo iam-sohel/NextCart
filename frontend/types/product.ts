@@ -27,4 +27,9 @@ export interface Product {
   color?: string;
   warranty?: string;
   delivery?: string;
+
+  // Optional rich fields populated by data/products.ts
+  highlights?: string[];
+  specifications?: Record<string, string>;
+  keywords?: string[];
 }

@@ -16,7 +16,7 @@ export default function DeliveryChecker() {
     <Paper sx={{ p: 3, mt: 4 }}>
       <Typography
         variant="h6"
-        fontWeight={700}
+        sx={{ fontWeight: 700 }}
         gutterBottom
       >
         Delivery
@@ -25,17 +25,19 @@ export default function DeliveryChecker() {
       <Stack
         direction={{ xs: "column", sm: "row" }}
         spacing={2}
-        mt={2}
+        sx={{ mt: 2 }}
       >
         <TextField
           fullWidth
           placeholder="Enter Pincode"
-          InputProps={{
-            startAdornment: (
-              <LocationOnIcon
-                sx={{ mr: 1, color: "text.secondary" }}
-              />
-            ),
+          slotProps={{
+            input: {
+              startAdornment: (
+                <LocationOnIcon
+                  sx={{ mr: 1, color: "text.secondary" }}
+                />
+              ),
+            },
           }}
         />
 
@@ -47,10 +49,10 @@ export default function DeliveryChecker() {
         </Button>
       </Stack>
 
-      <Box mt={2}>
+      <Box sx={{ mt: 2 }}>
         <Typography
           color="success.main"
-          fontWeight={600}
+          sx={{ fontWeight: 600 }}
         >
           Delivery by Tomorrow
         </Typography>

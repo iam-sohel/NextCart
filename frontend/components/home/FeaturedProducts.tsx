@@ -29,10 +29,11 @@ export default function FeaturedProducts() {
             size={{ xs: 12, sm: 6, md: 3 }}
           >
             <ProductCard
+              id={product.id}
               slug={product.slug}
               image={product.image}
               title={product.title}
-              price={`₹${product.price.toLocaleString()}`}
+              price={product.price}
               offer={`${product.discount}% OFF`}
             />
           </Grid>

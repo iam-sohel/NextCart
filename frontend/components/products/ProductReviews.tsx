@@ -33,18 +33,18 @@ const reviews = [
 export default function ProductReviews() {
   return (
     <Paper sx={{ p: 4 }}>
-      <Typography variant="h5" fontWeight={700} mb={3}>
+      <Typography variant="h5" sx={{ fontWeight: 700, mb: 3 }}>
         Customer Reviews
       </Typography>
 
       <Stack spacing={3}>
         {reviews.map((review) => (
           <div key={review.id}>
-            <Stack direction="row" spacing={2} alignItems="center">
+            <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
               <Avatar>{review.name.charAt(0)}</Avatar>
 
               <div>
-                <Typography fontWeight={600}>
+                <Typography sx={{ fontWeight: 600 }}>
                   {review.name}
                 </Typography>
 
@@ -56,7 +56,7 @@ export default function ProductReviews() {
               </div>
             </Stack>
 
-            <Typography mt={2}>
+            <Typography sx={{ mt: 2 }}>
               {review.comment}
             </Typography>
 

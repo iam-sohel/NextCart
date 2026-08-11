@@ -67,8 +67,8 @@ export default function CategoryBar() {
                 <CardActionArea>
                   <Stack
                     spacing={1}
-                    alignItems="center"
                     sx={{
+                      alignItems: "center",
                       py: 2,
                       px: 1,
                     }}

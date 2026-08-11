@@ -11,8 +11,10 @@ import {
   Divider,
 } from "@mui/material";
 
+import type { Product } from "@/types/product";
+
 interface Props {
-  product: any;
+  product: Product;
 }
 
 export default function ProductSpecifications({
@@ -28,8 +30,7 @@ export default function ProductSpecifications({
       <CardContent>
         <Typography
           variant="h5"
-          fontWeight={700}
-          mb={3}
+          sx={{ fontWeight: 700, mb: 3 }}
         >
           Specifications
         </Typography>

@@ -32,6 +32,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
 
                         .requestMatchers(
+<<<<<<< HEAD
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**",
@@ -44,6 +45,20 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
 
                         .anyRequest().authenticated()
+=======
+                                "/api/v1/auth/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html"
+                        ).permitAll()
+
+                        .anyRequest().authenticated()
+                )
+                .httpBasic(Customizer.withDefaults())
+                .addFilterBefore(
+                        jwtAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class
+>>>>>>> fc922c98ba9a5a570868cc41e98af38eecf476be
                 );
 
         return http.build();
