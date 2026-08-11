@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="5d57d862-a11b-4afa-b941-5c6767af27d6" name="Changes" comment="" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Interface" />
+        <option value="Class" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MavenImportPreferences">
+    <option name="generalSettings">
+      <MavenGeneralSettings>
+        <option name="mavenHomeTypeForPersistence" value="WRAPPER" />
+      </MavenGeneralSettings>
+    </option>
+  </component>
+  <component name="McpProjectServerCommands">
+    <commands />
+    <urls />
+  </component>
+  <component name="NextEditCompletionFeaturesState">
+    <decayedCancelled>
+      <entry key="MS100" value="1.0" />
+      <entry key="MS500" value="1.0000306023082246" />
+      <entry key="S2" value="1.0743769810191683" />
+      <entry key="S5" value="1.353652791309369" />
+      <entry key="S10" value="1.5962815758710072" />
+      <entry key="S30" value="2.024958729295304" />
+      <entry key="S60" value="2.5230823048664353" />
+      <entry key="M2" value="3.058692198503446" />
+      <entry key="M5" value="3.6074052493068898" />
+      <entry key="M10" value="4.122697055675101" />
+      <entry key="M15" value="4.652593074138515" />
+      <entry key="M30" value="6.816751074571644" />
+      <entry key="H1" value="16.112930356905622" />
+      <entry key="H2" value="37.3854133995166" />
+      <entry key="H4" value="62.2486263969293" />
+      <entry key="D1" value="98.29664042394224" />
+      <entry key="W1" value="106.55191113906929" />
+    </decayedCancelled>
+    <decayedSelected>
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="0.0" />
+      <entry key="S5" value="0.0" />
+      <entry key="S10" value="3.1923693799185035E-275" />
+      <entry key="S30" value="1.0602446344741329E-91" />
+      <entry key="S60" value="8.934983424334544E-46" />
+      <entry key="M2" value="8.39256049407949E-23" />
+      <entry key="M5" value="5.30180822747304E-9" />
+      <entry key="M10" value="2.3266982757950237E-4" />
+      <entry key="M15" value="0.008764779462634658" />
+      <entry key="M30" value="0.36637738203743364" />
+      <entry key="H1" value="2.572287785639646" />
+      <entry key="H2" value="7.060018354933569" />
+      <entry key="H4" value="11.83085415565798" />
+      <entry key="D1" value="18.312494469010524" />
+      <entry key="W1" value="19.749404200281308" />
+    </decayedSelected>
+    <decayedShown>
+      <entry key="MS100" value="0.4829681644624228" />
+      <entry key="MS500" value="0.8645659032667645" />
+      <entry key="S2" value="1.0374392095664604" />
+      <entry key="S5" value="1.3369053448115569" />
+      <entry key="S10" value="1.5870742721492386" />
+      <entry key="S30" value="2.020655631663377" />
+      <entry key="S60" value="2.519718423955672" />
+      <entry key="M2" value="3.0562921430904146" />
+      <entry key="M5" value="3.6059817134482866" />
+      <entry key="M10" value="4.121729134468279" />
+      <entry key="M15" value="4.660188864111684" />
+      <entry key="M30" value="7.180858887325706" />
+      <entry key="H1" value="18.67813528493208" />
+      <entry key="H2" value="44.434644682358545" />
+      <entry key="H4" value="74.06982882658663" />
+      <entry key="D1" value="116.60649857654208" />
+      <entry key="W1" value="126.30090514745324" />
+    </decayedShown>
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 6
+}</component>
+  <component name="ProjectId" id="3HiExznZxub87jM3pKF1bHNYIkE" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Application.NextcartBackendApplication.executor": "Run",
+    "Application.Unnamed.executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.MCP Project settings loaded": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "SHELLCHECK.PATH": "C:\\Users\\USER\\AppData\\Roaming\\JetBrains\\IntelliJIdea2025.3\\plugins\\Shell Script\\shellcheck.exe",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "git-widget-placeholder": "master",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "C:/Users/USER/Desktop/StartUp/NextCart",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.jshint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.jshint": "",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Project",
+    "project.structure.proportion": "0.0",
+    "project.structure.side.proportion": "0.0",
+    "settings.editor.selected.configurable": "preferences.pluginManager"
+  }
+}]]></component>
+  <component name="RunManager">
+    <configuration name="Unnamed" type="Application" factoryName="Application" nameIsGenerated="true">
+      <option name="ALTERNATIVE_JRE_PATH" value="25" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+      <option name="MAIN_CLASS_NAME" value="com.nextcart.nextcart.NextcartBackendApplication" />
+      <module name="nextcart-backend" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="JetRunConfigurationType">
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
+      <option name="filePath" />
+      <method v="2" />
+    </configuration>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-30f59d01ecdd-34e2839f716b-intellij.indexing.shared.core-IU-262.9437.185" />
+        <option value="bundled-js-predefined-d6986cc7102b-4abd2a77f808-JavaScript-IU-262.9437.185" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="5d57d862-a11b-4afa-b941-5c6767af27d6" name="Changes" comment="" />
+      <created>1786342740610</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1786342740610</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
+  </component>
+</project>
