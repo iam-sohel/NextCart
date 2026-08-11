@@ -6,8 +6,9 @@ import jakarta.validation.constraints.NotBlank;
 public class LoginRequest {
 
     @Email
-    @NotBlank
     private String email;
+
+    private String phone;
 
     @NotBlank
     private String password;
@@ -21,6 +22,14 @@ public class LoginRequest {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
 
     public String getPassword() {
