@@ -1,18 +1,18 @@
 package com.nextcart.nextcart.service;
 
-import com.nextcart.nextcart.repository.RoleRepository;
-
 import org.modelmapper.ModelMapper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import com.nextcart.nextcart.repository.UserRepository;
-import com.nextcart.nextcart.dto.RegisterRequest;
-import com.nextcart.nextcart.dto.RegisterResponse;
-import com.nextcart.nextcart.entity.User;
-import com.nextcart.nextcart.entity.Role;
 import com.nextcart.nextcart.dto.LoginRequest;
 import com.nextcart.nextcart.dto.LoginResponse;
+import com.nextcart.nextcart.dto.RegisterRequest;
+import com.nextcart.nextcart.dto.RegisterResponse;
+import com.nextcart.nextcart.entity.Role;
+import com.nextcart.nextcart.entity.User;
+import com.nextcart.nextcart.repository.RoleRepository;
+import com.nextcart.nextcart.repository.UserRepository;
 import com.nextcart.nextcart.security.JwtUtil;
 
 @Service
@@ -38,6 +38,7 @@ public class AuthService {
         this.jwtUtil = jwtUtil;
     }
 
+    @Transactional
     public RegisterResponse register(RegisterRequest request) {
 
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -55,9 +56,14 @@ public class AuthService {
                 passwordEncoder.encode(request.getPassword())
         );
 
+        // Fetch CUSTOMER role or create it dynamically if missing in Database
         Role role = roleRepository.findByName("CUSTOMER")
-                .orElseThrow(() ->
-                        new RuntimeException("Role CUSTOMER not found"));
+                .orElseGet(() -> roleRepository.findByName("ROLE_CUSTOMER")
+                        .orElseGet(() -> {
+                            Role newRole = new Role();
+                            newRole.setName("CUSTOMER");
+                            return roleRepository.save(newRole);
+                        }));
 
         user.setRole(role);
         user.setEnabled(true);
@@ -75,6 +81,7 @@ public class AuthService {
         return response;
     }
 
+    @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
 
         User user;
