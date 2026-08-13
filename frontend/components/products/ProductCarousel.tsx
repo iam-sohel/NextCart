@@ -4,7 +4,7 @@ import { Box } from "@mui/material";
 import ProductCard from "./ProductCard";
 
 interface CarouselProduct {
-  id: number;
+  id: number | string;
   slug: string;
   title: string;
   image: string;

@@ -229,11 +229,7 @@ function SearchPageContent() {
                         title={product.title}
                         price={product.price}
                         originalPrice={product.originalPrice}
-                        offer={`${Math.round(
-                          ((product.originalPrice - product.price) /
-                            product.originalPrice) *
-                            100
-                        )}% off`}
+                        offer={searchPageOffer(product)}
                         rating={product.rating}
                         reviews={product.reviews}
                         brand={product.brand}
@@ -277,4 +273,22 @@ function SearchPageContent() {
       <Footer />
     </>
   );
+}
+
+/**
+ * Compute the offer chip text for a search result. Returns "Best Price"
+ * when there is no discounted original price to compare against.
+ */
+function searchPageOffer(product: { price: number; originalPrice?: number }):
+  string {
+  if (
+    typeof product.originalPrice !== "number" ||
+    product.originalPrice <= product.price
+  ) {
+    return "Best Price";
+  }
+  const pct = Math.round(
+    ((product.originalPrice - product.price) / product.originalPrice) * 100,
+  );
+  return `${pct}% off`;
 }

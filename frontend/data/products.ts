@@ -1,6 +1,18 @@
 import { Product } from "@/types/product";
 
-const products: Product[] = [
+/**
+ * Mock catalogue used while the Spring Boot backend is offline.
+ *
+ * The `images` arrays are kept as `string[]` because that mirrors what
+ * a CMS export would look like. `utils/normalizeProduct` is the single
+ * place that projects this into the canonical `ProductImage[]` shape so
+ * every consumer (page, card, gallery) stays backend-ready.
+ *
+ * The `as unknown as Product[]` cast is intentional: we relax the strict
+ * `Product.images: ProductImage[]` typing here only, then re-normalize at
+ * the service boundary.
+ */
+const products = [
 {
   id: 1,
   title: "Apple iPhone 16",
@@ -379,6 +391,6 @@ const products: Product[] = [
     warranty: "1 Year Motorola Warranty",
     delivery: "Free Delivery Tomorrow",
   },
-];
+] as unknown as Product[];
 
 export default products;

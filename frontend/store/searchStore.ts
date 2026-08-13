@@ -89,7 +89,7 @@ const sortProducts = (
       break;
 
     case "newest":
-      sorted.sort((a, b) => b.id - a.id);
+      sorted.sort((a, b) => numericId(b.id) - numericId(a.id));
       break;
 
     case "relevance":
@@ -268,5 +268,15 @@ const useSearchStore = create<SearchStore>((set, get) => ({
       currentPage: 1,
     }),
 }));
+
+/**
+ * Coerce a Product.id (`number | string`) into a number for arithmetic.
+ * Falls back to 0 when the id is non-numeric so the sort stays stable.
+ */
+function numericId(id: number | string): number {
+  if (typeof id === "number") return id;
+  const parsed = Number(id);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
 
 export default useSearchStore;

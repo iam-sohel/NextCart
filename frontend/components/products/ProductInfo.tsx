@@ -1,260 +1,185 @@
 "use client";
 
-import {
-  Typography,
-  Stack,
-  Button,
-  Chip,
-  Rating,
-  Divider,
-  Paper,
-  TextField,
-  InputAdornment,
-  IconButton,
-} from "@mui/material";
+import { Box, Divider, Stack, Typography } from "@mui/material";
 
-import LocalOfferIcon from "@mui/icons-material/LocalOffer";
-import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
-import LocalShippingIcon from "@mui/icons-material/LocalShipping";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import FavoriteIcon from "@mui/icons-material/Favorite";
+import type { Product, ProductVariant } from "@/types/product";
+import type { InventoryState } from "@/utils/inventory";
 
-import useCartStore from "@/store/cartStore";
-import useWishlistStore from "@/store/wishlistStore";
+import DeliveryChecker from "./DeliveryChecker";
+import ProductActions from "./ProductActions";
+import ProductBreadcrumb from "./ProductBreadcrumb";
+import ProductDescription from "./ProductDescription";
+import ProductPriceBlock from "./ProductPriceBlock";
+import ProductRatingRow from "./ProductRatingRow";
+import ProductStock from "./ProductStock";
+import ProductVariants from "./ProductVariants";
+import QuantitySelector from "./QuantitySelector";
+import WishlistButton from "./WishlistButton";
 
-import type { Product } from "@/types/product";
-
-interface Props {
+interface ProductInfoProps {
   product: Product;
+  inventory: InventoryState;
+  selectedVariant?: ProductVariant | undefined;
+  quantity: number;
+  onQuantityChange: (next: number) => void;
+  onSelectVariant: (variantId: string | number) => void;
 }
 
-export default function ProductInfo({ product }: Props) {
-  const {
-    addToWishlist,
-    removeFromWishlist,
-    isInWishlist,
-  } = useWishlistStore();
+/**
+ * NEXTCART — ProductInfo
+ *
+ * The right column of the product details page. This component is a
+ * pure composition: it receives the product plus the orchestrator's
+ * derived state (selected variant, quantity, inventory) and lays it out
+ * in the canonical order:
+ *
+ *   Brand
+ *   Title
+ *   Rating
+ *   Price block
+ *   Variant selector (if any)
+ *   Stock indicator
+ *   Quantity selector
+ *   Action buttons (Add to Cart / Buy Now / Wishlist)
+ *   Delivery checker
+ *
+ * The component does NOT own state for the actions — the parent
+ * (ProductDetailsClient) is the single owner.
+ */
+export default function ProductInfo({
+  product,
+  inventory,
+  selectedVariant,
+  quantity,
+  onQuantityChange,
+  onSelectVariant,
+}: ProductInfoProps) {
+  const variantExists =
+    Array.isArray(product.variants) && product.variants.length > 0;
 
-  const addToCart = useCartStore((state) => state.addToCart);
+  const activePrice = selectedVariant?.price ?? product.price;
+  const canPurchase = inventory.status !== "out_of_stock";
+  const stockLabel =
+    inventory.status === "in_stock"
+      ? "In stock"
+      : inventory.status === "low_stock"
+        ? `Only ${inventory.available} left`
+        : "Out of stock";
 
-  const liked = isInWishlist(product.id);
-
-  const handleAddToCart = () => {
-    addToCart({
-      id: product.id,
-      slug: product.slug,
-      title: product.title,
-      image: product.image,
-      price: product.price,
-      quantity: 1,
-    });
-  };
-
-  const handleWishlistToggle = () => {
-    if (liked) {
-      removeFromWishlist(product.id);
-    } else {
-      addToWishlist({
-        id: product.id,
-        title: product.title,
-        image: product.image,
-        price: product.price,
-        slug: product.slug,
-      });
-    }
-  };
+  // Disable Add to Cart when the user hasn't chosen a variant (so the
+  // backend gets a valid variantId) OR when there's no stock.
+  const addDisabledReason = !canPurchase
+    ? "This product is currently out of stock."
+    : variantExists && !selectedVariant
+      ? "Choose a variant to continue."
+      : undefined;
 
   return (
-    <>
-      {/* Brand */}
-      <Typography color="primary" sx={{ fontWeight: 600 }}>
+    <Box>
+      <ProductBreadcrumb product={product} />
+
+      <Typography
+        variant="overline"
+        sx={{
+          color: "text.secondary",
+          fontWeight: 700,
+          letterSpacing: "0.08em",
+        }}
+      >
         {product.brand}
       </Typography>
 
-      {/* Product Name */}
-      <Typography variant="h4" sx={{ fontWeight: 700, mt: 1 }}>
+      <Typography
+        variant="h4"
+        component="h1"
+        sx={{ fontWeight: 700, mt: 0.5, lineHeight: 1.2 }}
+      >
         {product.title}
       </Typography>
 
-      {/* Rating */}
-      <Stack
-        direction="row"
-        spacing={2}
-        sx={{ mt: 2, alignItems: "center" }}
-      >
-        <Rating value={product.rating} precision={0.5} readOnly />
+      <ProductRatingRow
+        rating={product.rating}
+        reviewCount={product.reviews}
+      />
 
-        <Typography sx={{ fontWeight: 600 }}>
-          {product.rating}
-        </Typography>
-
-        <Typography color="text.secondary">
-          ({product.reviews} Ratings)
-        </Typography>
-      </Stack>
+      <Box sx={{ mt: 3 }}>
+        <ProductPriceBlock
+          price={activePrice}
+          originalPrice={product.originalPrice}
+        />
+      </Box>
 
       <Divider sx={{ my: 3 }} />
 
-      {/* Price */}
-      <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
-        <Typography
-          variant="h3"
-          color="primary"
-          sx={{ fontWeight: 700 }}
-        >
-          ₹{product.price.toLocaleString()}
-        </Typography>
+      {variantExists && (
+        <ProductVariants
+          variants={product.variants!}
+          selectedVariantId={selectedVariant?.id}
+          onSelect={onSelectVariant}
+        />
+      )}
 
-        <Chip
-          color="success"
-          label={`${product.discount}% OFF`}
+      <Box sx={{ mt: 3 }}>
+        <ProductStock
+          inventory={inventory}
+          label={inventory.status === "in_stock" ? stockLabel : stockLabel}
+        />
+      </Box>
+
+      <Box sx={{ mt: 3 }}>
+        <QuantitySelector
+          value={quantity}
+          onChange={onQuantityChange}
+          max={inventory.status === "out_of_stock" ? 0 : inventory.available}
+          disabled={!canPurchase}
+        />
+      </Box>
+
+      <Stack
+        direction="row"
+        spacing={1.5}
+        sx={{ alignItems: "center", mt: 3 }}
+      >
+        <Box sx={{ flex: 1 }}>
+          <ProductActions
+            product={product}
+            variantId={selectedVariant?.id}
+            variantLabel={selectedVariantLabel(selectedVariant)}
+            quantity={quantity}
+            priceOverride={selectedVariant?.price}
+            canPurchase={canPurchase && (!variantExists || Boolean(selectedVariant))}
+            addDisabledReason={addDisabledReason}
+          />
+        </Box>
+
+        <WishlistButton
+          productId={product.id}
+          title={product.title}
+          image={product.image}
+          slug={product.slug}
+          price={product.price}
+          originalPrice={product.originalPrice}
+          brand={product.brand ?? undefined}
         />
       </Stack>
 
-      <Typography
-        sx={{
-          mt: 1,
-          textDecoration: "line-through",
-          color: "gray",
-        }}
-      >
-        MRP ₹{product.originalPrice.toLocaleString()}
-      </Typography>
+      <DeliveryChecker productId={product.id} />
 
-      <Divider sx={{ my: 3 }} />
-
-      {/* Offers */}
-      <Typography variant="h6" sx={{ fontWeight: 700 }}>
-        Available Offers
-      </Typography>
-
-      <Stack spacing={2} sx={{ mt: 2 }}>
-        <Stack direction="row" spacing={2}>
-          <LocalOfferIcon color="success" />
-          <Typography>10% Instant Discount on HDFC Credit Cards</Typography>
-        </Stack>
-        <Stack direction="row" spacing={2}>
-          <LocalOfferIcon color="success" />
-          <Typography>No Cost EMI Available</Typography>
-        </Stack>
-        <Stack direction="row" spacing={2}>
-          <LocalOfferIcon color="success" />
-          <Typography>₹2,000 Exchange Bonus</Typography>
-        </Stack>
-        <Stack direction="row" spacing={2}>
-          <LocalOfferIcon color="success" />
-          <Typography>Free Delivery</Typography>
-        </Stack>
-      </Stack>
-
-      <Divider sx={{ my: 3 }} />
-
-      {/* Highlights */}
-      <Typography variant="h6" sx={{ fontWeight: 700 }}>
-        Highlights
-      </Typography>
-
-      <Stack spacing={1} sx={{ mt: 2 }}>
-        {product.highlights?.map((item: string) => (
-          <Typography key={item}>• {item}</Typography>
-        ))}
-      </Stack>
-
-      <Divider sx={{ my: 3 }} />
-
-      {/* Delivery */}
-      <Typography variant="h6" sx={{ fontWeight: 700 }}>
-        Delivery
-      </Typography>
-
-      <TextField
-        fullWidth
-        size="small"
-        placeholder="Enter Pincode"
-        sx={{ mt: 2 }}
-        slotProps={{
-          input: {
-            endAdornment: (
-              <InputAdornment position="end">
-                <Button size="small">Check</Button>
-              </InputAdornment>
-            ),
-          },
-        }}
+      <ProductDescription
+        description={product.description}
+        highlights={product.highlights}
       />
-
-      <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-        <LocalShippingIcon color="success" />
-        <Typography color="success.main">{product.delivery}</Typography>
-      </Stack>
-
-      <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-        <CheckCircleIcon color="primary" />
-        <Typography>{product.warranty}</Typography>
-      </Stack>
-
-      <Divider sx={{ my: 3 }} />
-
-      {/* Stock */}
-      <Typography
-        color={product.stock > 5 ? "success.main" : "error.main"}
-        sx={{ fontWeight: 700 }}
-      >
-        {product.stock > 0
-          ? `${product.stock} Items Left`
-          : "Out of Stock"}
-      </Typography>
-
-      {/* Buttons */}
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        spacing={2}
-        sx={{ mt: 4 }}
-      >
-        <Button
-          variant="contained"
-          color="warning"
-          size="large"
-          onClick={handleAddToCart}
-        >
-          Add To Cart
-        </Button>
-
-        <Button variant="contained" color="error" size="large">
-          Buy Now
-        </Button>
-
-        <IconButton
-          color="error"
-          sx={{ border: "1px solid #ddd" }}
-          onClick={handleWishlistToggle}
-        >
-          {liked ? <FavoriteIcon /> : <FavoriteBorderIcon />}
-        </IconButton>
-      </Stack>
-
-      {/* Seller */}
-      <Paper elevation={1} sx={{ p: 3, mt: 5, borderRadius: 3 }}>
-        <Typography variant="h6" sx={{ fontWeight: 700 }}>
-          Seller
-        </Typography>
-
-        <Typography sx={{ mt: 1 }} color="primary">
-          NextCart Retail Pvt Ltd
-        </Typography>
-
-        <Typography color="text.secondary" sx={{ mt: 1 }}>
-          ✔ Genuine Products
-        </Typography>
-
-        <Typography color="text.secondary">
-          ✔ 7 Days Replacement
-        </Typography>
-
-        <Typography color="text.secondary">
-          ✔ GST Invoice Available
-        </Typography>
-      </Paper>
-    </>
+    </Box>
   );
+}
+
+function selectedVariantLabel(
+  variant: ProductVariant | undefined,
+): string | undefined {
+  if (!variant) return undefined;
+  const parts: string[] = [];
+  if (variant.color) parts.push(String(variant.color));
+  if (variant.size) parts.push(String(variant.size));
+  if (variant.storage) parts.push(String(variant.storage));
+  return parts.length > 0 ? parts.join(" · ") : undefined;
 }

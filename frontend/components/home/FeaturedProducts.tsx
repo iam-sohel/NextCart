@@ -34,7 +34,9 @@ export default function FeaturedProducts() {
               image={product.image}
               title={product.title}
               price={product.price}
-              offer={`${product.discount}% OFF`}
+              offer={
+                product.discount ? `${product.discount}% OFF` : "Best Price"
+              }
             />
           </Grid>
         ))}

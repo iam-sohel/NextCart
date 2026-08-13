@@ -1,224 +1,146 @@
 "use client";
 
-import { useState } from "react";
-import {
-  Grid,
-  Typography,
-  Button,
-  Box,
-  Rating,
-} from "@mui/material";
-import Image from "next/image";
+import { useMemo, useState } from "react";
 
-import useCartStore from "@/store/cartStore";
-import { Product } from "@/types/product";
+import { Box, Container, Grid } from "@mui/material";
+
+import type { Product, ProductVariant } from "@/types/product";
+import {
+  deriveInventory,
+  type InventoryState,
+} from "@/utils/inventory";
+
+import ProductGallery from "./ProductGallery";
+import ProductInfo from "./ProductInfo";
+import ProductReviews from "./ProductReviews";
+import ProductSpecifications from "./ProductSpecifications";
+import RelatedProducts from "./RelatedProducts";
 
 interface ProductDetailsClientProps {
   product: Product;
+  related?: Product[];
 }
 
+/**
+ * NEXTCART — ProductDetailsClient
+ *
+ * The interactive orchestrator for the product details page. Owns all
+ * client-only state (selected variant, quantity) and composes the
+ * section components in the canonical mobile-first order:
+ *
+ *   Gallery
+ *   Info (breadcrumb, brand, title, rating, price, variants, stock,
+ *         quantity, actions, delivery, description)
+ *   Specifications
+ *   Reviews
+ *   Related products
+ *
+ * Server / data responsibilities:
+ *   - The parent server component (app/products/[slug]/page.tsx)
+ *     supplies the Product. Future backend integration is the parent's
+ *     job; this component continues to render whatever it receives.
+ *
+ * State model:
+ *   - selectedVariantId stays undefined until the user picks one. Add to
+ *     Cart is disabled in that state when variants exist.
+ *   - The displayed inventory is variant-level when a variant is picked,
+ *     otherwise it falls back to the product-level inventory.
+ *   - Quantity is clamped to the current inventory ceiling.
+ */
 export default function ProductDetailsClient({
   product,
+  related = [],
 }: ProductDetailsClientProps) {
-  const [quantity, setQuantity] = useState(1);
-  const [isAdding, setIsAdding] = useState(false);
-  const addToCart = useCartStore((state) => state.addToCart);
-
-  const handleAddToCart = () => {
-    setIsAdding(true);
-
-    for (let i = 0; i < quantity; i++) {
-      addToCart({
-        id: product.id,
-        slug: product.slug,
-        title: product.title,
-        image: product.image,
-        price: product.price,
-        quantity: 1,
-      });
-    }
-
-    setIsAdding(false);
-    setQuantity(1);
-  };
-
-  const handleBuyNow = () => {
-    handleAddToCart();
-    // Later: redirect to checkout
-    // router.push("/checkout");
-  };
-
-  const discount = Math.round(
-    ((product.originalPrice - product.price) / product.originalPrice) * 100
+  const variantList = useMemo<ProductVariant[]>(
+    () => product.variants ?? [],
+    [product.variants],
   );
+
+  const [selectedVariantId, setSelectedVariantId] = useState<
+    string | number | undefined
+  >(variantList[0]?.id);
+
+  const selectedVariant = useMemo<ProductVariant | undefined>(() => {
+    if (selectedVariantId === undefined) return undefined;
+    return variantList.find(
+      (v) => String(v.id) === String(selectedVariantId),
+    );
+  }, [variantList, selectedVariantId]);
+
+  // Compute the effective inventory for the currently-selected variant
+  // (or the product-level inventory if no variant is chosen).
+  const inventory: InventoryState = useMemo(() => {
+    if (selectedVariant?.inventory) {
+      return deriveInventory(selectedVariant.inventory);
+    }
+    return deriveInventory(product.inventory ?? product.stock ?? 0);
+  }, [selectedVariant, product.inventory, product.stock]);
+
+  // Quantity is clamped to the available stock on every render so
+  // changing the variant (which changes `inventory`) never requires an
+  // effect-driven setState cascade. We only store the user-intended
+  // value; the displayed / submitted value is derived.
+  const [requestedQuantity, setQuantity] = useState<number>(1);
+  const quantity = clampQuantityToInventory(requestedQuantity, inventory);
 
   return (
-    <Grid container spacing={5}>
-      {/* Product Image */}
-      <Grid size={{ xs: 12, md: 6 }}>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "center",
-            background: "#fafafa",
-            borderRadius: 3,
-            p: 3,
-          }}
-        >
-          <Image
-            src={product.image}
-            alt={product.title}
-            width={400}
-            height={400}
-            style={{
-              objectFit: "contain",
-            }}
+    <Container maxWidth="lg" sx={{ py: { xs: 3, md: 5 } }}>
+      <Grid container spacing={{ xs: 3, md: 5 }}>
+        {/* Gallery column. On mobile the gallery stacks first per the
+            recommended mobile order. */}
+        <Grid size={{ xs: 12, md: 6 }}>
+          <ProductGallery title={product.title} images={product.images} />
+        </Grid>
+
+        {/* Info column. */}
+        <Grid size={{ xs: 12, md: 6 }}>
+          <ProductInfo
+            product={product}
+            inventory={inventory}
+            selectedVariant={selectedVariant}
+            quantity={quantity}
+            onQuantityChange={setQuantity}
+            onSelectVariant={setSelectedVariantId}
           />
-        </Box>
+        </Grid>
       </Grid>
 
-      {/* Product Info */}
-      <Grid size={{ xs: 12, md: 6 }}>
-        <Typography variant="caption" color="text.secondary">
-          {product.brand}
-        </Typography>
+      {/* Below-the-fold sections span the full width. */}
+      <Box sx={{ mt: { xs: 2, md: 4 } }}>
+        <ProductSpecifications specifications={product.specifications} />
+      </Box>
 
-        <Typography variant="h4" sx={{ fontWeight: 700, mt: 1 }}>
-          {product.title}
-        </Typography>
+      <Box>
+        <ProductReviews
+          reviews={product.reviewsList ?? []}
+          summary={
+            product.reviewsSummary ?? {
+              average: product.rating,
+              count: product.reviews,
+            }
+          }
+        />
+      </Box>
 
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 2 }}>
-          <Rating
-            value={product.rating}
-            precision={0.5}
-            readOnly
-            size="medium"
-          />
-          <Typography color="text.secondary">
-            {product.reviews} reviews
-          </Typography>
-        </Box>
-
-        <Box sx={{ mt: 3 }}>
-          <Typography
-            variant="h5"
-            color="success.main"
-            sx={{ fontWeight: 700 }}
-          >
-            ₹{product.price.toLocaleString()}
-          </Typography>
-          <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-            <Typography
-              variant="body1"
-              sx={{
-                textDecoration: "line-through",
-                color: "text.secondary",
-              }}
-            >
-              ₹{product.originalPrice.toLocaleString()}
-            </Typography>
-            <Typography
-              sx={{
-                color: "success.main",
-                fontWeight: 700,
-              }}
-            >
-              {discount}% off
-            </Typography>
-          </Box>
-        </Box>
-
-        <Typography sx={{ mt: 3, color: "text.secondary" }}>
-          {product.description}
-        </Typography>
-
-        <Typography sx={{ mt: 2 }}>
-          {product.stock > 0 ? (
-            <span style={{ color: "green", fontWeight: 700 }}>
-              ✓ In Stock ({product.stock} available)
-            </span>
-          ) : (
-            <span style={{ color: "red", fontWeight: 700 }}>
-              Out of Stock
-            </span>
-          )}
-        </Typography>
-
-        <Box sx={{ mt: 3, display: "flex", alignItems: "center", gap: 2 }}>
-          <Typography>Quantity:</Typography>
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              border: "1px solid #ddd",
-              borderRadius: 1,
-            }}
-          >
-            <Button
-              size="small"
-              onClick={() => setQuantity(Math.max(1, quantity - 1))}
-              disabled={quantity === 1}
-            >
-              −
-            </Button>
-            <Typography sx={{ px: 2, minWidth: "40px", textAlign: "center" }}>
-              {quantity}
-            </Typography>
-            <Button
-              size="small"
-              onClick={() =>
-                setQuantity(Math.min(product.stock, quantity + 1))
-              }
-              disabled={quantity >= product.stock}
-            >
-              +
-            </Button>
-          </Box>
-        </Box>
-
-        <Box
-          sx={{
-            display: "flex",
-            gap: 2,
-            mt: 4,
-          }}
-        >
-          <Button
-            variant="contained"
-            size="large"
-            onClick={handleAddToCart}
-            disabled={isAdding || product.stock === 0}
-            sx={{ flex: 1 }}
-          >
-            {isAdding ? "Adding..." : "Add to Cart"}
-          </Button>
-
-          <Button
-            variant="outlined"
-            size="large"
-            onClick={handleBuyNow}
-            disabled={isAdding || product.stock === 0}
-            sx={{ flex: 1 }}
-          >
-            Buy Now
-          </Button>
-        </Box>
-
-        <Box sx={{ mt: 4, pt: 3, borderTop: "1px solid #eee" }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
-            Highlights
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            ✓ Free Delivery on orders above ₹500
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            ✓ 7-day returns & exchanges
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            ✓ Secure payments
-          </Typography>
-        </Box>
-      </Grid>
-    </Grid>
+      <Box>
+        <RelatedProducts related={related} />
+      </Box>
+    </Container>
   );
+}
+
+/**
+ * Clamp the user-entered quantity against the current inventory ceiling.
+ * Keeping this as a pure function lets the orchestrator derive the
+ * effective quantity on every render — no effect-driven setState.
+ */
+function clampQuantityToInventory(
+  requested: number,
+  inventory: InventoryState,
+): number {
+  if (inventory.status === "out_of_stock") return 1;
+  const max = inventory.available;
+  if (!Number.isFinite(requested) || requested < 1) return 1;
+  if (requested > max) return max;
+  return requested;
 }

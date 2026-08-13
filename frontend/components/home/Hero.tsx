@@ -16,10 +16,16 @@ import products from "@/data/products";
 // Tweak this freely — slug drives the CTA navigation.
 const showcase = products[0];
 const offerPrice = showcase.price.toLocaleString("en-IN");
-const originalPrice = showcase.originalPrice.toLocaleString("en-IN");
-const discountPct = Math.round(
-  ((showcase.originalPrice - showcase.price) / showcase.originalPrice) * 100
+const originalPrice = (showcase.originalPrice ?? showcase.price).toLocaleString(
+  "en-IN",
 );
+const discountPct =
+  showcase.originalPrice && showcase.originalPrice > showcase.price
+    ? Math.round(
+        ((showcase.originalPrice - showcase.price) / showcase.originalPrice) *
+          100,
+      )
+    : 0;
 
 export default function Hero() {
   return (

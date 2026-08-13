@@ -22,7 +22,7 @@ import useCartStore from "@/store/cartStore";
 import useWishlistStore from "@/store/wishlistStore";
 
 interface ProductCardProps {
-  id: number;
+  id: number | string;
   slug: string;
   image: string;
   title: string;
@@ -55,7 +55,8 @@ export default function ProductCard({
   const { addToWishlist, removeFromWishlist, isInWishlist } =
     useWishlistStore();
 
-  const isWishlisted = isInWishlist(id);
+  const numericId = toNumericId(id);
+  const isWishlisted = numericId !== null && isInWishlist(numericId);
 
   const handleAddToCart = () => {
     setIsAdding(true);
@@ -64,11 +65,12 @@ export default function ProductCard({
   };
 
   const handleWishlistToggle = () => {
+    if (numericId === null) return;
     if (isWishlisted) {
-      removeFromWishlist(id);
+      removeFromWishlist(numericId);
     } else {
       addToWishlist({
-        id,
+        id: numericId,
         slug,
         title,
         image,
@@ -303,4 +305,15 @@ export default function ProductCard({
       </CardContent>
     </Card>
   );
+}
+
+/**
+ * Coerce a Product.id (number | string) into the numeric id the wishlist
+ * store expects. Returns null for non-numeric values; callers treat that
+ * as a no-op target so we never poison the store.
+ */
+function toNumericId(id: number | string): number | null {
+  if (typeof id === "number") return id;
+  const parsed = Number(id);
+  return Number.isFinite(parsed) ? parsed : null;
 }

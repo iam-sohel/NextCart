@@ -6,7 +6,7 @@ import products from "@/data/products";
 
 export default function FlashSale() {
   const flashProducts = products.filter(
-    (product) => product.discount >= 10
+    (product) => (product.discount ?? 0) >= 10,
   );
 
   return (
