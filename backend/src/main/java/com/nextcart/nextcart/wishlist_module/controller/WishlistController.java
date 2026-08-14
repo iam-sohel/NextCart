@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.nextcart.nextcart.adcommon.dto.ApiResponse;
 import com.nextcart.nextcart.wishlist_module.dto.WishlistResponseDTO;
-import com.nextcart.nextcart.entity.User;
+import com.nextcart.nextcart.user_module.entity.User;
 import com.nextcart.nextcart.user_module.repository.UserRepository;
 import com.nextcart.nextcart.wishlist_module.service.WishlistService;
 

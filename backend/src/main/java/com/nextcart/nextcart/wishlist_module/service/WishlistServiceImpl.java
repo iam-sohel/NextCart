@@ -1,4 +1,6 @@
 package com.nextcart.nextcart.wishlist_module.service;
+import com.nextcart.nextcart.product_module.entity.Product;
+import com.nextcart.nextcart.product_module.repository.ProductRepository;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -7,7 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.nextcart.nextcart.wishlist_module.dto.WishlistResponseDTO;
-import com.nextcart.nextcart.entity.User;
+import com.nextcart.nextcart.user_module.entity.User;
 import com.nextcart.nextcart.wishlist_module.entity.Wishlist;
 import com.nextcart.nextcart.user_module.repository.UserRepository;
 import com.nextcart.nextcart.wishlist_module.repository.WishlistRepository;

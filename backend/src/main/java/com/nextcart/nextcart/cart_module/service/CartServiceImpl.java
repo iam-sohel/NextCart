@@ -1,4 +1,6 @@
 package com.nextcart.nextcart.cart_module.service;
+import com.nextcart.nextcart.product_module.entity.Product;
+import com.nextcart.nextcart.product_module.repository.ProductRepository;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -17,7 +19,7 @@ import com.nextcart.nextcart.cart_module.dto.CartResponseDTO;
 import com.nextcart.nextcart.cart_module.dto.UpdateCartItemRequestDTO;
 import com.nextcart.nextcart.cart_module.entity.Cart;
 import com.nextcart.nextcart.cart_module.entity.CartItem;
-import com.nextcart.nextcart.entity.User;
+import com.nextcart.nextcart.user_module.entity.User;
 import com.nextcart.nextcart.cart_module.repository.CartItemRepository;
 import com.nextcart.nextcart.cart_module.repository.CartRepository;
 import com.nextcart.nextcart.user_module.repository.UserRepository;

@@ -1,4 +1,5 @@
 package com.nextcart.nextcart.cart_module.entity;
+import com.nextcart.nextcart.user_module.entity.User;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,7 +1,7 @@
 package com.nextcart.nextcart.address_module.repository;
 
 import com.nextcart.nextcart.address_module.entity.Address;
-import com.nextcart.nextcart.entity.User;
+import com.nextcart.nextcart.user_module.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

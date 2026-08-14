@@ -1,7 +1,9 @@
 package com.nextcart.nextcart.adcommon.exception;
+import com.nextcart.nextcart.product_module.exception.ProductNotFoundException;
+import com.nextcart.nextcart.product_module.exception.ProductAlreadyExistsException;
 
-import com.nextcart.nextcart.exception.product.ProductAlreadyExistsException;
-import com.nextcart.nextcart.exception.product.ProductNotFoundException;
+import com.nextcart.nextcart.product_module.exception.ProductAlreadyExistsException;
+import com.nextcart.nextcart.product_module.exception.ProductNotFoundException;
 import com.nextcart.nextcart.user_module.exceptions.UserAlreadyExistsException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;

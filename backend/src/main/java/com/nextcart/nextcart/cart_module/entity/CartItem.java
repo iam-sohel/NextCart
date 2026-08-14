@@ -1,4 +1,5 @@
 package com.nextcart.nextcart.cart_module.entity;
+import com.nextcart.nextcart.product_module.entity.Product;
 
 import java.time.LocalDateTime;
 

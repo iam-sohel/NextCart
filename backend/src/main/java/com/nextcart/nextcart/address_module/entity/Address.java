@@ -1,4 +1,5 @@
 package com.nextcart.nextcart.address_module.entity;
+import com.nextcart.nextcart.user_module.entity.User;
 
 import com.nextcart.nextcart.adcommon.entity.BaseEntity;
 import jakarta.persistence.*;

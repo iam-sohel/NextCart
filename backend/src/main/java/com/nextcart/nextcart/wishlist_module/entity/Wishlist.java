@@ -1,4 +1,6 @@
 package com.nextcart.nextcart.wishlist_module.entity;
+import com.nextcart.nextcart.user_module.entity.User;
+import com.nextcart.nextcart.product_module.entity.Product;
 
 import com.nextcart.nextcart.adcommon.entity.BaseEntity;
 import jakarta.persistence.Entity;
