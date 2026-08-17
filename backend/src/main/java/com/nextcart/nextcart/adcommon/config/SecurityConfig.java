@@ -42,13 +42,15 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/api/products/**",
-                                "/api/v1/products/**"
+                                "/api/v1/products/**",
+                                "/api/v1/payments/webhook/razorpay"
                         ).permitAll()
                         .requestMatchers(
                                 "/api/v1/orders/**",
                                 "/api/v1/cart/**",
                                 "/api/v1/addresses/**",
-                                "/api/v1/wishlist/**"
+                                "/api/v1/wishlist/**",
+                                "/api/v1/payments/**"
                         ).authenticated()
                         .anyRequest().authenticated()
                 )
