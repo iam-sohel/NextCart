@@ -6,6 +6,7 @@ import com.nextcart.nextcart.subcategory_module.entity.SubCategory;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "products")
@@ -44,7 +45,9 @@ public class Product {
     @Column(name = "description")
     private String description;
 
+    @Column(name = "price", nullable = false)
+    private BigDecimal price;
+
     @Column(name = "status", nullable = false)
     private String status;
-
 }
