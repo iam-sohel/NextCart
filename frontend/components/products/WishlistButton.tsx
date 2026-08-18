@@ -16,6 +16,13 @@ interface WishlistButtonProps {
   price: number;
   originalPrice?: number;
   brand?: string;
+  /**
+   * Optional variant for the wishlist line. When the user picked a
+   * specific variant on the product details page we save that variant
+   * alongside the product so "Move to cart" later preserves it.
+   */
+  variantId?: string | number;
+  variantLabel?: string;
   /** Compact pill style for the price row; defaults to icon-only. */
   variant?: "icon" | "compact";
 }
@@ -43,28 +50,30 @@ export default function WishlistButton({
   price,
   originalPrice,
   brand,
+  variantId,
+  variantLabel,
   variant = "icon",
 }: WishlistButtonProps) {
   const [hovered, setHovered] = useState(false);
-  const { addToWishlist, removeFromWishlist, isInWishlist } =
+  const { addToWishlist, removeFromWishlistLine, isInWishlist } =
     useWishlistStore();
 
-  const numericId = toNumericId(productId);
-  const liked = numericId !== null && isInWishlist(numericId);
+  const liked = isInWishlist(productId, { variantId });
 
   const handleClick = () => {
-    if (numericId === null) return;
     if (liked) {
-      removeFromWishlist(numericId);
+      removeFromWishlistLine(productId, { variantId });
     } else {
       addToWishlist({
-        id: numericId,
+        id: productId,
         title,
         image,
         price,
         slug,
         brand,
         originalPrice,
+        variantId,
+        variantLabel,
       });
     }
   };
@@ -104,13 +113,6 @@ export default function WishlistButton({
 }
 
 /**
- * Coerce a `Product.id` (`number | string`) into the numeric id the
- * wishlist store expects. Returns null for non-numeric values (e.g. a
- * future UUID-based product id) — the button treats that case as a
- * non-actionable target so we never poison the store.
- */
-function toNumericId(id: number | string): number | null {
-  if (typeof id === "number") return id;
-  const parsed = Number(id);
-  return Number.isFinite(parsed) ? parsed : null;
-}
+ * NOTE: Previously this file coerced ids through `toNumericId` before
+ * passing them to the store. The store now accepts the polymorphic
+ * `id: number | string` shape directly, so the helper is gone.

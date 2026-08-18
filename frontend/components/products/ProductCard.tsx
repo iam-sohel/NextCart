@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import Image, { type StaticImageData } from "next/image";
 import { useState } from "react";
 
 import {
@@ -20,6 +20,7 @@ import FavoriteIcon from "@mui/icons-material/Favorite";
 
 import useCartStore from "@/store/cartStore";
 import useWishlistStore from "@/store/wishlistStore";
+import { UNIVERSAL_FALLBACK } from "@/utils/productImages";
 
 interface ProductCardProps {
   id: number | string;
@@ -51,33 +52,53 @@ export default function ProductCard({
   newArrival = false,
 }: ProductCardProps) {
   const [isAdding, setIsAdding] = useState(false);
+  const [resolvedImage, setResolvedImage] = useState<string>(image);
   const addToCart = useCartStore((state) => state.addToCart);
-  const { addToWishlist, removeFromWishlist, isInWishlist } =
+  const { addToWishlist, removeFromWishlistLine, isInWishlist } =
     useWishlistStore();
 
-  const numericId = toNumericId(id);
-  const isWishlisted = numericId !== null && isInWishlist(numericId);
+  const isWishlisted = isInWishlist(id);
 
   const handleAddToCart = () => {
     setIsAdding(true);
-    addToCart({ id, slug, title, image, price: Number(price), quantity: 1 });
+    addToCart({
+      id,
+      slug,
+      title,
+      image: resolvedImage,
+      price: Number(price),
+      quantity: 1,
+    });
     setTimeout(() => setIsAdding(false), 300);
   };
 
   const handleWishlistToggle = () => {
-    if (numericId === null) return;
     if (isWishlisted) {
-      removeFromWishlist(numericId);
+      removeFromWishlistLine(id);
     } else {
       addToWishlist({
-        id: numericId,
+        id,
         slug,
         title,
-        image,
+        image: resolvedImage,
         price: Number(price),
-        originalPrice: originalPrice !== undefined ? Number(originalPrice) : Number(price),
+        originalPrice:
+          originalPrice !== undefined
+            ? Number(originalPrice)
+            : Number(price),
         brand,
       });
+    }
+  };
+
+  /**
+   * next/image fires onError when the upstream file is missing or returns
+   * 4xx. We swap to the universal placeholder so the grid keeps rendering
+   * even if a single asset is broken — no more cascading 400s.
+   */
+  const handleImageError = () => {
+    if (resolvedImage !== UNIVERSAL_FALLBACK) {
+      setResolvedImage(UNIVERSAL_FALLBACK);
     }
   };
 
@@ -126,10 +147,12 @@ export default function ProductCard({
               }}
             >
               <Image
-                src={image}
+                src={resolvedImage as string | StaticImageData}
                 alt={title}
                 fill
+                sizes="(max-width: 600px) 100vw, (max-width: 1200px) 33vw, 25vw"
                 style={{ objectFit: "contain" }}
+                onError={handleImageError}
               />
             </Box>
           </Box>
@@ -308,12 +331,7 @@ export default function ProductCard({
 }
 
 /**
- * Coerce a Product.id (number | string) into the numeric id the wishlist
- * store expects. Returns null for non-numeric values; callers treat that
- * as a no-op target so we never poison the store.
- */
-function toNumericId(id: number | string): number | null {
-  if (typeof id === "number") return id;
-  const parsed = Number(id);
-  return Number.isFinite(parsed) ? parsed : null;
-}
+ * NOTE: Previously the card coerced ids through `toNumericId` before
+ * passing them to the wishlist store. The store now accepts the
+ * polymorphic `id: number | string` shape directly, so the helper is
+ * gone.

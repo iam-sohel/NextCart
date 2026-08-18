@@ -63,6 +63,12 @@ export interface ProductVariant {
   size?: string | null;
   color?: string | null;
   storage?: string | null;
+  /**
+   * Dynamic attribute map as supplied by the backend. The
+   * VariantSelector reads any axis (Color, RAM, Storage, Size, Material,
+   * Capacity, Configuration, …) from this map without code changes.
+   */
+  attributes?: Record<string, string | number | null>;
   /** Variant-level price override in rupees. Falls back to the product price. */
   price?: number;
   /** Inventory for this variant. Optional — when omitted we use the parent's. */
@@ -71,6 +77,12 @@ export interface ProductVariant {
     reservedQty?: number;
     available?: number;
   };
+  /**
+   * Optional backend-provided inventory status. When present, takes
+   * precedence over the local threshold-based derivation in
+   * `deriveInventory()`.
+   */
+  stockStatus?: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | string;
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -156,6 +168,13 @@ export interface Product {
   stock?: number;
   /** Structured inventory (preferred over `stock`). */
   inventory?: ProductInventory;
+  /**
+   * Optional backend-provided inventory status for the parent product
+   * (when the backend doesn't return full variant inventory). When
+   * present, takes precedence over the local threshold-based derivation
+   * in `deriveInventory()`.
+   */
+  stockStatus?: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | string;
 
   /** Optional variants. When present with length > 0, the UI should render a VariantSelector. */
   variants?: ProductVariant[];

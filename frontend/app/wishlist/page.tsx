@@ -31,6 +31,20 @@ export default function WishlistPage() {
     (state) => state.addToCart
   );
 
+  const moveToCart = (item: typeof items[number]) => {
+    addToCart({
+      id: item.id,
+      slug: item.slug,
+      title: item.title,
+      image: item.image,
+      price: item.price,
+      quantity: 1,
+      variantId: item.variantId,
+      variantLabel: item.variantLabel,
+    });
+    removeFromWishlist(item.id);
+  };
+
   if (items.length === 0) {
     return (
       <>
@@ -117,6 +131,16 @@ export default function WishlistPage() {
                     {item.title}
                   </Typography>
 
+                  {item.variantLabel && (
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mt: 0.5 }}
+                    >
+                      {item.variantLabel}
+                    </Typography>
+                  )}
+
                   <Typography
                     color="primary"
                     sx={{ fontWeight: 700, mt: 1 }}
@@ -128,16 +152,7 @@ export default function WishlistPage() {
                 <Button
                   variant="contained"
                   color="warning"
-                  onClick={() =>
-                    addToCart({
-                      id: item.id,
-                      slug: item.slug,
-                      title: item.title,
-                      image: item.image,
-                      price: item.price,
-                      quantity: 1,
-                    })
-                  }
+                  onClick={() => moveToCart(item)}
                 >
                   Add To Cart
                 </Button>

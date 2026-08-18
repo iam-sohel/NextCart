@@ -160,6 +160,8 @@ export default function ProductInfo({
           price={product.price}
           originalPrice={product.originalPrice}
           brand={product.brand ?? undefined}
+          variantId={selectedVariant?.id}
+          variantLabel={selectedVariantLabel(selectedVariant)}
         />
       </Stack>
 

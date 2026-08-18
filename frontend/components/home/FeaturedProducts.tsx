@@ -3,10 +3,11 @@
 import { Container, Typography, Grid } from "@mui/material";
 
 import ProductCard from "@/components/products/ProductCard";
-import products from "@/data/products";
+import { listMockProducts } from "@/services/productService";
+import { getProductImage } from "@/utils/productImages";
 
 export default function FeaturedProducts() {
-  const featuredProducts = products.filter(
+  const featuredProducts = listMockProducts().filter(
     (product) => product.featured
   );
 
@@ -31,12 +32,18 @@ export default function FeaturedProducts() {
             <ProductCard
               id={product.id}
               slug={product.slug}
-              image={product.image}
+              image={getProductImage(product)}
               title={product.title}
               price={product.price}
+              originalPrice={product.originalPrice}
               offer={
                 product.discount ? `${product.discount}% OFF` : "Best Price"
               }
+              rating={product.rating}
+              reviews={product.reviews}
+              brand={product.brand}
+              bestseller={product.bestseller}
+              newArrival={product.newArrival}
             />
           </Grid>
         ))}

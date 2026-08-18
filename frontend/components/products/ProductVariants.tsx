@@ -13,8 +13,6 @@ import {
 
 import type { ProductVariant } from "@/types/product";
 
-type VariantAxis = "size" | "color" | "storage";
-
 interface ProductVariantsProps {
   variants: ProductVariant[];
   /**
@@ -29,10 +27,16 @@ interface ProductVariantsProps {
 /**
  * NEXTCART — VariantSelector
  *
- * A reusable three-axis selector (size, color, storage) backed by the
- * ProductVariant[] array the backend will return. The component is
- * intentionally generic — it does NOT hardcode which axes exist; it
- * inspects the variant list and renders only axes that are present.
+ * A reusable, data-driven selector that works against the backend's
+ * `variants[].attributes` map. The component does NOT hardcode which
+ * axes exist; it inspects the variant list and renders one group per
+ * axis that is present on at least one variant.
+ *
+ * Why this is fully data-driven:
+ *   The backend can return any axis name (Color, RAM, Storage, Size,
+ *   Material, Capacity, Configuration, …). Treating the attribute map
+ *   as the source of truth means a new "Material" or "RAM" axis needs
+ *   zero code changes — the same selector handles them.
  *
  * Interaction model:
  *   - Clicking an option selects a variant. Picking "Red" first narrows
@@ -41,21 +45,13 @@ interface ProductVariantsProps {
  *   - For each option we show a faded style when the combination is
  *     currently unstocked so the user is never tempted to pick a
  *     sold-out variant.
- *
- * Why this is data-driven (and not hardcoded):
- *   The backend will return arbitrary axis combinations. Modelling the
- *   component around `(axis, value)` pairs means a future "Material" axis
- *   for jackets or a "RAM" axis for laptops needs zero code changes.
  */
 export default function ProductVariants({
   variants,
   selectedVariantId,
   onSelect,
 }: ProductVariantsProps) {
-  const axes = useMemo<VariantAxis[]>(
-    () => axesPresent(variants),
-    [variants],
-  );
+  const axes = useMemo<string[]>(() => axesPresent(variants), [variants]);
 
   const selectedVariant = useMemo(
     () =>
@@ -67,7 +63,7 @@ export default function ProductVariants({
 
   if (axes.length === 0) return null;
 
-  const handleAxisClick = (axis: VariantAxis, value: string) => {
+  const handleAxisClick = (axis: string, value: string) => {
     // Picking a value for an axis always resolves to a real variant.
     // We do not maintain a multi-axis cross-product — the (axis, value)
     // pair is enough to choose SOMETHING the customer can buy.
@@ -75,12 +71,12 @@ export default function ProductVariants({
     if (match) onSelect(match.id);
   };
 
-  const isAxisValueSelected = (axis: VariantAxis, value: string) => {
+  const isAxisValueSelected = (axis: string, value: string) => {
     if (!selectedVariant) return false;
     return readAxis(selectedVariant, axis) === value;
   };
 
-  const isAxisValueAvailable = (axis: VariantAxis, value: string) => {
+  const isAxisValueAvailable = (axis: string, value: string) => {
     // An option is "available" when at least one variant matching this
     // axis value is sellable (has inventory > 0 or no inventory field).
     return variants.some((v) => {
@@ -191,21 +187,50 @@ export default function ProductVariants({
   );
 }
 
-/** List of axis keys actually present (non-null) on at least one variant. */
-function axesPresent(variants: ProductVariant[]): VariantAxis[] {
-  const axesToCheck: VariantAxis[] = ["size", "color", "storage"];
-  return axesToCheck.filter((axis) =>
-    variants.some((v) => {
-      const raw = readAxis(v, axis);
-      return raw !== undefined && raw !== null && raw !== "";
-    }),
-  );
+/**
+ * List the attribute axes that are present (non-null, non-empty) on at
+ * least one variant. We use the `attributes` map (the backend's source
+ * of truth) and fall back to the well-known typed fields so legacy
+ * variants without an `attributes` block still render.
+ *
+ * The resulting array preserves the order the backend sent the keys in
+ * (Object.entries order is insertion order in modern JS), so the UI
+ * mirrors whatever order the backend chose.
+ */
+function axesPresent(variants: ProductVariant[]): string[] {
+  const seen = new Set<string>();
+  const ordered: string[] = [];
+
+  const consider = (key: string) => {
+    if (seen.has(key)) return;
+    seen.add(key);
+    ordered.push(key);
+  };
+
+  for (const variant of variants) {
+    // Prefer the backend's `attributes` map (the canonical source).
+    if (variant.attributes && typeof variant.attributes === "object") {
+      for (const key of Object.keys(variant.attributes)) {
+        const v = variant.attributes[key];
+        if (v === undefined || v === null || v === "") continue;
+        consider(key);
+      }
+    }
+    // Also surface the legacy typed fields so older mock data keeps
+    // working alongside the dynamic map.
+    for (const key of ["size", "color", "storage"] as const) {
+      const v = variant[key];
+      if (v === undefined || v === null || v === "") continue;
+      consider(key);
+    }
+  }
+  return ordered;
 }
 
 /** Distinct values for a single axis across all variants. */
 function uniqueValuesForAxis(
   variants: ProductVariant[],
-  axis: VariantAxis,
+  axis: string,
 ): string[] {
   const set = new Set<string>();
   for (const variant of variants) {
@@ -217,14 +242,18 @@ function uniqueValuesForAxis(
 }
 
 /**
- * Typed accessor for the (size | color | storage) axis. Replaces the
- * previous `as Record<string, unknown>` cast with a discriminated read so
- * the rest of the file stays strictly typed.
+ * Read the value of an axis for a variant. Prefers the dynamic
+ * `attributes` map; falls back to the legacy typed fields for
+ * backwards compatibility with mock data.
  */
 function readAxis(
   variant: ProductVariant,
-  axis: VariantAxis,
+  axis: string,
 ): string | number | null | undefined {
+  // Dynamic map first — the backend's source of truth.
+  if (variant.attributes && Object.prototype.hasOwnProperty.call(variant.attributes, axis)) {
+    return variant.attributes[axis] as string | number | null;
+  }
   switch (axis) {
     case "size":
       return variant.size;

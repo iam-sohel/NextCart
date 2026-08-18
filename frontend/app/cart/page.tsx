@@ -152,6 +152,16 @@ export default function CartPage() {
                         </Typography>
                       </Link>
 
+                      {item.variantLabel && (
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ mt: 0.5 }}
+                        >
+                          {item.variantLabel}
+                        </Typography>
+                      )}
+
                       <Typography
                         color="primary"
                         sx={{
@@ -184,7 +194,9 @@ export default function CartPage() {
                             border: "1px solid #ddd",
                           }}
                           onClick={() =>
-                            decreaseQuantity(item.id)
+                            decreaseQuantity(item.id, {
+                              variantId: item.variantId,
+                            })
                           }
                         >
                           <RemoveIcon />
@@ -209,7 +221,9 @@ export default function CartPage() {
                             border: "1px solid #ddd",
                           }}
                           onClick={() =>
-                            increaseQuantity(item.id)
+                            increaseQuantity(item.id, {
+                              variantId: item.variantId,
+                            })
                           }
                         >
                           <AddIcon />
@@ -218,7 +232,9 @@ export default function CartPage() {
                         <IconButton
                           color="error"
                           onClick={() =>
-                            removeFromCart(item.id)
+                            removeFromCart(item.id, {
+                              variantId: item.variantId,
+                            })
                           }
                         >
                           <DeleteIcon />

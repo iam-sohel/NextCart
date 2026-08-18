@@ -32,8 +32,15 @@ const LOW_STOCK_THRESHOLD = 5;
 
 /**
  * Build an InventoryState from the backend payload. Accepts either the
- * backend-shaped object (quantity/reservedQty) or the legacy flat "stock"
- * integer used by the current mock data — both produce the same UI result.
+ * backend-shaped object (quantity/reservedQty + optional stockStatus) or
+ * the legacy flat "stock" integer used by the current mock data — both
+ * produce the same UI result.
+ *
+ * When the backend provides a `stockStatus` (e.g. "IN_STOCK",
+ * "LOW_STOCK", "OUT_OF_STOCK") it takes precedence over the local
+ * threshold-based derivation. The numeric fields are still emitted so the
+ * "Only N left" label keeps working when the backend marks something as
+ * LOW_STOCK without an explicit count.
  */
 export function deriveInventory(
   input:
@@ -41,6 +48,7 @@ export function deriveInventory(
         quantity?: number;
         reservedQty?: number;
         available?: number;
+        stockStatus?: string;
       }
     | number
     | null
@@ -74,8 +82,31 @@ export function deriveInventory(
     quantity,
     reservedQty,
     available,
-    status: statusFor(available),
+    status: stockStatusToInventoryStatus(input.stockStatus) ?? statusFor(available),
   };
+}
+
+/**
+ * Map the backend's `stockStatus` enum to our local InventoryStatus.
+ * Returns undefined when the input is missing or unrecognised so the
+ * caller can fall back to the numeric derivation.
+ */
+function stockStatusToInventoryStatus(
+  raw: string | undefined,
+): InventoryStatus | undefined {
+  if (!raw) return undefined;
+  switch (String(raw).toUpperCase()) {
+    case "IN_STOCK":
+    case "AVAILABLE":
+      return "in_stock";
+    case "LOW_STOCK":
+      return "low_stock";
+    case "OUT_OF_STOCK":
+    case "SOLD_OUT":
+      return "out_of_stock";
+    default:
+      return undefined;
+  }
 }
 
 function statusFor(available: number): InventoryStatus {
