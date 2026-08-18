@@ -67,7 +67,7 @@ public class ProductMapper {
         response.setName(product.getName());
         response.setSlug(product.getSlug());
         response.setDescription(product.getDescription());
-        response.setStatus(product.getStatus());
+
 
         return response;
     }
@@ -86,6 +86,6 @@ public class ProductMapper {
         product.setName(request.getName());
         product.setSlug(request.getSlug());
         product.setDescription(request.getDescription());
-        product.setStatus(request.getStatus());
+
     }
 }

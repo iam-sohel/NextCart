@@ -1,21 +1,21 @@
 package com.nextcart.nextcart.cart_module.repository;
 
-import java.util.Optional;
-
+import com.nextcart.nextcart.cart_module.entity.CartItem;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Repository;
 
-import com.nextcart.nextcart.cart_module.entity.CartItem;
+import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CartItemRepository extends JpaRepository<CartItem, Long> {
 
-    Optional<CartItem> findByCartIdAndProductId(Long cartId, Long productId);
+    List<CartItem> findByCartId(Long cartId);
 
-    @Modifying
-    void deleteByCartIdAndProductId(Long cartId, Long productId);
+    Optional<CartItem> findByCartIdAndProductVariantId(
+            Long cartId,
+            Long productVariantId
+    );
 
-    @Modifying
     void deleteByCartId(Long cartId);
 }
