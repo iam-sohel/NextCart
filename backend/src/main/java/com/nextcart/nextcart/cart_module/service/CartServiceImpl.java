@@ -1,17 +1,4 @@
 package com.nextcart.nextcart.cart_module.service;
-import com.nextcart.nextcart.product_module.entity.Product;
-import com.nextcart.nextcart.product_module.repository.ProductRepository;
-
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.nextcart.nextcart.cart_module.dto.AddToCartRequestDTO;
 import com.nextcart.nextcart.cart_module.dto.CartItemResponseDTO;
@@ -19,37 +6,52 @@ import com.nextcart.nextcart.cart_module.dto.CartResponseDTO;
 import com.nextcart.nextcart.cart_module.dto.UpdateCartItemRequestDTO;
 import com.nextcart.nextcart.cart_module.entity.Cart;
 import com.nextcart.nextcart.cart_module.entity.CartItem;
-import com.nextcart.nextcart.user_module.entity.User;
 import com.nextcart.nextcart.cart_module.repository.CartItemRepository;
 import com.nextcart.nextcart.cart_module.repository.CartRepository;
+import com.nextcart.nextcart.product_module.entity.Product;
+import com.nextcart.nextcart.product_module.entity.ProductVariant;
+import com.nextcart.nextcart.product_module.repository.ProductVariantRepository;
+import com.nextcart.nextcart.user_module.entity.User;
 import com.nextcart.nextcart.user_module.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 @Transactional
 public class CartServiceImpl implements CartService {
 
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
-    private final ProductRepository productRepository;
+    private final ProductVariantRepository productVariantRepository;
     private final UserRepository userRepository;
 
-    public CartServiceImpl(CartRepository cartRepository,
-                           CartItemRepository cartItemRepository,
-                           ProductRepository productRepository,
-                           UserRepository userRepository) {
-        this.cartRepository = cartRepository;
-        this.cartItemRepository = cartItemRepository;
-        this.productRepository = productRepository;
-        this.userRepository = userRepository;
-    }
-
     private User getAuthenticatedUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new RuntimeException("User is not authenticated");
+
+        Authentication authentication =
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication();
+
+        if (authentication == null ||
+                !authentication.isAuthenticated()) {
+
+            throw new RuntimeException(
+                    "User is not authenticated");
         }
 
-        Object principal = authentication.getPrincipal();
+        Object principal =
+                authentication.getPrincipal();
+
         String email;
 
         if (principal instanceof UserDetails userDetails) {
@@ -60,109 +62,289 @@ public class CartServiceImpl implements CartService {
             email = authentication.getName();
         }
 
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+        return userRepository
+                .findByEmail(email)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "User not found with email: " + email));
     }
 
     private Cart getOrCreateCart() {
+
         User user = getAuthenticatedUser();
-        return cartRepository.findByUserId(user.getId())
-                .orElseGet(() -> cartRepository.save(new Cart(user)));
+
+        return cartRepository
+                .findByUser(user)
+                .orElseGet(() ->
+                        cartRepository.save(
+                                new Cart(user)));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public CartResponseDTO getCart() {
+
         Cart cart = getOrCreateCart();
+
         return mapToCartResponseDTO(cart);
     }
 
     @Override
-    public CartResponseDTO addToCart(AddToCartRequestDTO request) {
+    public CartResponseDTO addToCart(
+            AddToCartRequestDTO request) {
+
         Cart cart = getOrCreateCart();
-        Product product = productRepository.findById(request.getProductId())
-                .orElseThrow(() -> new RuntimeException("Product not found with id: " + request.getProductId()));
 
-        Optional<CartItem> existingItemOpt = cartItemRepository.findByCartIdAndProductId(cart.getId(), product.getId());
-
-        if (existingItemOpt.isPresent()) {
-            CartItem existingItem = existingItemOpt.get();
-            existingItem.setQuantity(existingItem.getQuantity() + request.getQuantity());
-            cartItemRepository.save(existingItem);
-        } else {
-            CartItem newItem = new CartItem(cart, product, request.getQuantity());
-            cart.addItem(newItem);
-            cartItemRepository.save(newItem);
+        if (request.getVariantId() == null) {
+            throw new RuntimeException(
+                    "Variant ID is required");
         }
 
-        return mapToCartResponseDTO(cartRepository.findById(cart.getId()).get());
+        if (request.getQuantity() == null ||
+                request.getQuantity() <= 0) {
+
+            throw new RuntimeException(
+                    "Quantity must be greater than zero");
+        }
+
+        ProductVariant productVariant =
+                productVariantRepository
+                        .findById(request.getVariantId())
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Product variant not found with id: "
+                                                + request.getVariantId()));
+
+        Product product =
+                productVariant.getProduct();
+
+        if (product == null) {
+            throw new RuntimeException(
+                    "Product not found for variant");
+        }
+
+        if (productVariant.getPrice() == null) {
+            throw new RuntimeException(
+                    "Price not found for product variant");
+        }
+
+        Optional<CartItem> existingItemOptional =
+                cartItemRepository
+                        .findByCartIdAndProductVariantId(
+                                cart.getId(),
+                                productVariant.getId());
+
+        if (existingItemOptional.isPresent()) {
+
+            CartItem existingItem =
+                    existingItemOptional.get();
+
+            existingItem.setQuantity(
+                    existingItem.getQuantity()
+                            + request.getQuantity());
+
+            cartItemRepository.save(existingItem);
+
+        } else {
+
+            CartItem cartItem =
+                    new CartItem(
+                            cart,
+                            product,
+                            productVariant,
+                            request.getQuantity());
+
+            cartItemRepository.save(cartItem);
+
+            cart.getItems().add(cartItem);
+        }
+
+        updateCartTotal(cart);
+
+        Cart savedCart =
+                cartRepository.save(cart);
+
+        return mapToCartResponseDTO(savedCart);
     }
 
     @Override
-    public CartResponseDTO updateCartItem(Long productId, UpdateCartItemRequestDTO request) {
-        Cart cart = getOrCreateCart();
-        CartItem cartItem = cartItemRepository.findByCartIdAndProductId(cart.getId(), productId)
-                .orElseThrow(() -> new RuntimeException("Item not found in cart for product id: " + productId));
+    public CartResponseDTO updateCartItem(
+            Long variantId,
+            UpdateCartItemRequestDTO request) {
 
-        cartItem.setQuantity(request.getQuantity());
+        Cart cart = getOrCreateCart();
+
+        if (request.getQuantity() == null ||
+                request.getQuantity() <= 0) {
+
+            throw new RuntimeException(
+                    "Quantity must be greater than zero");
+        }
+
+        CartItem cartItem =
+                cartItemRepository
+                        .findByCartIdAndProductVariantId(
+                                cart.getId(),
+                                variantId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Product variant not found in cart"));
+
+        cartItem.setQuantity(
+                request.getQuantity());
+
         cartItemRepository.save(cartItem);
 
-        return mapToCartResponseDTO(cartRepository.findById(cart.getId()).get());
+        updateCartTotal(cart);
+
+        Cart savedCart =
+                cartRepository.save(cart);
+
+        return mapToCartResponseDTO(savedCart);
     }
 
     @Override
-    public CartResponseDTO removeFromCart(Long productId) {
+    public CartResponseDTO removeFromCart(
+            Long variantId) {
+
         Cart cart = getOrCreateCart();
-        
-        Optional<CartItem> itemOpt = cartItemRepository.findByCartIdAndProductId(cart.getId(), productId);
-        if (itemOpt.isPresent()) {
-            CartItem item = itemOpt.get();
-            cart.removeItem(item);
-            cartItemRepository.delete(item);
+
+        Optional<CartItem> itemOptional =
+                cartItemRepository
+                        .findByCartIdAndProductVariantId(
+                                cart.getId(),
+                                variantId);
+
+        if (itemOptional.isPresent()) {
+
+            CartItem cartItem =
+                    itemOptional.get();
+
+            cart.getItems().remove(cartItem);
+
+            cartItemRepository.delete(cartItem);
         }
 
-        return mapToCartResponseDTO(cartRepository.save(cart));
+        updateCartTotal(cart);
+
+        Cart savedCart =
+                cartRepository.save(cart);
+
+        return mapToCartResponseDTO(savedCart);
     }
 
     @Override
     public void clearCart() {
+
         Cart cart = getOrCreateCart();
+
+        cartItemRepository.deleteByCartId(
+                cart.getId());
+
         cart.getItems().clear();
-        cartItemRepository.deleteByCartId(cart.getId());
+
+        cart.setTotalAmount(
+                BigDecimal.ZERO);
+
+        cartRepository.save(cart);
     }
 
-    private CartResponseDTO mapToCartResponseDTO(Cart cart) {
-        CartResponseDTO dto = new CartResponseDTO();
-        dto.setId(cart.getId());
+    private void updateCartTotal(Cart cart) {
+
+        BigDecimal total =
+                cart.getItems()
+                        .stream()
+                        .map(item -> {
+
+                            if (item.getProductVariant() == null ||
+                                    item.getProductVariant().getPrice() == null) {
+
+                                return BigDecimal.ZERO;
+                            }
+
+                            return item.getProductVariant()
+                                    .getPrice()
+                                    .multiply(
+                                            BigDecimal.valueOf(
+                                                    item.getQuantity()));
+                        })
+                        .reduce(
+                                BigDecimal.ZERO,
+                                BigDecimal::add);
+
+        cart.setTotalAmount(total);
+    }
+
+    private CartResponseDTO mapToCartResponseDTO(
+            Cart cart) {
+
+        List<CartItemResponseDTO> itemDTOs =
+                cart.getItems()
+                        .stream()
+                        .map(item -> {
+
+                            Product product =
+                                    item.getProduct();
+
+                            ProductVariant variant =
+                                    item.getProductVariant();
+
+                            BigDecimal price =
+                                    variant != null
+                                            ? variant.getPrice()
+                                            : BigDecimal.ZERO;
+
+                            BigDecimal itemTotal =
+                                    price.multiply(
+                                            BigDecimal.valueOf(
+                                                    item.getQuantity()));
+
+                            return new CartItemResponseDTO(
+                                    item.getId(),
+                                    product.getId(),
+                                    product.getName(),
+                                    null,
+                                    price,
+                                    item.getQuantity(),
+                                    itemTotal
+                            );
+                        })
+                        .collect(Collectors.toList());
+
+        CartResponseDTO response =
+                new CartResponseDTO();
+
+        response.setId(cart.getId());
+
         if (cart.getUser() != null) {
-            dto.setUserId(cart.getUser().getId());
+            response.setUserId(
+                    cart.getUser().getId());
         }
-        dto.setSessionId(cart.getSessionId());
 
-        List<CartItemResponseDTO> itemDTOs = cart.getItems().stream().map(item -> {
-            BigDecimal price = item.getProduct().getPrice();
-            BigDecimal total = price.multiply(BigDecimal.valueOf(item.getQuantity()));
+        response.setSessionId(
+                cart.getSessionId());
 
-            return new CartItemResponseDTO(
-                    item.getId(),
-                    item.getProduct().getId(),
-                    item.getProduct().getName(),
-                    null,
-                    price,
-                    item.getQuantity(),
-                    total
-            );
-        }).collect(Collectors.toList());
+        response.setItems(itemDTOs);
 
-        dto.setItems(itemDTOs);
+        int totalItems =
+                itemDTOs
+                        .stream()
+                        .mapToInt(
+                                CartItemResponseDTO::getQuantity)
+                        .sum();
 
-        int totalItems = itemDTOs.stream().mapToInt(CartItemResponseDTO::getQuantity).sum();
-        BigDecimal grandTotal = itemDTOs.stream()
-                .map(CartItemResponseDTO::getItemTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal grandTotal =
+                itemDTOs
+                        .stream()
+                        .map(
+                                CartItemResponseDTO::getItemTotal)
+                        .reduce(
+                                BigDecimal.ZERO,
+                                BigDecimal::add);
 
-        dto.setTotalItems(totalItems);
-        dto.setGrandTotal(grandTotal);
+        response.setTotalItems(totalItems);
+        response.setGrandTotal(grandTotal);
 
-        return dto;
+        return response;
     }
 }

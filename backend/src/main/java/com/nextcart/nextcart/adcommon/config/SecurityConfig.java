@@ -35,26 +35,37 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/api/auth/**",
-                                "/api/v1/auth/**",
-                                "/v3/api-docs/**",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/api/products/**",
-                                "/api/v1/products/**",
-                                "/api/v1/payments/webhook/razorpay"
-                        ).permitAll()
-                        .requestMatchers(
-                                "/api/v1/orders/**",
-                                "/api/v1/cart/**",
-                                "/api/v1/addresses/**",
-                                "/api/v1/wishlist/**",
-                                "/api/v1/payments/**"
-                        ).authenticated()
-                        .anyRequest().authenticated()
-                )
-                .addFilterBefore(
+
+                                .requestMatchers(
+                                        "/api/auth/**",
+                                        "/api/v1/auth/**",
+                                        "/v3/api-docs/**",
+                                        "/swagger-ui/**",
+                                        "/swagger-ui.html",
+
+                                        // Product Management - temporary security skip
+                                        "/api/products/**",
+                                        "/api/v1/products/**",
+                                        "/api/categories/**",
+                                        "/api/v1/categories/**",
+                                        "/api/subcategories/**",
+                                        "/api/v1/subcategories/**",
+                                        "/api/brands/**",
+                                        "/api/v1/brands/**",
+
+                                        "/api/v1/payments/webhook/razorpay"
+                                ).permitAll()
+
+                                .requestMatchers(
+                                        "/api/v1/orders/**",
+                                        "/api/v1/cart/**",
+                                        "/api/v1/addresses/**",
+                                        "/api/v1/wishlist/**",
+                                        "/api/v1/payments/**"
+                                ).authenticated()
+
+                                .anyRequest().authenticated()
+                        ).addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
                 );
