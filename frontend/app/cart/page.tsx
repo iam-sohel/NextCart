@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useEffect } from "react";
 
 import {
   Container,
@@ -23,23 +24,29 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 
 import useCartStore from "@/store/cartStore";
+import useAuthStore from "@/store/authStore";
 
 export default function CartPage() {
-  const {
-    items,
-    increaseQuantity,
-    decreaseQuantity,
-    removeFromCart,
-  } = useCartStore();
+  const items = useCartStore((s) => s.items);
+  const increaseQuantity = useCartStore((s) => s.increaseQuantity);
+  const decreaseQuantity = useCartStore((s) => s.decreaseQuantity);
+  const removeFromCart = useCartStore((s) => s.removeFromCart);
+  const fetchCart = useCartStore((s) => s.fetchCart);
+  const serverGrandTotal = useCartStore((s) => s.serverGrandTotal);
+  const token = useAuthStore((s) => s.token);
 
-  const subtotal = items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
+  // Hydrate from the server when the page mounts. For guests the local
+  // in-memory cart keeps working; for logged-in users the server cart
+  // becomes the source of truth. The interceptor handles 401s.
+  useEffect(() => {
+    if (token) void fetchCart();
+  }, [token, fetchCart]);
 
-  const shipping = 0;
-  const discount = 0;
-  const total = subtotal + shipping - discount;
+  // Brief: backend is the absolute source of truth for cart and order
+  // totals. We display the server-provided grandTotal rather than
+  // recomputing on the client.
+  const total = serverGrandTotal;
+  const subtotal = serverGrandTotal; // free shipping + no discount yet
 
   if (items.length === 0) {
     return (
@@ -232,9 +239,7 @@ export default function CartPage() {
                         <IconButton
                           color="error"
                           onClick={() =>
-                            removeFromCart(item.id, {
-                              variantId: item.variantId,
-                            })
+                            removeFromCart(item.id)
                           }
                         >
                           <DeleteIcon />

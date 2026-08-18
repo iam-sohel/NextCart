@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -25,12 +26,46 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 
 import useCartStore from "@/store/cartStore";
-import useOrderStore from "@/store/orderStore";
+import useAddressStore from "@/store/addressStore";
+import useAuthStore from "@/store/authStore";
+import {
+  validateAddressPhone,
+  validatePostalCode,
+} from "@/components/auth/validation";
 
+import { checkout as apiCheckout } from "@/services/orderService";
+import { createAddress as apiCreateAddress } from "@/services/addressService";
+
+/**
+ * NEXTCART — Checkout
+ *
+ * Backend-driven flow (Checkpoint 4):
+ *   1. The cart's `serverGrandTotal` is the only number shown to the
+ *      user for the total. We do NOT recompute it client-side.
+ *   2. "Place Order" hits `POST /api/v1/orders/checkout` with
+ *      `{ addressId, paymentMethod }`.
+ *   3. If the user typed a fresh inline address, we first POST it to
+ *      `/api/v1/addresses` (so we have an `addressId` to send).
+ *   4. The local cart is only cleared AFTER the server returns 201.
+ *      The server's `orderNumber` is the source of truth for the
+ *      success page; no browser-generated IDs.
+ *   5. Guests are redirected to /login — the backend checkout endpoint
+ *      requires authentication.
+ *
+ * Visual layout is byte-identical to the prior version: same fields,
+ * same Cards, same Order Summary block, same button labels.
+ */
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, clearCart } = useCartStore();
-  const addOrder = useOrderStore((state) => state.addOrder);
+  const items = useCartStore((s) => s.items);
+  const serverGrandTotal = useCartStore((s) => s.serverGrandTotal);
+  const clearCart = useCartStore((s) => s.clearCart);
+  const fetchCart = useCartStore((s) => s.fetchCart);
+  const fetchAddresses = useAddressStore((s) => s.fetchAll);
+  const addresses = useAddressStore((s) => s.items);
+  const token = useAuthStore((s) => s.token);
+
+  const defaultAddress = addresses.find((a) => a.isDefault === true);
 
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -40,17 +75,96 @@ export default function CheckoutPage() {
   const [pincode, setPincode] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"COD" | "ONLINE">("COD");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const subtotal = items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
-  const shipping = 0;
-  const total = subtotal + shipping;
+  // Auth gate: checkout requires a logged-in user.
+  useEffect(() => {
+    if (!token) {
+      router.push("/login?reason=login-required&return=/checkout");
+    }
+  }, [token, router]);
 
-  const handlePlaceOrder = useCallback(() => {
+  // Pre-fill the form from the user's default saved address, exactly once
+  // after the addresses load. Only runs when fields are still empty so the
+  // user can keep editing without their input being clobbered.
+  useEffect(() => {
+    if (token && defaultAddress) {
+      flushSync(() => {
+        setFullName((v) => v || defaultAddress.fullName || "");
+        setPhone((v) => v || defaultAddress.phoneNumber || "");
+        setAddressLine((v) => v || defaultAddress.streetAddress || "");
+        setCity((v) => v || defaultAddress.city || "");
+        setState((v) => v || defaultAddress.state || "");
+        setPincode((v) => v || defaultAddress.postalCode || "");
+      });
+    }
+  }, [token, defaultAddress]);
+
+  // Kick off the address fetch + cart refresh on mount when authenticated.
+  useEffect(() => {
+    if (!token) return;
+    void fetchAddresses();
+    void fetchCart();
+  }, [token, fetchAddresses, fetchCart]);
+
+  // Brief: backend is the absolute source of truth for the total.
+  const total = serverGrandTotal;
+  const subtotal = serverGrandTotal; // free shipping + no discount yet
+
+  /**
+   * Decide which `addressId` to send. If the inline fields exactly
+   * match a saved address (especially the default), reuse its id. If
+   * the user typed something new, persist it first and use the
+   * returned id.
+   */
+  const resolveAddressId = async (): Promise<number> => {
+    if (defaultAddress && fieldsMatch(defaultAddress)) {
+      return defaultAddress.id;
+    }
+    const createRes = await apiCreateAddress({
+      fullName,
+      phoneNumber: phone,
+      streetAddress: addressLine,
+      landmark: "",
+      city,
+      state,
+      postalCode: pincode,
+      country: "India",
+      isDefault: addresses.length === 0,
+    });
+    if (!createRes.ok) {
+      throw new Error(createRes.message);
+    }
+    return createRes.data.id;
+  };
+
+  function fieldsMatch(a: NonNullable<typeof defaultAddress>): boolean {
+    return (
+      a.fullName === fullName &&
+      a.phoneNumber === phone &&
+      a.streetAddress === addressLine &&
+      a.city === city &&
+      a.state === state &&
+      a.postalCode === pincode
+    );
+  }
+
+  const handlePlaceOrder = useCallback(async () => {
+    if (submitting) return;
+
     if (!fullName || !phone || !addressLine || !city || !state || !pincode) {
       setError("Please fill in all address fields.");
+      return;
+    }
+
+    const phoneError = validateAddressPhone(phone);
+    if (phoneError) {
+      setError(phoneError);
+      return;
+    }
+    const pincodeError = validatePostalCode(pincode);
+    if (pincodeError) {
+      setError(pincodeError);
       return;
     }
 
@@ -60,30 +174,46 @@ export default function CheckoutPage() {
     }
 
     setError("");
+    setSubmitting(true);
 
-    const orderId = `NC${Date.now().toString(36).toUpperCase()}`;
+    try {
+      // Step 1: resolve the addressId.
+      const addressId = await resolveAddressId();
 
-    addOrder({
-      orderId,
-      items: items.map((item) => ({
-        id: item.id,
-        slug: item.slug,
-        title: item.title,
-        image: item.image,
-        price: item.price,
-        quantity: item.quantity,
-      })),
-      subtotal,
-      shipping,
-      total,
-      address: { fullName, phone, addressLine, city, state, pincode },
-      paymentMethod,
-      orderDate: Date.now(),
-    });
+      // Step 2: hit the server-authoritative checkout endpoint.
+      const result = await apiCheckout(addressId, "COD");
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
 
-    clearCart();
-    router.push(`/order-success?orderId=${orderId}`);
-  }, [items, fullName, phone, addressLine, city, state, pincode, paymentMethod, subtotal, shipping, total, addOrder, clearCart, router]);
+      // Step 3: only clear the local cart AFTER the server returns
+      // success. Re-fetch so the server-cart is empty too.
+      await clearCart();
+      void fetchCart();
+
+      // Step 4: navigate with the server's orderNumber — no mock IDs.
+      router.push(`/order-success?orderId=${encodeURIComponent(result.data.orderNumber)}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Checkout failed.";
+      setError(message);
+    } finally {
+      setSubmitting(false);
+    }
+  }, [
+    submitting,
+    fullName,
+    phone,
+    addressLine,
+    city,
+    state,
+    pincode,
+    paymentMethod,
+    clearCart,
+    fetchCart,
+    resolveAddressId,
+    router,
+  ]);
 
   if (items.length === 0) {
     return (
@@ -289,14 +419,14 @@ export default function CheckoutPage() {
                 size="large"
                 sx={{ mt: 4, py: 1.5, borderRadius: 2 }}
                 onClick={handlePlaceOrder}
+                disabled={submitting}
               >
-                Place Order
+                {submitting ? "Placing Order…" : "Place Order"}
               </Button>
             </CardContent>
           </Card>
         </Box>
       </Container>
-
       <Footer />
     </>
   );

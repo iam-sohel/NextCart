@@ -66,6 +66,11 @@ const useAuthStore = create<AuthState>((set) => ({
   error: null,
   isAuthenticating: false,
 
+  // `lib/authInterceptor.ts` reads the live token via
+  // `useAuthStore.getState().token` on every authenticated request, so a
+  // fresh login is reflected on the next call without needing to re-subscribe.
+  // No action needed on the store itself; the interceptor owns the wiring.
+
   async login(email, password) {
     set({ loading: true, isAuthenticating: true, error: null });
 

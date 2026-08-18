@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useEffect } from "react";
 
 import {
   Container,
@@ -20,12 +21,21 @@ import Footer from "@/components/layout/Footer";
 
 import useWishlistStore from "@/store/wishlistStore";
 import useCartStore from "@/store/cartStore";
+import useAuthStore from "@/store/authStore";
 
 export default function WishlistPage() {
-  const {
-    items,
-    removeFromWishlist,
-  } = useWishlistStore();
+  const items = useWishlistStore((s) => s.items);
+  const removeAction = useWishlistStore((s) => s.remove);
+  const fetchAll = useWishlistStore((s) => s.fetchAll);
+  const token = useAuthStore((s) => s.token);
+
+  // Load the wishlist once on mount, only when authenticated.
+  // A 401 here triggers the global interceptor; we just don't double-fire.
+  useEffect(() => {
+    if (token) {
+      void fetchAll();
+    }
+  }, [token, fetchAll]);
 
   const addToCart = useCartStore(
     (state) => state.addToCart
@@ -33,7 +43,7 @@ export default function WishlistPage() {
 
   const moveToCart = (item: typeof items[number]) => {
     addToCart({
-      id: item.id,
+      id: item.productId,
       slug: item.slug,
       title: item.title,
       image: item.image,
@@ -42,7 +52,7 @@ export default function WishlistPage() {
       variantId: item.variantId,
       variantLabel: item.variantLabel,
     });
-    removeFromWishlist(item.id);
+    void removeAction(item.productId);
   };
 
   if (items.length === 0) {
@@ -99,7 +109,7 @@ export default function WishlistPage() {
 
         {items.map((item) => (
           <Card
-            key={item.id}
+            key={item.wishlistId}
             sx={{
               mb: 3,
               borderRadius: 3,
@@ -114,8 +124,8 @@ export default function WishlistPage() {
                 }}
               >
                 <Image
-                  src={item.image}
-                  alt={item.title}
+                  src={item.image || "/placeholder.png"}
+                  alt={item.title || "Wishlist item"}
                   width={120}
                   height={120}
                   style={{
@@ -145,7 +155,7 @@ export default function WishlistPage() {
                     color="primary"
                     sx={{ fontWeight: 700, mt: 1 }}
                   >
-                    ₹{item.price.toLocaleString()}
+                    ₹{Number(item.price || 0).toLocaleString()}
                   </Typography>
                 </Box>
 
@@ -160,7 +170,7 @@ export default function WishlistPage() {
                 <IconButton
                   color="error"
                   onClick={() =>
-                    removeFromWishlist(item.id)
+                    void removeAction(item.productId)
                   }
                 >
                   <DeleteIcon />
