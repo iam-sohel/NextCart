@@ -86,3 +86,44 @@ export const validateLoginPassword = (raw: string): ValidationResult => {
   if (!raw) return "Password is required.";
   return null;
 };
+
+/* ─────────────────────────────────────────────────────────────────────
+   Address validators
+   ---------------------------------------------------------------------
+   The backend's AddressRequestDTO enforces these as @Pattern annotations:
+
+     phoneNumber: ^[0-9]{10}$
+     postalCode:  ^[0-9]{6}$
+
+   We mirror them on the client so the user sees the same error before
+   a round-trip, and we never submit an invalid payload.
+   ───────────────────────────────────────────────────────────────────── */
+
+const ADDRESS_PHONE_REGEX = /^[0-9]{10}$/;
+const ADDRESS_POSTAL_REGEX = /^[0-9]{6}$/;
+
+/**
+ * Validates an address phone number. Strict 10-digit numeric string —
+ * matches the backend's `@Pattern(regexp = "^[0-9]{10}$")`.
+ */
+export const validateAddressPhone = (raw: string): ValidationResult => {
+  const value = raw.trim();
+  if (!value) return "Phone number is required.";
+  if (!ADDRESS_PHONE_REGEX.test(value)) {
+    return "Phone number must be a valid 10-digit number.";
+  }
+  return null;
+};
+
+/**
+ * Validates an Indian (or any 6-digit) PIN/postal code. Strict 6-digit
+ * numeric string — matches the backend's `@Pattern(regexp = "^[0-9]{6}$")`.
+ */
+export const validatePostalCode = (raw: string): ValidationResult => {
+  const value = raw.trim();
+  if (!value) return "Postal code is required.";
+  if (!ADDRESS_POSTAL_REGEX.test(value)) {
+    return "Postal code must be a valid 6-digit PIN code.";
+  }
+  return null;
+};

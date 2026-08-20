@@ -24,6 +24,7 @@ import PersonOutlineIcon from "@mui/icons-material/Person";
 import useCartStore from "@/store/cartStore";
 import useWishlistStore from "@/store/wishlistStore";
 import useAuthStore from "@/store/authStore";
+import useAddressStore from "@/store/addressStore";
 
 export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -33,6 +34,8 @@ export default function Navbar() {
   const wishlistItems = useWishlistStore((state) => state.items);
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
+  const resetAddresses = useAddressStore((s) => s.reset);
+  const resetCart = useCartStore((s) => s.reset);
 
   const isAuthenticated = Boolean(user);
   const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
@@ -51,8 +54,11 @@ export default function Navbar() {
 
   const handleLogout = () => {
     logout();
-    // Drop the user back on the home page. Cart/wishlist are guest-friendly
-    // and intentionally preserved so a logged-out session can resume later.
+    resetAddresses();
+    resetCart();
+    // Drop the user back on the home page. Wishlist stays local so a
+    // logged-out session can resume; the cart and address book are reset
+    // because they're now backend-driven and a fresh login will refetch.
     router.push("/");
   };
 
@@ -125,7 +131,7 @@ export default function Navbar() {
 
         <Button
           component={Link}
-          href={isAuthenticated ? "/account" : "/login"}
+          href={isAuthenticated ? "/account/addresses" : "/login"}
           variant="contained"
           sx={{
             bgcolor: "secondary.main",

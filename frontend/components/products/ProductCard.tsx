@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import Image, { type StaticImageData } from "next/image";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import {
   Card,
@@ -20,6 +21,8 @@ import FavoriteIcon from "@mui/icons-material/Favorite";
 
 import useCartStore from "@/store/cartStore";
 import useWishlistStore from "@/store/wishlistStore";
+import useAuthStore from "@/store/authStore";
+import { UNIVERSAL_FALLBACK } from "@/utils/productImages";
 
 interface ProductCardProps {
   id: number | string;
@@ -36,6 +39,39 @@ interface ProductCardProps {
   newArrival?: boolean;
 }
 
+/**
+ * Deterministic price formatter.
+ *
+ * Explicitly uses the Indian locale so the server and browser
+ * produce the same result during hydration.
+ *
+ * Example:
+ * 119999 -> 1,19,999
+ */
+const formatPrice = (value: number | string): string => {
+  const amount = Number(value);
+
+  if (!Number.isFinite(amount)) {
+    return "0";
+  }
+
+  return new Intl.NumberFormat("en-IN", {
+    maximumFractionDigits: 0,
+    useGrouping: true,
+  }).format(amount);
+};
+
+const formatReviews = (value: number): string => {
+  if (!Number.isFinite(value)) {
+    return "0";
+  }
+
+  return new Intl.NumberFormat("en-IN", {
+    maximumFractionDigits: 0,
+    useGrouping: true,
+  }).format(value);
+};
+
 export default function ProductCard({
   id,
   slug,
@@ -51,33 +87,62 @@ export default function ProductCard({
   newArrival = false,
 }: ProductCardProps) {
   const [isAdding, setIsAdding] = useState(false);
-  const addToCart = useCartStore((state) => state.addToCart);
-  const { addToWishlist, removeFromWishlist, isInWishlist } =
-    useWishlistStore();
+  const [resolvedImage, setResolvedImage] = useState<string>(image);
 
-  const numericId = toNumericId(id);
-  const isWishlisted = numericId !== null && isInWishlist(numericId);
+  const router = useRouter();
+
+  const addToCart = useCartStore((state) => state.addToCart);
+
+  const token = useAuthStore((state) => state.token);
+
+  const has = useWishlistStore((state) => state.has);
+  const addToWishlistAction = useWishlistStore((state) => state.add);
+  const removeFromWishlistAction = useWishlistStore(
+    (state) => state.remove,
+  );
+
+  const isWishlisted = has(id);
 
   const handleAddToCart = () => {
     setIsAdding(true);
-    addToCart({ id, slug, title, image, price: Number(price), quantity: 1 });
-    setTimeout(() => setIsAdding(false), 300);
+
+    addToCart({
+      id,
+      slug,
+      title,
+      image: resolvedImage,
+      price: Number(price),
+      quantity: 1,
+    });
+
+    setTimeout(() => {
+      setIsAdding(false);
+    }, 300);
   };
 
   const handleWishlistToggle = () => {
-    if (numericId === null) return;
+    if (!token) {
+      router.push(`/login?reason=login-required&return=/wishlist`);
+      return;
+    }
+
     if (isWishlisted) {
-      removeFromWishlist(numericId);
+      void removeFromWishlistAction(id);
     } else {
-      addToWishlist({
-        id: numericId,
-        slug,
-        title,
-        image,
-        price: Number(price),
-        originalPrice: originalPrice !== undefined ? Number(originalPrice) : Number(price),
-        brand,
-      });
+      void addToWishlistAction(id);
+    }
+  };
+
+  /**
+   * next/image fires onError when the upstream file is missing
+   * or returns a 4xx response.
+   *
+   * Swap to the universal placeholder so one broken product
+   * image doesn't break the product grid.
+   */
+  const handleImageError = () => {
+    if (resolvedImage !== UNIVERSAL_FALLBACK) {
+      setResolvedImage(UNIVERSAL_FALLBACK);
     }
   };
 
@@ -95,6 +160,7 @@ export default function ProductCard({
           transform: "translateY(-6px)",
           boxShadow: 3,
         },
+
         "&:hover .product-card-image": {
           transform: "scale(1.06)",
         },
@@ -103,9 +169,12 @@ export default function ProductCard({
       <Box sx={{ position: "relative" }}>
         <Link
           href={`/products/${slug}`}
-          style={{ textDecoration: "none", color: "inherit" }}
+          style={{
+            textDecoration: "none",
+            color: "inherit",
+          }}
         >
-          {/* Product photo stage — intentionally light, see note above */}
+          {/* Product photo stage */}
           <Box
             sx={{
               height: 220,
@@ -126,10 +195,14 @@ export default function ProductCard({
               }}
             >
               <Image
-                src={image}
+                src={resolvedImage as string | StaticImageData}
                 alt={title}
                 fill
-                style={{ objectFit: "contain" }}
+                sizes="(max-width: 600px) 100vw, (max-width: 1200px) 33vw, 25vw"
+                style={{
+                  objectFit: "contain",
+                }}
+                onError={handleImageError}
               />
             </Box>
           </Box>
@@ -159,6 +232,7 @@ export default function ProductCard({
               }}
             />
           )}
+
           {!bestseller && newArrival && (
             <Chip
               label="New"
@@ -172,6 +246,7 @@ export default function ProductCard({
               }}
             />
           )}
+
           <Chip
             label={offer}
             size="small"
@@ -185,8 +260,15 @@ export default function ProductCard({
           />
         </Box>
 
+        {/* Wishlist */}
         <IconButton
           onClick={handleWishlistToggle}
+          aria-label={
+            isWishlisted
+              ? "Remove from wishlist"
+              : "Add to wishlist"
+          }
+          aria-pressed={isWishlisted}
           sx={{
             position: "absolute",
             top: 8,
@@ -195,18 +277,32 @@ export default function ProductCard({
             boxShadow: 1,
             width: 34,
             height: 34,
-            "&:hover": { bgcolor: "#F3F1EC" },
+
+            "&:hover": {
+              bgcolor: "#F3F1EC",
+            },
           }}
         >
           {isWishlisted ? (
-            <FavoriteIcon sx={{ fontSize: 18, color: "error.main" }} />
+            <FavoriteIcon
+              sx={{
+                fontSize: 18,
+                color: "error.main",
+              }}
+            />
           ) : (
-            <FavoriteBorderIcon sx={{ fontSize: 18, color: "#0B1120" }} />
+            <FavoriteBorderIcon
+              sx={{
+                fontSize: 18,
+                color: "#0B1120",
+              }}
+            />
           )}
         </IconButton>
       </Box>
 
       <CardContent sx={{ pb: 2 }}>
+        {/* Brand */}
         <Typography
           variant="caption"
           sx={{
@@ -219,9 +315,13 @@ export default function ProductCard({
           {brand}
         </Typography>
 
+        {/* Product title */}
         <Link
           href={`/products/${slug}`}
-          style={{ textDecoration: "none", color: "inherit" }}
+          style={{
+            textDecoration: "none",
+            color: "inherit",
+          }}
         >
           <Typography
             sx={{
@@ -238,18 +338,48 @@ export default function ProductCard({
           </Typography>
         </Link>
 
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, my: 1 }}>
-          <StarIcon sx={{ fontSize: 16, color: "secondary.main" }} />
-          <Typography variant="body2" sx={{ fontWeight: 700 }}>
-            {rating.toFixed(1)}
+        {/* Rating */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 0.5,
+            my: 1,
+          }}
+        >
+          <StarIcon
+            sx={{
+              fontSize: 16,
+              color: "secondary.main",
+            }}
+          />
+
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: 700,
+            }}
+          >
+            {Number.isFinite(rating) ? rating.toFixed(1) : "0.0"}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
-            ({reviews.toLocaleString()})
+
+          <Typography
+            variant="caption"
+            color="text.secondary"
+          >
+            ({formatReviews(reviews)})
           </Typography>
         </Box>
 
-        {/* Price tag — signature element */}
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, mb: 1.5 }}>
+        {/* Price */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1.25,
+            mb: 1.5,
+          }}
+        >
           <Box
             sx={{
               position: "relative",
@@ -263,6 +393,7 @@ export default function ProductCard({
               pr: 1.25,
               py: 0.5,
               fontSize: "1.1rem",
+
               "&::before": {
                 content: '""',
                 position: "absolute",
@@ -277,26 +408,31 @@ export default function ProductCard({
               },
             }}
           >
-            ₹{price.toLocaleString()}
+            ₹{formatPrice(price)}
           </Box>
 
-          {originalPrice !== undefined && Number(originalPrice) > Number(price) && (
-            <Typography
-              variant="body2"
-              sx={{
-                textDecoration: "line-through",
-                color: "text.secondary",
-              }}
-            >
-              ₹{Number(originalPrice).toLocaleString()}
-            </Typography>
-          )}
+          {originalPrice !== undefined &&
+            Number(originalPrice) > Number(price) && (
+              <Typography
+                variant="body2"
+                sx={{
+                  textDecoration: "line-through",
+                  color: "text.secondary",
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                ₹{formatPrice(originalPrice)}
+              </Typography>
+            )}
         </Box>
 
+        {/* Add to cart */}
         <Button
           fullWidth
           variant="contained"
-          sx={{ borderRadius: 2 }}
+          sx={{
+            borderRadius: 2,
+          }}
           onClick={handleAddToCart}
           disabled={isAdding}
         >
@@ -305,15 +441,4 @@ export default function ProductCard({
       </CardContent>
     </Card>
   );
-}
-
-/**
- * Coerce a Product.id (number | string) into the numeric id the wishlist
- * store expects. Returns null for non-numeric values; callers treat that
- * as a no-op target so we never poison the store.
- */
-function toNumericId(id: number | string): number | null {
-  if (typeof id === "number") return id;
-  const parsed = Number(id);
-  return Number.isFinite(parsed) ? parsed : null;
 }

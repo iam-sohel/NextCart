@@ -68,13 +68,30 @@ export default function ProductDetailsClient({
   }, [variantList, selectedVariantId]);
 
   // Compute the effective inventory for the currently-selected variant
-  // (or the product-level inventory if no variant is chosen).
+  // (or the product-level inventory if no variant is chosen). When the
+  // backend attaches a `stockStatus` enum (IN_STOCK / LOW_STOCK /
+  // OUT_OF_STOCK) it takes precedence over the local threshold-based
+  // derivation.
   const inventory: InventoryState = useMemo(() => {
-    if (selectedVariant?.inventory) {
-      return deriveInventory(selectedVariant.inventory);
+    if (selectedVariant?.inventory || selectedVariant?.stockStatus) {
+      return deriveInventory({
+        ...(selectedVariant?.inventory ?? {}),
+        stockStatus: selectedVariant?.stockStatus,
+      });
     }
-    return deriveInventory(product.inventory ?? product.stock ?? 0);
-  }, [selectedVariant, product.inventory, product.stock]);
+    if (product.inventory || product.stockStatus) {
+      return deriveInventory({
+        ...(product.inventory ?? {}),
+        stockStatus: product.stockStatus,
+      });
+    }
+    return deriveInventory(product.stock ?? 0);
+  }, [
+    selectedVariant,
+    product.inventory,
+    product.stock,
+    product.stockStatus,
+  ]);
 
   // Quantity is clamped to the available stock on every render so
   // changing the variant (which changes `inventory`) never requires an

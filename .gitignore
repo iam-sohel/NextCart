@@ -8,6 +8,19 @@ out/
 # Environment variables
 .env
 .env.local
+.env.*.local
+
+# Backend secrets - real configuration files must never be committed.
+# application-example.properties (the safe template) is the only file in
+# src/main/resources/ that should be tracked.
+backend/src/main/resources/application.properties
+backend/src/main/resources/application-dev.properties
+backend/src/main/resources/application-prod.properties
+backend/src/main/resources/application-local.properties
+backend/.env
+backend/.env.*
+# Compiled output of any leaked application.properties is excluded too.
+backend/target/classes/application.properties
 
 # Logs
 npm-debug.log*

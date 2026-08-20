@@ -59,6 +59,7 @@ export default function ProductInfo({
 
   const activePrice = selectedVariant?.price ?? product.price;
   const canPurchase = inventory.status !== "out_of_stock";
+
   const stockLabel =
     inventory.status === "in_stock"
       ? "In stock"
@@ -66,8 +67,8 @@ export default function ProductInfo({
         ? `Only ${inventory.available} left`
         : "Out of stock";
 
-  // Disable Add to Cart when the user hasn't chosen a variant (so the
-  // backend gets a valid variantId) OR when there's no stock.
+  // Disable Add to Cart when the user hasn't chosen a variant
+  // OR when there's no stock.
   const addDisabledReason = !canPurchase
     ? "This product is currently out of stock."
     : variantExists && !selectedVariant
@@ -122,7 +123,7 @@ export default function ProductInfo({
       <Box sx={{ mt: 3 }}>
         <ProductStock
           inventory={inventory}
-          label={inventory.status === "in_stock" ? stockLabel : stockLabel}
+          label={stockLabel}
         />
       </Box>
 
@@ -147,20 +148,14 @@ export default function ProductInfo({
             variantLabel={selectedVariantLabel(selectedVariant)}
             quantity={quantity}
             priceOverride={selectedVariant?.price}
-            canPurchase={canPurchase && (!variantExists || Boolean(selectedVariant))}
+            canPurchase={
+              canPurchase && (!variantExists || Boolean(selectedVariant))
+            }
             addDisabledReason={addDisabledReason}
           />
         </Box>
 
-        <WishlistButton
-          productId={product.id}
-          title={product.title}
-          image={product.image}
-          slug={product.slug}
-          price={product.price}
-          originalPrice={product.originalPrice}
-          brand={product.brand ?? undefined}
-        />
+        <WishlistButton productId={product.id} />
       </Stack>
 
       <DeliveryChecker productId={product.id} />
@@ -177,9 +172,12 @@ function selectedVariantLabel(
   variant: ProductVariant | undefined,
 ): string | undefined {
   if (!variant) return undefined;
+
   const parts: string[] = [];
+
   if (variant.color) parts.push(String(variant.color));
   if (variant.size) parts.push(String(variant.size));
   if (variant.storage) parts.push(String(variant.storage));
+
   return parts.length > 0 ? parts.join(" · ") : undefined;
 }

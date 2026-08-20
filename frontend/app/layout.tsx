@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Sora, Inter } from "next/font/google";
 
 import ThemeRegistry from "@/components/providers/ThemeRegistry";
+import AuthClientBootstrap from "@/lib/authInterceptor";
 
 import "./globals.css";
 
@@ -29,7 +30,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${sora.variable} ${inter.variable}`}>
       <body>
-        <ThemeRegistry>{children}</ThemeRegistry>
+        <ThemeRegistry>
+          <AuthClientBootstrap />
+          {children}
+        </ThemeRegistry>
       </body>
     </html>
   );

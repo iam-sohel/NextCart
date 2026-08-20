@@ -2,74 +2,52 @@
 
 import { useState } from "react";
 
-import { IconButton, Tooltip } from "@mui/material";
-import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import FavoriteIcon from "@mui/icons-material/Favorite";
+import { IconButton, Tooltip } from "@mui/material";
+import { useRouter } from "next/navigation";
 
+import useAuthStore from "@/store/authStore";
 import useWishlistStore from "@/store/wishlistStore";
 
 interface WishlistButtonProps {
   productId: number | string;
-  title: string;
-  image: string;
-  slug: string;
-  price: number;
-  originalPrice?: number;
-  brand?: string;
-  /** Compact pill style for the price row; defaults to icon-only. */
   variant?: "icon" | "compact";
 }
 
-/**
- * NEXTCART — WishlistButton
- *
- * Single source of truth for "toggle this product in the wishlist" used
- * in:
- *   - Product details page (next to Add to Cart)
- *   - ProductCard (top-right corner overlay)
- *   - Future: cart line items ("save for later")
- *
- * Behaviour:
- *   - Toggles through the existing wishlistStore. Never duplicates state.
- *   - Always reads the latest isInWishlist() result so the heart icon
- *     updates the moment a related event changes the store.
- *   - aria-pressed reflects the current state.
- */
 export default function WishlistButton({
   productId,
-  title,
-  image,
-  slug,
-  price,
-  originalPrice,
-  brand,
   variant = "icon",
 }: WishlistButtonProps) {
   const [hovered, setHovered] = useState(false);
-  const { addToWishlist, removeFromWishlist, isInWishlist } =
-    useWishlistStore();
 
-  const numericId = toNumericId(productId);
-  const liked = numericId !== null && isInWishlist(numericId);
+  const router = useRouter();
+
+  const token = useAuthStore((state) => state.token);
+
+  const has = useWishlistStore((state) => state.has);
+  const add = useWishlistStore((state) => state.add);
+  const remove = useWishlistStore((state) => state.remove);
+
+  const liked = has(productId);
 
   const handleClick = () => {
-    if (numericId === null) return;
+    if (!token) {
+      router.push("/login?reason=login-required&return=/wishlist");
+      return;
+    }
+
     if (liked) {
-      removeFromWishlist(numericId);
+      void remove(productId);
     } else {
-      addToWishlist({
-        id: numericId,
-        title,
-        image,
-        price,
-        slug,
-        brand,
-        originalPrice,
-      });
+      void add(productId);
     }
   };
 
-  const label = liked ? "Remove from wishlist" : "Add to wishlist";
+  const label = liked
+    ? "Remove from wishlist"
+    : "Add to wishlist";
+
   const showFilled = liked || (hovered && !liked);
 
   return (
@@ -94,23 +72,19 @@ export default function WishlistButton({
         }
       >
         {showFilled ? (
-          <FavoriteIcon sx={{ color: liked ? "error.main" : "text.primary" }} />
+          <FavoriteIcon
+            sx={{
+              color: liked ? "error.main" : "text.primary",
+            }}
+          />
         ) : (
-          <FavoriteBorderIcon sx={{ color: "text.primary" }} />
+          <FavoriteBorderIcon
+            sx={{
+              color: "text.primary",
+            }}
+          />
         )}
       </IconButton>
     </Tooltip>
   );
-}
-
-/**
- * Coerce a `Product.id` (`number | string`) into the numeric id the
- * wishlist store expects. Returns null for non-numeric values (e.g. a
- * future UUID-based product id) — the button treats that case as a
- * non-actionable target so we never poison the store.
- */
-function toNumericId(id: number | string): number | null {
-  if (typeof id === "number") return id;
-  const parsed = Number(id);
-  return Number.isFinite(parsed) ? parsed : null;
 }

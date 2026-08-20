@@ -32,6 +32,7 @@ export type { Product, CardProduct, Review, ReviewSummary };
    ───────────────────────────────────────────────────────────────────── */
 
 const ENDPOINTS = {
+  products: "/api/products",
   productBySlug: (slug: string) => `/api/products/${encodeURIComponent(slug)}`,
   productReviews: (slug: string) =>
     `/api/products/${encodeURIComponent(slug)}/reviews`,
@@ -144,7 +145,11 @@ export async function checkPincodeServiceability(
    ───────────────────────────────────────────────────────────────────── */
 
 import mockProducts from "@/data/products";
-import { normalizeProduct } from "@/utils/normalizeProduct";
+import {
+  normalizeProduct,
+  normalizeBackendProduct,
+  type BackendProductDto,
+} from "@/utils/normalizeProduct";
 
 const MOCK_PRODUCT_MAP: Map<string, Product> = new Map(
   mockProducts.map((p) => [p.slug, normalizeProduct(p as Product)]),
@@ -158,6 +163,99 @@ export function getMockProductBySlug(slug: string): Product | undefined {
 /** Return the mock product list as a sync generator (dev-only). */
 export function listMockProducts(): Product[] {
   return Array.from(MOCK_PRODUCT_MAP.values());
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   List products (catalogue) with graceful mock fallback
+   ───────────────────────────────────────────────────────────────────── */
+
+/**
+ * Result wrapper that distinguishes the three states a catalogue call
+ * can end up in:
+ *
+ *   - backend  : real data came from GET /api/products.
+ *   - fallback : the backend was unavailable; we served the local mock
+ *                so the page still renders. The UI can show a soft
+ *                "showing demo data" hint.
+ *   - error    : the request failed AND the mock fallback was disabled
+ *                (e.g. an explicit `useMockFallback: false`).
+ */
+export type ListProductsResult =
+  | { source: "backend"; products: Product[] }
+  | { source: "fallback"; products: Product[]; reason: string }
+  | { source: "error"; message: string; errorCode?: string };
+
+interface ListProductsOptions {
+  signal?: AbortSignal;
+  /**
+   * When true (default) we fall back to the local mock dataset if the
+   * backend is unavailable. Pass `false` to surface the failure instead
+   * — useful for the catalogue page where you want to show an error
+   * state rather than silently mock-data the user.
+   */
+  useMockFallback?: boolean;
+}
+
+/**
+ * Fetch the full product catalogue. Hits GET /api/products and runs the
+ * result through `normalizeBackendProduct()` so callers always get the
+ * in-house `Product` shape.
+ *
+ * In development (backend offline) we fall back to the local mock data
+ * so the page still renders. The `source` field on the result tells the
+ * UI which path produced the list, so it can show a soft "demo data"
+ * hint or an error state as appropriate.
+ */
+export async function listProducts(
+  options: ListProductsOptions = {},
+): Promise<ListProductsResult> {
+  const { signal, useMockFallback = true } = options;
+
+  const result = await apiRequest<BackendProductDto[] | unknown>(
+    ENDPOINTS.products,
+    { method: "GET", signal },
+  );
+
+  if (result.ok) {
+    const raw = result.data;
+    if (Array.isArray(raw)) {
+      const products = raw
+        .map((dto) => {
+          try {
+            return normalizeBackendProduct(dto as BackendProductDto);
+          } catch {
+            return null;
+          }
+        })
+        .filter((p): p is Product => p !== null);
+      return { source: "backend", products };
+    }
+    // Backend returned something unexpected — treat as a soft error.
+    if (useMockFallback) {
+      return {
+        source: "fallback",
+        products: listMockProducts(),
+        reason: "Backend returned an unexpected payload.",
+      };
+    }
+    return {
+      source: "error",
+      message: "Backend returned an unexpected payload.",
+    };
+  }
+
+  if (useMockFallback) {
+    return {
+      source: "fallback",
+      products: listMockProducts(),
+      reason: result.message,
+    };
+  }
+  return {
+    source: "error",
+    message: result.message,
+    errorCode: result.errorCode,
+  };
 }
 
 /** Convert a product into the card-shaped view used by listings. */

@@ -1,23 +1,3 @@
-/**
- * NEXTCART — Lightweight HTTP client
- *
- * Why a thin wrapper around `fetch`?
- *   - The Next.js web client and the future React Native / native mobile client
- *     will both talk to the same Spring Boot REST API. Keeping the transport
- *     behind a tiny module means we can later swap `fetch` for the platform
- *     equivalent on mobile without touching call-sites.
- *   - The wrapper centralises:
- *       • base URL (read from `NEXT_PUBLIC_API_BASE_URL` so it can be
- *         configured per environment — local, staging, production),
- *       • JSON content negotiation,
- *       • Authorisation header injection,
- *       • a single place to surface backend error envelopes (the Spring
- *         `GlobalExceptionHandler` produces `{ success, message, errorCode }`).
- *   - We deliberately DO NOT throw on non-2xx responses because many call sites
- *     want to render `message` inline rather than crash. Callers can read the
- *     `ok` flag and `error` field on `ApiResult<T>` instead.
- */
-
 const DEFAULT_BASE_URL = "http://localhost:8080";
 
 function resolveBaseUrl(): string {
@@ -51,14 +31,7 @@ interface RequestOptions {
   signal?: AbortSignal;
   /** extra headers, e.g. Idempotency-Key */
   headers?: Record<string, string>;
-}
-
-/**
- * Shape returned by the Spring `GlobalExceptionHandler` for known errors.
- * The success paths (AuthController) currently return DTOs directly — we still
- * try to detect `ApiResponse<T>` wrappers so future endpoints can use them.
- */
-interface BackendErrorEnvelope {
+}interface BackendErrorEnvelope {
   success?: boolean;
   message?: string;
   errorCode?: string;
@@ -77,6 +50,42 @@ function extractErrorCode(payload: unknown): string | undefined {
   if (typeof maybe.errorCode === "string" && maybe.errorCode.trim()) return maybe.errorCode;
   return undefined;
 }
+type TokenGetter = () => string | null;
+type AuthFailureNotifier = (status: number, payload: unknown) => void;
+
+let getTokenFn: TokenGetter | null = null;
+let notifyAuthFailureFn: AuthFailureNotifier | null = null;
+
+export function registerAuthTokenGetter(fn: TokenGetter): () => void {
+  getTokenFn = fn;
+  return () => {
+    if (getTokenFn === fn) getTokenFn = null;
+  };
+}
+
+export function registerAuthFailureHandler(fn: AuthFailureNotifier): () => void {
+  notifyAuthFailureFn = fn;
+  return () => {
+    if (notifyAuthFailureFn === fn) notifyAuthFailureFn = null;
+  };
+}
+
+function resolveToken(explicit: string | null | undefined): string | null {
+  if (explicit === null) return null; // explicit suppression
+  if (typeof explicit === "string" && explicit.length > 0) return explicit;
+  if (getTokenFn) {
+    try {
+      return getTokenFn();
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   Public request function
+   ────────────────────────────────────────────────────────────────────── */
 
 export async function apiRequest<T>(
   path: string,
@@ -86,12 +95,13 @@ export async function apiRequest<T>(
 
   const url = `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 
+  const resolvedToken = resolveToken(token);
   const finalHeaders: Record<string, string> = {
     Accept: "application/json",
+    "Content-Type": "application/json",
     ...headers,
   };
-  if (body !== undefined) finalHeaders["Content-Type"] = "application/json";
-  if (token) finalHeaders["Authorization"] = `Bearer ${token}`;
+  if (resolvedToken) finalHeaders["Authorization"] = `Bearer ${resolvedToken}`;
 
   let response: Response;
   try {
@@ -131,6 +141,17 @@ export async function apiRequest<T>(
 
   if (response.ok) {
     return { ok: true, status: response.status, data: payload as T };
+  }
+
+  // Hand off 401 to the global handler if one is registered. We deliberately
+  // do NOT throw — call sites already handle `ok: false` uniformly, and the
+  // interceptor will navigate + clear auth on its own.
+  if (response.status === 401 && notifyAuthFailureFn) {
+    try {
+      notifyAuthFailureFn(response.status, payload);
+    } catch {
+      // Interceptor errors must not break the caller's error flow.
+    }
   }
 
   return {
