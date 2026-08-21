@@ -8,14 +8,20 @@ import com.nextcart.nextcart.category_module.entity.Category;
 import com.nextcart.nextcart.category_module.exceptions.CategoryNotFoundException;
 import com.nextcart.nextcart.category_module.repository.CategoryRepository;
 
+import com.nextcart.nextcart.product_module.dto.ProductDetailsResponse;
+import com.nextcart.nextcart.product_module.dto.ProductVariant.ProductVariantResponse;
 import com.nextcart.nextcart.product_module.dto.product.ProductCreateRequest;
 import com.nextcart.nextcart.product_module.dto.product.ProductResponse;
 import com.nextcart.nextcart.product_module.dto.product.ProductUpdateRequest;
+import com.nextcart.nextcart.product_module.dto.productImage.ProductImageResponse;
+import com.nextcart.nextcart.product_module.dto.productSpecification.ProductSpecificationResponse;
+import com.nextcart.nextcart.product_module.dto.product_information.ProductInformationResponseDTO;
 import com.nextcart.nextcart.product_module.entity.Product;
+import com.nextcart.nextcart.product_module.entity.VariantAttribute;
 import com.nextcart.nextcart.product_module.exceptions.ProductAlreadyExistsException;
 import com.nextcart.nextcart.product_module.exceptions.ProductNotFoundException;
 import com.nextcart.nextcart.product_module.mapper.ProductMapper;
-import com.nextcart.nextcart.product_module.repository.ProductRepository;
+import com.nextcart.nextcart.product_module.repository.*;
 
 import com.nextcart.nextcart.subcategory_module.entity.SubCategory;
 import com.nextcart.nextcart.subcategory_module.exceptions.SubCategoryNotFoundException;
@@ -26,6 +32,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -37,7 +45,11 @@ public class ProductServiceImpl implements ProductService {
     private final SubCategoryRepository subCategoryRepository;
     private final BrandRepository brandRepository;
     private final ProductMapper productMapper;
-
+    private final ProductInformationRepository productInformationRepository;
+    private final ProductSpecificationRepository productSpecificationRepository;
+    private final ProductImageRepository productImageRepository;
+    private final ProductVariantRepository productVariantRepository;
+    private final VariantAttributeRepository variantAttributeRepository;
 
     // =========================
     // CREATE PRODUCT
@@ -436,5 +448,86 @@ public class ProductServiceImpl implements ProductService {
                 );
 
         productRepository.delete(product);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductDetailsResponse getProductDetails(Long productId) {
+
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() ->
+                        new ProductNotFoundException(
+                                "Product not found with id: " + productId
+                        )
+                );
+
+        ProductInformationResponseDTO information =
+                productInformationRepository.findByProductId(productId)
+                        .map(info -> ProductInformationResponseDTO.builder()
+                                .id(info.getId())
+                                .productId(productId)
+                                .shortDescription(info.getShortDescription())
+                                .longDescription(info.getLongDescription())
+                                .warranty(info.getWarranty())
+                                .manufacturer(info.getManufacturer())
+                                .build())
+                        .orElse(null);
+
+        List<ProductSpecificationResponse> specifications =
+                productSpecificationRepository.findByProductId(productId)
+                        .stream()
+                        .map(spec -> ProductSpecificationResponse.builder()
+                                .id(spec.getId())
+                                .productId(productId)
+                                .specificationName(spec.getSpecificationName())
+                                .specificationValue(spec.getSpecificationValue())
+                                .build())
+                        .toList();
+
+        List<ProductImageResponse> images =
+                productImageRepository
+                        .findByProductIdOrderByDisplayOrderAsc(productId)
+                        .stream()
+                        .map(image -> ProductImageResponse.builder()
+                                .id(image.getId())
+                                .productId(productId)
+                                .imageUrl(image.getImageUrl())
+                                .isPrimary(image.getIsPrimary())
+                                .displayOrder(image.getDisplayOrder())
+                                .build())
+                        .toList();
+
+
+        List<ProductVariantResponse> variants =
+                productVariantRepository.findByProductId(productId)
+                        .stream()
+                        .map(variant -> {
+
+                            Map<String, String> attributes =
+                                    variantAttributeRepository
+                                            .findByVariantId(variant.getId())
+                                            .stream()
+                                            .collect(Collectors.toMap(
+                                                    VariantAttribute::getAttributeName,
+                                                    VariantAttribute::getAttributeValue
+                                            ));
+
+                            return ProductVariantResponse.builder()
+                                    .id(variant.getId())
+                                    .productId(productId)
+                                    .sku(variant.getSku())
+                                    .price(variant.getPrice())
+                                    .attributes(attributes)
+                                    .build();
+                        })
+                        .toList();
+
+        return ProductDetailsResponse.builder()
+                .product(productMapper.toResponse(product))
+                .information(information)
+                .specifications(specifications)
+                .variants(variants)
+                .images(images)
+                .build();
     }
 }

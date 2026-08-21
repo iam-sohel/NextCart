@@ -1,5 +1,6 @@
 package com.nextcart.nextcart.product_module.service;
 
+import com.nextcart.nextcart.product_module.dto.ProductDetailsResponse;
 import com.nextcart.nextcart.product_module.dto.product.ProductCreateRequest;
 import com.nextcart.nextcart.product_module.dto.product.ProductResponse;
 import com.nextcart.nextcart.product_module.dto.product.ProductUpdateRequest;
@@ -8,40 +9,40 @@ import java.util.List;
 
 public interface ProductService {
 
-    ProductResponse createProduct(
-            ProductCreateRequest request
-    );
+    // Create
+    ProductResponse createProduct(ProductCreateRequest request);
 
-    ProductResponse getProductById(
-            Long id
-    );
+    // Get product by ID
+    ProductResponse getProductById(Long id);
 
+    // Get complete product details
+    ProductDetailsResponse getProductDetails(Long productId);
+
+    // Get all products
     List<ProductResponse> getAllProducts();
 
-    List<ProductResponse> getProductsByCategory(
-            Long categoryId
-    );
+    // Get products by category
+    List<ProductResponse> getProductsByCategory(Long categoryId);
 
-    List<ProductResponse> getProductsBySubCategory(
-            Long subCategoryId
-    );
+    // Get products by subcategory
+    List<ProductResponse> getProductsBySubCategory(Long subCategoryId);
 
-    List<ProductResponse> searchProducts(
-            String keyword
-    );
+    // Search products
+    List<ProductResponse> searchProducts(String keyword);
 
+    // Filter products
     List<ProductResponse> filterProducts(
             Long categoryId,
             Long subCategoryId,
             String keyword
     );
 
+    // Update
     ProductResponse updateProduct(
             Long id,
             ProductUpdateRequest request
     );
 
-    void deleteProduct(
-            Long id
-    );
+    // Delete
+    void deleteProduct(Long id);
 }
