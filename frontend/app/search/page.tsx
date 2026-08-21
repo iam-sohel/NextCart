@@ -24,7 +24,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import ProductCard from "@/components/products/ProductCard";
 import useSearchStore from "@/store/searchStore";
-import products from "@/data/products";
+
 
 export default function SearchPage() {
   return (
@@ -39,22 +39,23 @@ function SearchPageContent() {
   const query = searchParams.get("q") || "";
 
   const {
-    results,
-    totalResults,
-    totalPages,
-    currentPage,
-    selectedCategory,
-    selectedBrand,
-    priceRange,
-    sortBy,
-    search,
-    setCategory,
-    setBrand,
-    setPriceRange,
-    setSortBy,
-    setPage,
-    clearFilters,
-  } = useSearchStore();
+  catalog,
+  results,
+  totalResults,
+  totalPages,
+  currentPage,
+  selectedCategory,
+  selectedBrand,
+  priceRange,
+  sortBy,
+  search,
+  setCategory,
+  setBrand,
+  setPriceRange,
+  setSortBy,
+  setPage,
+  clearFilters,
+} = useSearchStore();
 
   // Initialize search when page loads or query changes
   useEffect(() => {
@@ -64,9 +65,17 @@ function SearchPageContent() {
   }, [query, search]);
 
   // Get unique categories and brands for filters
-  const categories = [...new Set(products.map((p) => p.category))];
-  const brands = [...new Set(products.map((p) => p.brand))];
+ const categories = [
+  ...new Set(
+    catalog.map((product) => product.category),
+  ),
+];
 
+const brands = [
+  ...new Set(
+    catalog.map((product) => product.brand),
+  ),
+];
   // Paginate results
   const itemsPerPage = 12;
   const startIndex = (currentPage - 1) * itemsPerPage;

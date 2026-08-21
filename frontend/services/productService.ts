@@ -1,17 +1,8 @@
 /**
  * NEXTCART — Product service boundary.
  *
- * This is the ONLY module in the UI that knows the future Spring Boot
- * endpoint paths. If the backend renames `/api/products` to
- * `/api/v1/catalog/products` we change one file, not every component.
- *
- * Conventions:
- *   - Endpoints are kept as constants at the top so they're easy to grep.
- *   - Each function returns an `ApiResult<T>` (from lib/api) so callers
- *     handle errors uniformly without try/catch noise.
- *   - Mock-data fallbacks live here too — when the backend is unavailable
- *     we still render real-looking content. Components never import
- *     `data/products` directly any more.
+ * All product API communication lives here.
+ * UI components should not know backend endpoint paths.
  */
 
 import { apiRequest, type ApiResult } from "@/lib/api";
@@ -21,63 +12,139 @@ import type {
   Review,
   ReviewSummary,
 } from "@/types/product";
+
 import { toCardProduct, type CardProduct } from "@/types/product";
+
 import type { PincodeCheckResult } from "@/types/delivery";
 
-// Re-export so UI code imports both Product-type and service from one place.
-export type { Product, CardProduct, Review, ReviewSummary };
+export type {
+  Product,
+  CardProduct,
+  Review,
+  ReviewSummary,
+};
 
-/* ─────────────────────────────────────────────────────────────────────
-   Endpoint constants
-   ───────────────────────────────────────────────────────────────────── */
+/* -------------------------------------------------------------------------- */
+/* Endpoint definitions                                                       */
+/* -------------------------------------------------------------------------- */
 
 const ENDPOINTS = {
-  products: "/api/products",
-  productBySlug: (slug: string) => `/api/products/${encodeURIComponent(slug)}`,
-  productReviews: (slug: string) =>
-    `/api/products/${encodeURIComponent(slug)}/reviews`,
-  productRelated: (slug: string) =>
-    `/api/products/${encodeURIComponent(slug)}/related`,
+  products: "/api/v1/products",
+
+  productById: (id: string | number) =>
+    `/api/v1/products/${encodeURIComponent(String(id))}`,
+
+  searchProducts: (keyword: string) =>
+    `/api/v1/products/search?keyword=${encodeURIComponent(keyword)}`,
+
+  filterProducts: (params: string) =>
+    `/api/v1/products/filter${params ? `?${params}` : ""}`,
+
+  categoryProducts: (categoryId: string | number) =>
+    `/api/v1/products/category/${encodeURIComponent(String(categoryId))}`,
+
+  subCategoryProducts: (subCategoryId: string | number) =>
+    `/api/v1/products/subcategory/${encodeURIComponent(
+      String(subCategoryId),
+    )}`,
+
+  /*
+   * These endpoints are kept here because existing product-detail UI
+   * components still depend on them.
+   *
+   * They can be connected to their respective backend modules when
+   * those controllers are available.
+   */
+  productReviews: (id: string | number) =>
+    `/api/v1/products/${encodeURIComponent(String(id))}/reviews`,
+
+  productRelated: (id: string | number) =>
+    `/api/v1/products/${encodeURIComponent(String(id))}/related`,
+
   inventory: (variantId: string | number) =>
-    `/api/inventory/${encodeURIComponent(String(variantId))}`,
-  deliveryCheck: "/api/delivery/check",
+    `/api/v1/inventory/${encodeURIComponent(String(variantId))}`,
+
+  deliveryCheck: (pincode: string) =>
+    `/api/delivery/check?pincode=${encodeURIComponent(pincode)}`,
 } as const;
 
-/* ─────────────────────────────────────────────────────────────────────
-   Service functions
-   ───────────────────────────────────────────────────────────────────── */
+/* -------------------------------------------------------------------------- */
+/* Product detail                                                             */
+/* -------------------------------------------------------------------------- */
 
 /**
- * Fetch a single product by slug.
- * Replaces direct imports from `data/products` so future backend
- * integration is a one-file change.
+ * Backend currently exposes products by ID, not slug.
+ *
+ * We therefore load the catalogue and resolve the requested slug locally.
+ * This keeps the existing /products/[slug] frontend route working without
+ * changing the UI or backend contract.
  */
 export async function getProductBySlug(
   slug: string,
   signal?: AbortSignal,
 ): Promise<ApiResult<Product>> {
-  const result = await apiRequest<Product>(ENDPOINTS.productBySlug(slug), {
-    method: "GET",
+  const result = await listProducts({
     signal,
+    useMockFallback: false,
   });
-  return result;
+
+  if (result.source === "error") {
+    return {
+      ok: false,
+      status: 500,
+      message: result.message,
+    };
+  }
+
+  const product = result.products.find(
+    (item) => item.slug === slug,
+  );
+
+  if (!product) {
+    return {
+      ok: false,
+      status: 404,
+      message: `Product "${slug}" not found.`,
+      errorCode: "PRODUCT_NOT_FOUND",
+    };
+  }
+
+  return {
+    ok: true,
+    status: 200,
+    data: product,
+  };
 }
 
 /**
- * Fetch the review list and summary for a product. Used by ProductReviews
- * and to populate the rating block on the info panel.
+ * Fetch product directly by backend ID.
  */
-export async function getProductReviews(
-  slug: string,
+export async function getProductById(
+  id: string | number,
   signal?: AbortSignal,
-): Promise<
-  ApiResult<{
-    summary: ReviewSummary;
-    reviews: Review[];
-  }>
-> {
-  return apiRequest<{ summary: ReviewSummary; reviews: Review[] }>(
-    ENDPOINTS.productReviews(slug),
+): Promise<ApiResult<Product>> {
+  return apiRequest<Product>(
+    ENDPOINTS.productById(id),
+    {
+      method: "GET",
+      signal,
+    },
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Search / catalogue                                                         */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Search products using the real Spring Boot backend.
+ */
+export async function searchProducts(
+  keyword: string,
+  signal?: AbortSignal,
+): Promise<ApiResult<Product[]>> {
+  return apiRequest<Product[]>(
+    ENDPOINTS.searchProducts(keyword),
     {
       method: "GET",
       signal,
@@ -86,65 +153,190 @@ export async function getProductReviews(
 }
 
 /**
- * Fetch products related to the current one (same category, frequently
- * bought together, etc.). The backend decides the strategy — we just
- * render whatever we get back as cards.
+ * Fetch all products from the real backend.
  */
-export async function getRelatedProducts(
-  slug: string,
+export async function listBackendProducts(
   signal?: AbortSignal,
 ): Promise<ApiResult<Product[]>> {
-  return apiRequest<Product[]>(ENDPOINTS.productRelated(slug), {
-    method: "GET",
-    signal,
-  });
+  return apiRequest<Product[]>(
+    ENDPOINTS.products,
+    {
+      method: "GET",
+      signal,
+    },
+  );
 }
 
 /**
- * Check the latest inventory for a single variant. Use this when the user
- * selects a variant and we want to refresh the in-stock state without
- * re-fetching the entire product.
+ * Filter products through the backend.
+ *
+ * Supported backend parameters:
+ * - categoryId
+ * - subCategoryId
+ * - keyword
  */
+export async function filterBackendProducts(
+  params: {
+    categoryId?: number;
+    subCategoryId?: number;
+    keyword?: string;
+  },
+  signal?: AbortSignal,
+): Promise<ApiResult<Product[]>> {
+  const searchParams = new URLSearchParams();
+
+  if (params.categoryId !== undefined) {
+    searchParams.set(
+      "categoryId",
+      String(params.categoryId),
+    );
+  }
+
+  if (params.subCategoryId !== undefined) {
+    searchParams.set(
+      "subCategoryId",
+      String(params.subCategoryId),
+    );
+  }
+
+  if (params.keyword?.trim()) {
+    searchParams.set(
+      "keyword",
+      params.keyword.trim(),
+    );
+  }
+
+  return apiRequest<Product[]>(
+    ENDPOINTS.filterProducts(searchParams.toString()),
+    {
+      method: "GET",
+      signal,
+    },
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Category APIs                                                              */
+/* -------------------------------------------------------------------------- */
+
+export async function getProductsByCategory(
+  categoryId: string | number,
+  signal?: AbortSignal,
+): Promise<ApiResult<Product[]>> {
+  return apiRequest<Product[]>(
+    ENDPOINTS.categoryProducts(categoryId),
+    {
+      method: "GET",
+      signal,
+    },
+  );
+}
+
+export async function getProductsBySubCategory(
+  subCategoryId: string | number,
+  signal?: AbortSignal,
+): Promise<ApiResult<Product[]>> {
+  return apiRequest<Product[]>(
+    ENDPOINTS.subCategoryProducts(subCategoryId),
+    {
+      method: "GET",
+      signal,
+    },
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Product reviews                                                            */
+/* -------------------------------------------------------------------------- */
+
+export async function getProductReviews(
+  productId: string | number,
+  signal?: AbortSignal,
+): Promise<
+  ApiResult<{
+    summary: ReviewSummary;
+    reviews: Review[];
+  }>
+> {
+  return apiRequest<{
+    summary: ReviewSummary;
+    reviews: Review[];
+  }>(
+    ENDPOINTS.productReviews(productId),
+    {
+      method: "GET",
+      signal,
+    },
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Related products                                                           */
+/* -------------------------------------------------------------------------- */
+
+export async function getRelatedProducts(
+  productId: string | number,
+  signal?: AbortSignal,
+): Promise<ApiResult<Product[]>> {
+  return apiRequest<Product[]>(
+    ENDPOINTS.productRelated(productId),
+    {
+      method: "GET",
+      signal,
+    },
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Inventory                                                                  */
+/* -------------------------------------------------------------------------- */
+
 export async function getInventory(
   variantId: string | number,
   signal?: AbortSignal,
-): Promise<ApiResult<{ available: number; quantity: number; reservedQty: number }>> {
-  return apiRequest(ENDPOINTS.inventory(variantId), {
-    method: "GET",
-    signal,
-  });
+): Promise<
+  ApiResult<{
+    available: number;
+    quantity: number;
+    reservedQty: number;
+  }>
+> {
+  return apiRequest(
+    ENDPOINTS.inventory(variantId),
+    {
+      method: "GET",
+      signal,
+    },
+  );
 }
 
-/**
- * Ask the backend whether a pincode can receive this product.
- * Until the backend exists the service layer is the only place that
- * performs this call — UI components stay agnostic.
- */
+/* -------------------------------------------------------------------------- */
+/* Delivery                                                                   */
+/* -------------------------------------------------------------------------- */
+
 export async function checkPincodeServiceability(
   pincode: string,
   productId: string | number,
   signal?: AbortSignal,
 ): Promise<ApiResult<PincodeCheckResult>> {
-  return apiRequest<PincodeCheckResult>(ENDPOINTS.deliveryCheck, {
-    method: "GET",
-    headers: { "X-Product-Id": String(productId) },
-    // The DeliveryChecker builds its own query string because
-    // apiRequest currently only joins a path. Encoding it here keeps the
-    // public surface tidy.
-    signal,
-  }).then((res) => {
-    if (res.ok) {
-      return { ...res, data: { ...res.data, pincode } };
-    }
-    return res;
-  });
+  return apiRequest<PincodeCheckResult>(
+    ENDPOINTS.deliveryCheck(pincode),
+    {
+      method: "GET",
+      headers: {
+        "X-Product-Id": String(productId),
+      },
+      signal,
+    },
+  );
 }
 
-/* ─────────────────────────────────────────────────────────────────────
-   In-memory mock fallback for development
-   ───────────────────────────────────────────────────────────────────── */
+/* -------------------------------------------------------------------------- */
+/* Mock data                                                                  */
+/* -------------------------------------------------------------------------- */
 
 import mockProducts from "@/data/products";
+
 import {
   normalizeProduct,
   normalizeBackendProduct,
@@ -152,95 +344,113 @@ import {
 } from "@/utils/normalizeProduct";
 
 const MOCK_PRODUCT_MAP: Map<string, Product> = new Map(
-  mockProducts.map((p) => [p.slug, normalizeProduct(p as Product)]),
+  mockProducts.map((product) => [
+    product.slug,
+    normalizeProduct(product as Product),
+  ]),
 );
 
-/** Read a product from the mock dataset (dev-only). */
-export function getMockProductBySlug(slug: string): Product | undefined {
+export function getMockProductBySlug(
+  slug: string,
+): Product | undefined {
   return MOCK_PRODUCT_MAP.get(slug);
 }
 
-/** Return the mock product list as a sync generator (dev-only). */
 export function listMockProducts(): Product[] {
   return Array.from(MOCK_PRODUCT_MAP.values());
 }
 
-/* ─────────────────────────────────────────────────────────────────────
-   List products (catalogue) with graceful mock fallback
-   ───────────────────────────────────────────────────────────────────── */
+/* -------------------------------------------------------------------------- */
+/* Catalogue                                                                  */
+/* -------------------------------------------------------------------------- */
 
-/**
- * Result wrapper that distinguishes the three states a catalogue call
- * can end up in:
- *
- *   - backend  : real data came from GET /api/products.
- *   - fallback : the backend was unavailable; we served the local mock
- *                so the page still renders. The UI can show a soft
- *                "showing demo data" hint.
- *   - error    : the request failed AND the mock fallback was disabled
- *                (e.g. an explicit `useMockFallback: false`).
- */
 export type ListProductsResult =
-  | { source: "backend"; products: Product[] }
-  | { source: "fallback"; products: Product[]; reason: string }
-  | { source: "error"; message: string; errorCode?: string };
+  | {
+      source: "backend";
+      products: Product[];
+    }
+  | {
+      source: "fallback";
+      products: Product[];
+      reason: string;
+    }
+  | {
+      source: "error";
+      message: string;
+      errorCode?: string;
+    };
 
 interface ListProductsOptions {
   signal?: AbortSignal;
+
   /**
-   * When true (default) we fall back to the local mock dataset if the
-   * backend is unavailable. Pass `false` to surface the failure instead
-   * — useful for the catalogue page where you want to show an error
-   * state rather than silently mock-data the user.
+   * Default true for development compatibility.
+   *
+   * Search explicitly disables this so production/search does not silently
+   * display mock data when the backend fails.
    */
   useMockFallback?: boolean;
 }
 
 /**
- * Fetch the full product catalogue. Hits GET /api/products and runs the
- * result through `normalizeBackendProduct()` so callers always get the
- * in-house `Product` shape.
- *
- * In development (backend offline) we fall back to the local mock data
- * so the page still renders. The `source` field on the result tells the
- * UI which path produced the list, so it can show a soft "demo data"
- * hint or an error state as appropriate.
+ * Fetch the complete catalogue from Spring Boot.
  */
 export async function listProducts(
   options: ListProductsOptions = {},
 ): Promise<ListProductsResult> {
-  const { signal, useMockFallback = true } = options;
+  const {
+    signal,
+    useMockFallback = true,
+  } = options;
 
-  const result = await apiRequest<BackendProductDto[] | unknown>(
+  const result = await apiRequest<
+    BackendProductDto[] | unknown
+  >(
     ENDPOINTS.products,
-    { method: "GET", signal },
+    {
+      method: "GET",
+      signal,
+    },
   );
 
   if (result.ok) {
     const raw = result.data;
+
     if (Array.isArray(raw)) {
       const products = raw
         .map((dto) => {
           try {
-            return normalizeBackendProduct(dto as BackendProductDto);
+            return normalizeBackendProduct(
+              dto as BackendProductDto,
+            );
           } catch {
             return null;
           }
         })
-        .filter((p): p is Product => p !== null);
-      return { source: "backend", products };
+        .filter(
+          (product): product is Product =>
+            product !== null,
+        );
+
+      return {
+        source: "backend",
+        products,
+      };
     }
-    // Backend returned something unexpected — treat as a soft error.
+
     if (useMockFallback) {
       return {
         source: "fallback",
         products: listMockProducts(),
-        reason: "Backend returned an unexpected payload.",
+        reason:
+          "Backend returned an unexpected payload.",
       };
     }
+
     return {
       source: "error",
-      message: "Backend returned an unexpected payload.",
+      message:
+        "Backend returned an unexpected payload.",
     };
   }
 
@@ -251,6 +461,7 @@ export async function listProducts(
       reason: result.message,
     };
   }
+
   return {
     source: "error",
     message: result.message,
@@ -258,7 +469,12 @@ export async function listProducts(
   };
 }
 
-/** Convert a product into the card-shaped view used by listings. */
-export function toCard(product: Product): CardProduct {
+/* -------------------------------------------------------------------------- */
+/* Card conversion                                                            */
+/* -------------------------------------------------------------------------- */
+
+export function toCard(
+  product: Product,
+): CardProduct {
   return toCardProduct(product);
 }
