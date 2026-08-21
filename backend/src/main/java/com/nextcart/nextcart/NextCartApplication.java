@@ -9,9 +9,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class NextCartApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(
-                NextCartApplication.class,
-                args
-        );
+        SpringApplication.run(NextCartApplication.class, args);
     }
 }

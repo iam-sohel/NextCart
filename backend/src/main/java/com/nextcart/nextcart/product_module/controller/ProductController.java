@@ -1,5 +1,6 @@
 package com.nextcart.nextcart.product_module.controller;
 
+import com.nextcart.nextcart.product_module.dto.ProductDetailsResponse;
 import com.nextcart.nextcart.product_module.dto.product.ProductCreateRequest;
 import com.nextcart.nextcart.product_module.dto.product.ProductResponse;
 import com.nextcart.nextcart.product_module.dto.product.ProductUpdateRequest;
@@ -160,5 +161,14 @@ public class ProductController {
         productService.deleteProduct(id);
 
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{productId}/details")
+    public ResponseEntity<ProductDetailsResponse> getProductDetails(
+            @PathVariable Long productId) {
+
+        return ResponseEntity.ok(
+                productService.getProductDetails(productId)
+        );
     }
 }

@@ -226,4 +226,28 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(ProductInformationAlreadyExistsException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, Object> handleProductInformationAlreadyExists(
+            ProductInformationAlreadyExistsException ex) {
+
+        return Map.of(
+                "success", false,
+                "message", ex.getMessage(),
+                "errorCode", "PRODUCT_INFORMATION_ALREADY_EXISTS"
+        );
+    }
+
+    @ExceptionHandler(ProductInformationNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public Map<String, Object> handleProductInformationNotFound(
+            ProductInformationNotFoundException ex) {
+
+        return Map.of(
+                "success", false,
+                "message", ex.getMessage(),
+                "errorCode", "PRODUCT_INFORMATION_NOT_FOUND"
+        );
+    }
+
 }

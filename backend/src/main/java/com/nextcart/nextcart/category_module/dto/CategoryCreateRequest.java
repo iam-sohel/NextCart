@@ -10,4 +10,6 @@ public class CategoryCreateRequest {
 
     @NotBlank(message = "Category name is required")
     private String name;
+
+
 }

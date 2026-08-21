@@ -3,7 +3,6 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/NextCart.iml" filepath="$PROJECT_DIR$/.idea/NextCart.iml" />
-      <module fileurl="file://$PROJECT_DIR$/backend/nextcart-backend.iml" filepath="$PROJECT_DIR$/backend/nextcart-backend.iml" />
     </modules>
   </component>
 </project>
