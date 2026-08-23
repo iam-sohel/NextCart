@@ -5,8 +5,9 @@ import Footer from "@/components/layout/Footer";
 import ProductDetailsClient from "@/components/products/ProductDetailsClient";
 
 import {
-  getMockProductBySlug,
-  listMockProducts,
+  getProductBySlug,
+  listProducts,
+  getProductDetailsById,
 } from "@/services/productService";
 import { normalizeProduct } from "@/utils/normalizeProduct";
 import type { Product } from "@/types/product";
@@ -20,25 +21,47 @@ import type { Product } from "@/types/product";
  * flags that this version of Next differs from prior training data —
  * the prop signature below is intentional.
  *
- * Today this page renders from the local mock dataset. Once the Spring
- * Boot backend exposes GET /api/products/{slug} we will swap the data
- * source to `getProductBySlug(slug)` from the service layer.
+ * Data flow:
+ *   1. Resolve the slug against the live Spring Boot catalogue.
+ *      If the backend is reachable we then load the matching
+ *      `ProductDetailsResponse` (images, variants, specs, info).
+ *   2. If the backend is unavailable, we fall back to the in-house
+ *      mock catalogue so the page still renders (development-friendly).
+ *   3. If neither source knows the slug, `notFound()` triggers the
+ *      segment-level 404 page.
+ *
+ * The Product* UI components (ProductGallery, ProductInfo,
+ * ProductActions, ProductVariants, ProductSpecifications,
+ * ProductReviews, ProductBreadcrumb, RelatedProducts) are
+ * untouched — they receive the same Product shape as before.
  */
 export default async function ProductDetailsPage(
   props: PageProps<"/products/[slug]">,
 ) {
   const { slug } = await props.params;
 
-  const raw = getMockProductBySlug(slug);
-  if (!raw) notFound();
+  const lookup = await getProductBySlug(slug, { useMockFallback: true });
 
-  const product = normalizeProduct(raw);
+  if (!lookup.ok) {
+    notFound();
+  }
 
-  // Related products = up to 4 products in the same category, excluding
-  // the current one. Sorted to keep results stable.
-  const related = listMockProducts()
+  const product = lookup.data;
+
+  // Related products: up to 4 products in the same category,
+  // excluding the current product. The backend does not yet expose a
+  // dedicated /related endpoint so we use the same-category subset of
+  // the catalogue.
+  const catalogue = await listProducts({ useMockFallback: true });
+
+  const relatedSource =
+    catalogue.source === "error" ? [] : catalogue.products;
+
+  const related = relatedSource
     .filter(
       (p) =>
+        p.category &&
+        product.category &&
         p.category === product.category &&
         String(p.id) !== String(product.id),
     )
@@ -56,3 +79,11 @@ export default async function ProductDetailsPage(
     </>
   );
 }
+
+/**
+ * `getProductDetailsById` is re-exported here so other server modules
+ * (e.g. route segment config) can import it without a separate deep
+ * import path. Not used by the page above, but kept available for
+ * future server-rendered pre-rendering of the details payload.
+ */
+export { getProductDetailsById };

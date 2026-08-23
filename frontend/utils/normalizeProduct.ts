@@ -55,46 +55,34 @@ export function absolutizeImageUrl(url: string | undefined | null): string {
 
 /**
  * Subset of the Spring Boot DTO surface that the frontend actually
- * consumes. Documented in the backend contract:
- *
- *   ProductDto {
- *     id: number
- *     name: string                          // → title
- *     description?: string
- *     price: number
- *     originalPrice?: number
- *     discount?: number
- *     brand?: string
- *     category?: string
- *     images: { imageUrl: string, sortOrder?: number, isPrimary?: boolean }[]
- *     variants: {
- *       id: number | string
- *       sku?: string
- *       price?: number
- *       attributes: Record<string, string>  // Color/RAM/Storage/...
- *       inventory: {
- *         stockStatus: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK"
- *         quantity?: number
- *         reservedQty?: number
- *       }
- *     }[]
- *     rating?: number
- *     reviewsCount?: number
- *   }
- *
- * The fields are marked optional so unknown DTOs don't fail the adapter —
- * we degrade gracefully (e.g. fall back to a placeholder image).
+ * consumes. The current Spring Boot `ProductResponse` DTO does NOT
+ * carry price, images, variants, inventory, ratings or reviews — those
+ * live on the `ProductDetailsResponse` returned by
+ * `GET /api/v1/products/{id}/details` (see `BackendProductDetailsDto`
+ * below). This shape models a generic "product-like" backend payload
+ * with all the fields any of the existing endpoint variants may
+ * include, so the normalizer can stay defensive.
  */
 export interface BackendProductDto {
   id: number | string;
   name?: string;
+  slug?: string;
   description?: string;
   price?: number;
   originalPrice?: number;
   discount?: number;
   brand?: string;
+  brandName?: string;
   category?: string;
-  slug?: string;
+  categoryName?: string;
+  subCategoryName?: string;
+  status?: string | null;
+  rating?: number;
+  reviewsCount?: number;
+  // Optional embedded blocks. The current top-level catalogue
+  // endpoint does not include these — they are populated by the
+  // /details endpoint instead. Kept here so the same normalizer
+  // works against either shape.
   images?: Array<{
     imageUrl?: string;
     sortOrder?: number;
@@ -111,8 +99,60 @@ export interface BackendProductDto {
       reservedQty?: number;
     };
   }>;
-  rating?: number;
-  reviewsCount?: number;
+}
+
+/**
+ * The actual `ProductDetailsResponse` payload served by the Spring Boot
+ * backend at `GET /api/v1/products/{id}/details`.
+ *
+ *   ProductDetailsResponse {
+ *     product: ProductResponse  // id, name, slug, description, brand/category names, status
+ *     information?: {
+ *       shortDescription?, longDescription?, warranty?, manufacturer?
+ *     }
+ *     specifications: { id, productId, specificationName, specificationValue }[]
+ *     variants: {
+ *       id, productId, sku, price, attributes: Record<string,string>, status
+ *     }[]
+ *     images: { id, productId, imageUrl, isPrimary, displayOrder }[]
+ *   }
+ *
+ * NOTE: This endpoint does NOT yet include inventory (stockStatus/
+ * quantity). Per-variant inventory is fetched separately from
+ * `GET /api/v1/inventory/variant/{variantId}` and is merged in by the
+ * service layer when present.
+ */
+export interface BackendProductDetailsDto {
+  product?: BackendProductDto;
+  information?: {
+    id?: number | string;
+    productId?: number | string;
+    shortDescription?: string;
+    longDescription?: string;
+    warranty?: string;
+    manufacturer?: string;
+  };
+  specifications?: Array<{
+    id?: number | string;
+    productId?: number | string;
+    specificationName?: string;
+    specificationValue?: string;
+  }>;
+  variants?: Array<{
+    id: number | string;
+    productId?: number | string;
+    sku?: string;
+    price?: number | string;
+    attributes?: Record<string, string>;
+    status?: string;
+  }>;
+  images?: Array<{
+    id?: number | string;
+    productId?: number | string;
+    imageUrl?: string;
+    isPrimary?: boolean;
+    displayOrder?: number;
+  }>;
 }
 
 /**
@@ -155,8 +195,12 @@ export function normalizeBackendProduct(dto: BackendProductDto): Product {
         ? {
             quantity: Number(inv.quantity ?? 0),
             reservedQty: Number(inv.reservedQty ?? 0),
-            available: Number(
-              inv.quantity ?? 0 - Number(inv.reservedQty ?? 0),
+            // Guard operator precedence: `??` binds looser than `-`, so the
+            // previous `inv.quantity ?? 0 - Number(...)` computed the wrong
+            // number. Compute available explicitly and clamp at 0.
+            available: Math.max(
+              0,
+              Number(inv.quantity ?? 0) - Number(inv.reservedQty ?? 0),
             ),
           }
         : undefined,
@@ -195,8 +239,12 @@ export function normalizeBackendProduct(dto: BackendProductDto): Product {
     slug,
     title: dto.name ?? "",
     description: dto.description ?? "",
-    brand: dto.brand ?? "",
-    category: dto.category ?? "",
+    // The Spring Boot catalogue/search DTO (`ProductResponse`) carries
+    // `brandName` / `categoryName`, NOT `brand` / `category`. Mirror the
+    // details adapter so the catalogue, card brand label, search filters
+    // and same-category "related products" all resolve against the real API.
+    brand: dto.brandName?.trim() || dto.brand?.trim() || "",
+    category: dto.categoryName?.trim() || dto.category?.trim() || "",
     // `image` and `images` are filled by the in-house normalizeProduct
     // via the getProductImage() registry; we still pass a sensible
     // primary so the registry has a starting point.
@@ -224,6 +272,216 @@ function attrString(
   if (v === null) return null;
   if (v === undefined) return undefined;
   return String(v);
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Backend ProductDetailsResponse → in-house Product adapter
+   ───────────────────────────────────────────────────────────────────── */
+
+/**
+ * Map a `ProductDetailsResponse` payload (served by
+ * `GET /api/v1/products/{id}/details`) plus a pre-fetched base
+ * `ProductResponse` (so we don't lose any fields that only live on
+ * `product`) into the in-house `Product` shape.
+ *
+ * What this merges:
+ *   - product: id, name, slug, description, status, brand/category names
+ *   - information.longDescription / shortDescription → product.description
+ *   - information.warranty / manufacturer → product.warranty / brand
+ *   - images[] → product.images (primary first, ordered by displayOrder)
+ *   - variants[] → product.variants (attributes map preserved verbatim)
+ *   - specifications[] → product.specifications (Record<string,string>)
+ *
+ * What this does NOT fabricate:
+ *   - Price, originalPrice, discount, rating, reviewsCount, stock/inventory.
+ *     Those are absent from the current DTO surface — the
+ *     `InventoryResponse` is fetched per variant by the service layer
+ *     and merged in. We never invent prices.
+ */
+export function normalizeBackendProductDetails(
+  details: BackendProductDetailsDto | null | undefined,
+  base: BackendProductDto | null | undefined,
+): Product {
+  const baseProduct = base ?? details?.product ?? ({} as BackendProductDto);
+  const productId = baseProduct.id ?? details?.product?.id ?? "";
+
+  // ── Images ──────────────────────────────────────────────────────────
+  const rawImages = Array.isArray(details?.images) ? details!.images! : [];
+  const mappedImages: ProductImage[] = rawImages
+    .map((img, index): ProductImage | null => {
+      const url = absolutizeImageUrl(img.imageUrl);
+      if (!url) return null;
+      return {
+        id: img.id ?? `be-${productId}-${index}`,
+        url,
+        sortOrder:
+          typeof img.displayOrder === "number" ? img.displayOrder : index,
+        isPrimary: img.isPrimary ?? index === 0,
+      };
+    })
+    .filter((img): img is ProductImage => img !== null)
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+  // Promote a single image to isPrimary if none was flagged.
+  if (mappedImages.length > 0 && !mappedImages.some((img) => img.isPrimary)) {
+    mappedImages[0].isPrimary = true;
+  }
+
+  // ── Variants ────────────────────────────────────────────────────────
+  const rawVariants = Array.isArray(details?.variants) ? details!.variants! : [];
+  const mappedVariants: ProductVariant[] = rawVariants.map((v) => {
+    const attrs = v.attributes ?? {};
+    return {
+      id: v.id,
+      sku: v.sku,
+      size: attrString(attrs, "size"),
+      color: attrString(attrs, "color"),
+      storage: attrString(attrs, "storage"),
+      price:
+        typeof v.price === "number"
+          ? v.price
+          : typeof v.price === "string" && v.price.trim() !== ""
+            ? Number(v.price)
+            : undefined,
+      attributes: attrs,
+      status: v.status,
+      // Inventory is intentionally left undefined here. The service
+      // layer fills it in from /api/v1/inventory/variant/{id} when
+      // available; until then, the UI shows OUT_OF_STOCK which is the
+      // safe default for a backend we cannot trust to have a number.
+      inventory: undefined,
+    };
+  });
+
+  // ── Specifications ──────────────────────────────────────────────────
+  const rawSpecs = Array.isArray(details?.specifications)
+    ? details!.specifications!
+    : [];
+  const specifications: Record<string, string> = {};
+  for (const spec of rawSpecs) {
+    const name = spec.specificationName?.trim();
+    const value = spec.specificationValue?.trim();
+    if (!name || value === undefined) continue;
+    specifications[name] = value;
+  }
+
+  // ── Description / Warranty / Brand ──────────────────────────────────
+  const information = details?.information;
+  const longDescription = information?.longDescription?.trim();
+  const shortDescription = information?.shortDescription?.trim();
+  const description =
+    longDescription && longDescription.length > 0
+      ? longDescription
+      : shortDescription && shortDescription.length > 0
+        ? shortDescription
+        : baseProduct.description ?? "";
+
+  const warranty = information?.warranty?.trim() || undefined;
+  const brand =
+    baseProduct.brandName?.trim() ||
+    baseProduct.brand?.trim() ||
+    information?.manufacturer?.trim() ||
+    "";
+
+  const category =
+    baseProduct.categoryName?.trim() ||
+    baseProduct.category?.trim() ||
+    "";
+
+  // ── Aggregate parent inventory (currently always 0) ─────────────────
+  // The base product does not yet expose a top-level inventory block.
+  // The variant list is still exposed so the parent can derive "in
+  // stock" once the per-variant inventory is merged in by the service.
+  const aggregateInventory: ProductInventory = (() => {
+    if (mappedVariants.length === 0) {
+      return { quantity: 0, reservedQty: 0, available: 0 };
+    }
+    return { quantity: 0, reservedQty: 0, available: 0 };
+  })();
+
+  // ── Slug ────────────────────────────────────────────────────────────
+  const slug =
+    baseProduct.slug ||
+    (typeof baseProduct.name === "string"
+      ? baseProduct.name
+          .toLowerCase()
+          .replace(/['’]/g, "")
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "")
+      : String(productId));
+
+  const partial: Product = {
+    id: productId,
+    slug,
+    title: baseProduct.name ?? "",
+    description,
+    brand,
+    category,
+    categorySlug: undefined,
+    image: mappedImages[0]?.url ?? "",
+    images: mappedImages,
+    // Price is not part of the current contract. Keep 0 so callers
+    // can still detect "missing" via `price === 0` and the existing
+    // UI doesn't have to branch on undefined.
+    price: typeof baseProduct.price === "number" ? baseProduct.price : 0,
+    originalPrice:
+      typeof baseProduct.originalPrice === "number"
+        ? baseProduct.originalPrice
+        : undefined,
+    discount:
+      typeof baseProduct.discount === "number"
+        ? baseProduct.discount
+        : undefined,
+    rating: Number(baseProduct.rating ?? 0),
+    reviews: Number(baseProduct.reviewsCount ?? 0),
+    inventory: aggregateInventory,
+    variants: mappedVariants,
+    warranty,
+    specifications,
+  };
+
+  return normalizeProduct(partial);
+}
+
+/**
+ * Merge per-variant inventory records (sourced from
+ * `GET /api/v1/inventory/variant/{variantId}`) into a Product's variants
+ * in place. The function is pure: it returns a new array of variants.
+ */
+export function mergeVariantInventory(
+  product: Product,
+  inventoryByVariant: Record<
+    string | number,
+    {
+      quantity?: number;
+      reservedQuantity?: number;
+      availableQuantity?: number;
+      stockStatus?: string;
+    }
+  >,
+): Product {
+  if (!product.variants || product.variants.length === 0) return product;
+
+  const mergedVariants = product.variants.map((v) => {
+    const inv = inventoryByVariant[String(v.id)] ?? inventoryByVariant[v.id];
+    if (!inv) return v;
+    const quantity = Number(inv.quantity ?? 0);
+    const reservedQty = Number(inv.reservedQuantity ?? 0);
+    const available =
+      typeof inv.availableQuantity === "number"
+        ? Math.max(0, inv.availableQuantity)
+        : Math.max(0, quantity - reservedQty);
+    return {
+      ...v,
+      inventory: { quantity, reservedQty, available },
+      stockStatus: inv.stockStatus ?? v.stockStatus,
+    };
+  });
+
+  return {
+    ...product,
+    variants: mergedVariants,
+  };
 }
 
 /**

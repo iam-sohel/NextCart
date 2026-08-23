@@ -48,6 +48,8 @@ function SearchPageContent() {
   selectedBrand,
   priceRange,
   sortBy,
+  loading,
+  error,
   search,
   setCategory,
   setBrand,
@@ -226,7 +228,35 @@ const brands = [
             )}
 
             {/* Results Grid */}
-            {paginatedResults.length > 0 ? (
+            {loading ? (
+              <Box
+                sx={{
+                  textAlign: "center",
+                  py: 6,
+                }}
+              >
+                <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
+                  Searching...
+                </Typography>
+                <Typography color="text.secondary">
+                  Fetching the latest results from our catalogue.
+                </Typography>
+              </Box>
+            ) : error ? (
+              <Box
+                sx={{
+                  textAlign: "center",
+                  py: 6,
+                }}
+              >
+                <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
+                  Search is temporarily unavailable
+                </Typography>
+                <Typography color="text.secondary">
+                  {error}
+                </Typography>
+              </Box>
+            ) : paginatedResults.length > 0 ? (
               <>
                 <Grid container spacing={2} sx={{ mb: 4 }}>
                   {paginatedResults.map((product) => (

@@ -1,22 +1,49 @@
-"use client";
-
 import { Grid } from "@mui/material";
+
 import ProductCard from "./ProductCard";
-import { listMockProducts } from "@/services/productService";
+import {
+  enrichProductListWithDetails,
+  listProducts,
+} from "@/services/productService";
 import { getProductImage } from "@/utils/productImages";
+import type { Product } from "@/types/product";
 
 /**
- * Renders the full product catalogue. The grid deliberately goes through
- * the service layer (not a direct `data/products` import) so that when the
- * Spring Boot backend exposes GET /api/products we can swap the data
- * source to `fetchProducts()` without touching this file.
+ * NEXTCART — ProductGrid (Server Component).
+ *
+ * Renders the full product catalogue. The grid deliberately goes
+ * through the service layer (not a direct `data/products` import) so
+ * the data source can be swapped without touching the rendering code.
+ *
+ * Data flow (per P0 contract):
+ *   1. `listProducts()` hits the Spring Boot catalogue endpoint.
+ *      - If the backend is reachable we receive the live list of
+ *        `ProductResponse` payloads.
+ *      - If the backend is unreachable, the service falls back to the
+ *        in-house mock dataset so the grid never breaks during
+ *        development.
+ *   2. `enrichProductListWithDetails()` issues a follow-up
+ *      `GET /api/v1/products/{id}/details` for each product in small
+ *      parallel batches to upgrade it with images, variants,
+ *      specifications and information. Failures on individual details
+ *      calls keep the original product in place (graceful degradation).
+ *
+ * The product card visual design is preserved — only the data layer
+ * changed.
  */
-export default function ProductGrid() {
-  const products = listMockProducts();
+export default async function ProductGrid() {
+  const list = await listProducts({ useMockFallback: true });
+
+  const products: Product[] =
+    list.source === "error" ? [] : list.products;
+
+  const enriched = await enrichProductListWithDetails(products, {
+    loadInventory: false,
+  });
 
   return (
     <Grid container spacing={3}>
-      {products.map((product) => {
+      {enriched.map((product) => {
         const image = getProductImage(product);
         const offer =
           product.discount && product.discount > 0
