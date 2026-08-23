@@ -44,6 +44,14 @@ export default function AuthClientBootstrap(): null {
   const pathname = usePathname();
 
   useEffect(() => {
+    // Restore the persisted session from localStorage. The auth store is
+    // configured with `skipHydration` so that SSR and the first client paint
+    // both start as "guest" (preventing a hydration mismatch); we trigger
+    // rehydration explicitly here on mount. When it finishes, the store's
+    // `hasHydrated` flag flips to true and any guards waiting on it (see
+    // `hooks/useRequireAuth`) and the navbar make their decision.
+    void useAuthStore.persist.rehydrate();
+
     // Live token reader — always reflects the latest store value, including
     // updates after a fresh login. We don't subscribe to the store because
     // `apiRequest` reads this on every call.

@@ -33,11 +33,17 @@ export default function Navbar() {
   const cartItems = useCartStore((state) => state.items);
   const wishlistItems = useWishlistStore((state) => state.items);
   const user = useAuthStore((state) => state.user);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const logout = useAuthStore((state) => state.logout);
   const resetAddresses = useAddressStore((s) => s.reset);
   const resetCart = useCartStore((s) => s.reset);
 
-  const isAuthenticated = Boolean(user);
+  // Gate auth-dependent UI on hydration so the server render (always guest)
+  // matches the first client paint; the Account / Sign Out controls appear
+  // only after the persisted session has been restored from localStorage.
+  // This prevents both a hydration mismatch and a logged-in user briefly
+  // flashing as a guest on a hard refresh.
+  const isAuthenticated = hasHydrated && Boolean(user);
   const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
   const wishlistCount = wishlistItems.length;
 

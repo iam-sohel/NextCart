@@ -59,10 +59,47 @@ export default function LoginPage() {
   const [emailTouched, setEmailTouched] = useState(false);
   const [passwordTouched, setPasswordTouched] = useState(false);
 
+  // A non-error notice derived from the URL query: account just created
+  // (?registered=1), session expired, or "please sign in to continue"
+  // (?reason=…). We read it from the URL inside an effect (client-only)
+  // rather than via `useSearchParams`, which would force this page to be
+  // wrapped in a Suspense boundary for the production build.
+  const [notice, setNotice] = useState<{
+    severity: "success" | "info";
+    text: string;
+  } | null>(null);
+
   // Reset any stale store error when the user lands on the page (e.g. after
-  // a failed signup that bounced to /login with an error still in memory).
+  // a failed signup that bounced to /login with an error still in memory),
+  // and surface any informational notice carried in the query string.
   useEffect(() => {
     clearError();
+
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+
+    let next: { severity: "success" | "info"; text: string } | null = null;
+    if (params.get("registered") === "1") {
+      next = {
+        severity: "success",
+        text: "Account created successfully. Please sign in to continue.",
+      };
+    } else if (params.get("reason") === "session-expired") {
+      next = {
+        severity: "info",
+        text: "Your session has expired. Please sign in again.",
+      };
+    } else if (params.get("reason") === "login-required") {
+      next = {
+        severity: "info",
+        text: "Please sign in to continue.",
+      };
+    }
+
+    if (next) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setNotice(next);
+    }
   }, [clearError]);
 
   const handleEmailBlur = () => {
@@ -114,6 +151,12 @@ export default function LoginPage() {
     >
       <Box component="form" onSubmit={handleSubmit} noValidate>
         <Stack spacing={2}>
+          {notice ? (
+            <Alert severity={notice.severity} variant="outlined">
+              {notice.text}
+            </Alert>
+          ) : null}
+
           {error ? (
             <Alert severity="error" variant="outlined" role="alert">
               {error}

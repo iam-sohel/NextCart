@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import {
   Container,
@@ -28,6 +27,7 @@ import Footer from "@/components/layout/Footer";
 
 import useAuthStore from "@/store/authStore";
 import useAddressStore from "@/store/addressStore";
+import useRequireAuth from "@/hooks/useRequireAuth";
 
 import type {
   AddressRequestPayload as AddressRequestDTO,
@@ -57,8 +57,6 @@ const EMPTY_FORM: AddressRequestDTO = {
 };
 
 export default function AccountAddressesPage() {
-  const router = useRouter();
-
   const token = useAuthStore((s) => s.token);
 
   const items = useAddressStore((s) => s.items);
@@ -79,17 +77,16 @@ export default function AccountAddressesPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Auth gate + initial fetch
-  useEffect(() => {
-    if (!token) {
-      router.push(
-        "/login?reason=login-required&return=/account/addresses",
-      );
-      return;
-    }
+  // Auth gate (hydration-safe): redirect guests to /login with a return path,
+  // without bouncing a logged-in user before the persisted token is restored.
+  useRequireAuth("/account/addresses");
 
-    void fetchAll();
-  }, [token, router, fetchAll]);
+  // Load the address book once the session token is available.
+  useEffect(() => {
+    if (token) {
+      void fetchAll();
+    }
+  }, [token, fetchAll]);
 
   // Seed/reset the form when changing modes
   useEffect(() => {

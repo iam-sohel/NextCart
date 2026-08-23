@@ -35,6 +35,7 @@ import {
 
 import { checkout as apiCheckout } from "@/services/orderService";
 import { createAddress as apiCreateAddress } from "@/services/addressService";
+import useRequireAuth from "@/hooks/useRequireAuth";
 
 /**
  * NEXTCART — Checkout
@@ -77,12 +78,10 @@ export default function CheckoutPage() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Auth gate: checkout requires a logged-in user.
-  useEffect(() => {
-    if (!token) {
-      router.push("/login?reason=login-required&return=/checkout");
-    }
-  }, [token, router]);
+  // Auth gate: checkout requires a logged-in user. Hydration-safe (waits for
+  // the persisted token to be restored) so a logged-in user is not bounced to
+  // /login on a hard refresh. Guests are redirected with a return path.
+  useRequireAuth("/checkout");
 
   // Pre-fill the form from the user's default saved address, exactly once
   // after the addresses load. Only runs when fields are still empty so the

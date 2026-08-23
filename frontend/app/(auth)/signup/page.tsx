@@ -165,7 +165,9 @@ export default function SignupPage() {
 
     const result = await register(fullName.trim(), email.trim(), phone.trim(), password);
     if (result.ok) {
-      router.push("/login");
+      // Registration does not return a token — send the user to /login to
+      // sign in, and flag it so the login page confirms the account was made.
+      router.push("/login?registered=1");
     }
   };
 
