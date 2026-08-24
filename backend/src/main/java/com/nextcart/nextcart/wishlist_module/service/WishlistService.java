@@ -1,8 +1,8 @@
 package com.nextcart.nextcart.wishlist_module.service;
 
-import java.util.List;
-
 import com.nextcart.nextcart.wishlist_module.dto.WishlistResponseDTO;
+
+import java.util.List;
 
 public interface WishlistService {
 

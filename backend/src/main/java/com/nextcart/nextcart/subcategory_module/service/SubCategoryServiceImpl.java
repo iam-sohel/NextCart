@@ -1,23 +1,27 @@
 package com.nextcart.nextcart.subcategory_module.service;
 
 import com.nextcart.nextcart.category_module.entity.Category;
+import com.nextcart.nextcart.category_module.entity.CategoryStatus;
 import com.nextcart.nextcart.category_module.exceptions.CategoryNotFoundException;
 import com.nextcart.nextcart.category_module.repository.CategoryRepository;
-import com.nextcart.nextcart.subcategory_module.dto.*;
+import com.nextcart.nextcart.subcategory_module.dto.SubCategoryCreateRequest;
+import com.nextcart.nextcart.subcategory_module.dto.SubCategoryResponse;
+import com.nextcart.nextcart.subcategory_module.dto.SubCategoryUpdateRequest;
 import com.nextcart.nextcart.subcategory_module.entity.SubCategory;
+import com.nextcart.nextcart.subcategory_module.entity.SubCategoryStatus;
 import com.nextcart.nextcart.subcategory_module.exceptions.SubCategoryAlreadyExistsException;
 import com.nextcart.nextcart.subcategory_module.exceptions.SubCategoryNotFoundException;
 import com.nextcart.nextcart.subcategory_module.mapper.SubCategoryMapper;
 import com.nextcart.nextcart.subcategory_module.repository.SubCategoryRepository;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class SubCategoryServiceImpl implements SubCategoryService {
 
     private final SubCategoryRepository subCategoryRepository;
@@ -25,118 +29,115 @@ public class SubCategoryServiceImpl implements SubCategoryService {
     private final SubCategoryMapper subCategoryMapper;
 
     @Override
+    @Transactional
     public SubCategoryResponse createSubCategory(
             SubCategoryCreateRequest request) {
 
-        Category category = categoryRepository.findById(
+        Category category = getActiveCategory(
                 request.getCategoryId()
-        ).orElseThrow(() ->
-                new CategoryNotFoundException(
-                        "Category not found with id: "
-                                + request.getCategoryId()
-                )
         );
+
+        String name = request.getName().trim();
 
         if (subCategoryRepository
                 .existsByCategoryIdAndNameIgnoreCase(
-                        request.getCategoryId(),
-                        request.getName())) {
+                        category.getId(),
+                        name
+                )) {
 
             throw new SubCategoryAlreadyExistsException(
-                    "SubCategory already exists: "
-                            + request.getName()
+                    "SubCategory already exists in this category"
             );
         }
 
         SubCategory subCategory =
-                subCategoryMapper.toEntity(request, category);
+                subCategoryMapper.toEntity(
+                        request,
+                        category
+                );
 
         SubCategory savedSubCategory =
                 subCategoryRepository.save(subCategory);
 
-        return subCategoryMapper.toResponse(savedSubCategory);
+        return subCategoryMapper.toResponse(
+                savedSubCategory
+        );
     }
 
     @Override
-    @Transactional(readOnly = true)
     public SubCategoryResponse getSubCategoryById(Long id) {
 
         SubCategory subCategory =
-                subCategoryRepository.findById(id)
+                subCategoryRepository
+                        .findByIdAndStatus(
+                                id,
+                                SubCategoryStatus.ACTIVE
+                        )
                         .orElseThrow(() ->
                                 new SubCategoryNotFoundException(
-                                        "SubCategory not found with id: " + id
+                                        "Active SubCategory not found with id: "
+                                                + id
                                 )
                         );
 
-        return subCategoryMapper.toResponse(subCategory);
+        return subCategoryMapper.toResponse(
+                subCategory
+        );
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public List<SubCategoryResponse> getAllSubCategories() {
-
-        return subCategoryRepository.findAll()
-                .stream()
-                .map(subCategoryMapper::toResponse)
-                .toList();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<SubCategoryResponse> getSubCategoriesByCategoryId(
-            Long categoryId) {
-
-        if (!categoryRepository.existsById(categoryId)) {
-            throw new CategoryNotFoundException(
-                    "Category not found with id: " + categoryId
-            );
-        }
+    public Page<SubCategoryResponse> getAllSubCategories(
+            Pageable pageable) {
 
         return subCategoryRepository
-                .findByCategoryId(categoryId)
-                .stream()
-                .map(subCategoryMapper::toResponse)
-                .toList();
+                .findAllByStatus(
+                        SubCategoryStatus.ACTIVE,
+                        pageable
+                )
+                .map(subCategoryMapper::toResponse);
     }
 
     @Override
+    public Page<SubCategoryResponse> getSubCategoriesByCategoryId(
+            Long categoryId,
+            Pageable pageable) {
+
+        getActiveCategory(categoryId);
+
+        return subCategoryRepository
+                .findAllByCategoryIdAndStatus(
+                        categoryId,
+                        SubCategoryStatus.ACTIVE,
+                        pageable
+                )
+                .map(subCategoryMapper::toResponse);
+    }
+
+    @Override
+    @Transactional
     public SubCategoryResponse updateSubCategory(
             Long id,
             SubCategoryUpdateRequest request) {
 
         SubCategory subCategory =
-                subCategoryRepository.findById(id)
-                        .orElseThrow(() ->
-                                new SubCategoryNotFoundException(
-                                        "SubCategory not found with id: " + id
-                                )
-                        );
+                getSubCategoryForAdmin(id);
 
         Category category =
-                categoryRepository.findById(
+                getActiveCategory(
                         request.getCategoryId()
-                ).orElseThrow(() ->
-                        new CategoryNotFoundException(
-                                "Category not found with id: "
-                                        + request.getCategoryId()
-                        )
                 );
 
+        String name = request.getName().trim();
+
         if (subCategoryRepository
-                .existsByCategoryIdAndNameIgnoreCase(
-                        request.getCategoryId(),
-                        request.getName())
-                && (
-                    !subCategory.getName()
-                            .equalsIgnoreCase(request.getName())
-                    || !subCategory.getCategory().getId()
-                            .equals(request.getCategoryId())
+                .existsByCategoryIdAndNameIgnoreCaseAndIdNot(
+                        category.getId(),
+                        name,
+                        id
                 )) {
 
             throw new SubCategoryAlreadyExistsException(
-                    "SubCategory already exists: "
-                            + request.getName()
+                    "SubCategory already exists in this category"
             );
         }
 
@@ -149,20 +150,111 @@ public class SubCategoryServiceImpl implements SubCategoryService {
         SubCategory updatedSubCategory =
                 subCategoryRepository.save(subCategory);
 
-        return subCategoryMapper.toResponse(updatedSubCategory);
+        return subCategoryMapper.toResponse(
+                updatedSubCategory
+        );
     }
 
     @Override
-    public void deleteSubCategory(Long id) {
+    @Transactional
+    public void deactivateSubCategory(Long id) {
 
         SubCategory subCategory =
-                subCategoryRepository.findById(id)
+                getSubCategoryForAdmin(id);
+
+        if (subCategory.getStatus()
+                == SubCategoryStatus.INACTIVE) {
+            return;
+        }
+
+        subCategory.setStatus(
+                SubCategoryStatus.INACTIVE
+        );
+
+        subCategoryRepository.save(subCategory);
+    }
+
+    @Override
+    @Transactional
+    public SubCategoryResponse restoreSubCategory(Long id) {
+
+        SubCategory subCategory =
+                subCategoryRepository
+                        .findById(id)
                         .orElseThrow(() ->
                                 new SubCategoryNotFoundException(
-                                        "SubCategory not found with id: " + id
+                                        "SubCategory not found with id: "
+                                                + id
                                 )
                         );
 
-        subCategoryRepository.delete(subCategory);
+        if (subCategory.getStatus()
+                == SubCategoryStatus.ACTIVE) {
+
+            return subCategoryMapper.toResponse(
+                    subCategory
+            );
+        }
+
+        Category category =
+                subCategory.getCategory();
+
+        if (category.getStatus()
+                != CategoryStatus.ACTIVE) {
+
+            throw new CategoryNotFoundException(
+                    "Cannot restore SubCategory because its category is inactive"
+            );
+        }
+
+        if (subCategoryRepository
+                .existsByCategoryIdAndNameIgnoreCaseAndIdNot(
+                        category.getId(),
+                        subCategory.getName(),
+                        id
+                )) {
+
+            throw new SubCategoryAlreadyExistsException(
+                    "An active SubCategory with the same name already exists in this category"
+            );
+        }
+
+        subCategory.setStatus(
+                SubCategoryStatus.ACTIVE
+        );
+
+        SubCategory restoredSubCategory =
+                subCategoryRepository.save(subCategory);
+
+        return subCategoryMapper.toResponse(
+                restoredSubCategory
+        );
+    }
+
+    private Category getActiveCategory(Long categoryId) {
+
+        return categoryRepository
+                .findByIdAndStatus(
+                        categoryId,
+                        CategoryStatus.ACTIVE
+                )
+                .orElseThrow(() ->
+                        new CategoryNotFoundException(
+                                "Active Category not found with id: "
+                                        + categoryId
+                        )
+                );
+    }
+
+    private SubCategory getSubCategoryForAdmin(Long id) {
+
+        return subCategoryRepository
+                .findById(id)
+                .orElseThrow(() ->
+                        new SubCategoryNotFoundException(
+                                "SubCategory not found with id: "
+                                        + id
+                        )
+                );
     }
 }

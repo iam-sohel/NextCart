@@ -9,10 +9,10 @@ import com.nextcart.nextcart.inventory_module.exceptions.InventoryNotFoundExcept
 import com.nextcart.nextcart.inventory_module.mapper.InventoryMapper;
 import com.nextcart.nextcart.inventory_module.repository.InventoryRepository;
 
-import com.nextcart.nextcart.product_module.entity.ProductVariant;
+import com.nextcart.nextcart.product_module.productVariant.ProductVariantEntity;
 import com.nextcart.nextcart.product_module.exceptions.ProductVariantNotFoundException;
-import com.nextcart.nextcart.product_module.repository.ProductVariantRepository;
 
+import com.nextcart.nextcart.product_module.productVariant.ProductVariantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,7 +39,7 @@ public class InventoryServiceImpl implements InventoryService {
     public InventoryResponse createInventory(
             InventoryCreateRequest request) {
 
-        ProductVariant variant =
+        ProductVariantEntity variant =
                 productVariantRepository.findById(
                         request.getVariantId()
                 ).orElseThrow(() ->

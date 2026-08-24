@@ -1,18 +1,20 @@
 package com.nextcart.nextcart.subcategory_module.controller;
 
+import com.nextcart.nextcart.adcommon.dto.ApiResponse;
 import com.nextcart.nextcart.subcategory_module.dto.SubCategoryCreateRequest;
 import com.nextcart.nextcart.subcategory_module.dto.SubCategoryResponse;
 import com.nextcart.nextcart.subcategory_module.dto.SubCategoryUpdateRequest;
 import com.nextcart.nextcart.subcategory_module.service.SubCategoryService;
-
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/subcategories")
@@ -21,9 +23,9 @@ public class SubCategoryController {
 
     private final SubCategoryService subCategoryService;
 
-    // CREATE
     @PostMapping
-    public ResponseEntity<SubCategoryResponse> createSubCategory(
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<SubCategoryResponse>> createSubCategory(
             @Valid @RequestBody SubCategoryCreateRequest request) {
 
         SubCategoryResponse response =
@@ -31,67 +33,127 @@ public class SubCategoryController {
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(response);
+                .body(
+                        new ApiResponse<>(
+                                true,
+                                "SubCategory created successfully",
+                                response
+                        )
+                );
     }
 
-    // GET BY ID
     @GetMapping("/{id}")
-    public ResponseEntity<SubCategoryResponse> getSubCategoryById(
+    public ResponseEntity<ApiResponse<SubCategoryResponse>> getSubCategoryById(
             @PathVariable Long id) {
 
         SubCategoryResponse response =
                 subCategoryService.getSubCategoryById(id);
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "SubCategory fetched successfully",
+                        response
+                )
+        );
     }
 
-    // GET ALL
     @GetMapping
-    public ResponseEntity<List<SubCategoryResponse>>
-    getAllSubCategories() {
+    public ResponseEntity<ApiResponse<Page<SubCategoryResponse>>>
+    getAllSubCategories(
+            @PageableDefault(
+                    size = 20,
+                    sort = "name",
+                    direction = Sort.Direction.ASC
+            )
+            Pageable pageable) {
 
-        List<SubCategoryResponse> response =
-                subCategoryService.getAllSubCategories();
+        Page<SubCategoryResponse> response =
+                subCategoryService.getAllSubCategories(pageable);
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "SubCategories fetched successfully",
+                        response
+                )
+        );
     }
 
-    // GET BY CATEGORY ID
     @GetMapping("/category/{categoryId}")
-    public ResponseEntity<List<SubCategoryResponse>>
+    public ResponseEntity<ApiResponse<Page<SubCategoryResponse>>>
     getSubCategoriesByCategoryId(
-            @PathVariable Long categoryId) {
+            @PathVariable Long categoryId,
+            @PageableDefault(
+                    size = 20,
+                    sort = "name",
+                    direction = Sort.Direction.ASC
+            )
+            Pageable pageable) {
 
-        List<SubCategoryResponse> response =
+        Page<SubCategoryResponse> response =
                 subCategoryService.getSubCategoriesByCategoryId(
-                        categoryId
+                        categoryId,
+                        pageable
                 );
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "SubCategories fetched successfully",
+                        response
+                )
+        );
     }
 
-    // UPDATE
     @PutMapping("/{id}")
-    public ResponseEntity<SubCategoryResponse> updateSubCategory(
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<SubCategoryResponse>> updateSubCategory(
             @PathVariable Long id,
             @Valid @RequestBody SubCategoryUpdateRequest request) {
 
         SubCategoryResponse response =
-                subCategoryService.updateSubCategory(
-                        id,
-                        request
-                );
+                subCategoryService.updateSubCategory(id, request);
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "SubCategory updated successfully",
+                        response
+                )
+        );
     }
 
-    // DELETE
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteSubCategory(
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> deactivateSubCategory(
             @PathVariable Long id) {
 
-        subCategoryService.deleteSubCategory(id);
+        subCategoryService.deactivateSubCategory(id);
 
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "SubCategory deactivated successfully",
+                        null
+                )
+        );
+    }
+
+    @PatchMapping("/{id}/restore")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<SubCategoryResponse>> restoreSubCategory(
+            @PathVariable Long id) {
+
+        SubCategoryResponse response =
+                subCategoryService.restoreSubCategory(id);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "SubCategory restored successfully",
+                        response
+                )
+        );
     }
 }

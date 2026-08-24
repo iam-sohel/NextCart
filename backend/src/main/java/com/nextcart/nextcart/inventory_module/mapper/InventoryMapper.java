@@ -7,7 +7,7 @@ import com.nextcart.nextcart.inventory_module.dto.InventoryResponse;
 import com.nextcart.nextcart.inventory_module.dto.InventoryUpdateRequest;
 import com.nextcart.nextcart.inventory_module.entity.Inventory;
 
-import com.nextcart.nextcart.product_module.entity.ProductVariant;
+import com.nextcart.nextcart.product_module.productVariant.ProductVariantEntity;
 
 import org.springframework.stereotype.Component;
 
@@ -16,7 +16,7 @@ public class InventoryMapper {
 
     public Inventory toEntity(
             InventoryCreateRequest request,
-            ProductVariant variant) {
+            ProductVariantEntity variant) {
 
         Inventory inventory = new Inventory();
 

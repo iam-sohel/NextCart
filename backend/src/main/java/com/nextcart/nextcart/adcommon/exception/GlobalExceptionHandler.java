@@ -1,5 +1,6 @@
 package com.nextcart.nextcart.adcommon.exception;
 
+import com.nextcart.nextcart.adcommon.dto.ApiResponse;
 import com.nextcart.nextcart.brand_module.exceptions.BrandAlreadyExistsException;
 import com.nextcart.nextcart.brand_module.exceptions.BrandNotFoundException;
 import com.nextcart.nextcart.category_module.exceptions.CategoryAlreadyExistsException;
@@ -11,8 +12,9 @@ import com.nextcart.nextcart.subcategory_module.exceptions.SubCategoryAlreadyExi
 import com.nextcart.nextcart.subcategory_module.exceptions.SubCategoryNotFoundException;
 import com.nextcart.nextcart.user_module.exceptions.UserAlreadyExistsException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.Map;
@@ -20,234 +22,329 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(UserAlreadyExistsException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public Map<String, Object> handleUserAlreadyExists(
-            UserAlreadyExistsException ex) {
+    // =========================
+    // USER
+    // =========================
 
-        return Map.of(
-                "success", false,
-                "message", ex.getMessage(),
-                "errorCode", "USER_ALREADY_EXISTS"
+    @ExceptionHandler(UserAlreadyExistsException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleUserAlreadyExists(UserAlreadyExistsException ex) {
+
+        return buildError(
+                HttpStatus.BAD_REQUEST,
+                ex.getMessage(),
+                "USER_ALREADY_EXISTS"
         );
     }
 
-    @ExceptionHandler(CategoryAlreadyExistsException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public Map<String, Object> handleCategoryAlreadyExists(
-            CategoryAlreadyExistsException ex) {
+    // =========================
+    // CATEGORY
+    // =========================
 
-        return Map.of(
-                "success", false,
-                "message", ex.getMessage(),
-                "errorCode", "CATEGORY_ALREADY_EXISTS"
+    @ExceptionHandler(CategoryAlreadyExistsException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleCategoryAlreadyExists(CategoryAlreadyExistsException ex) {
+
+        return buildError(
+                HttpStatus.BAD_REQUEST,
+                ex.getMessage(),
+                "CATEGORY_ALREADY_EXISTS"
         );
     }
 
     @ExceptionHandler(CategoryNotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    public Map<String, Object> handleCategoryNotFound(CategoryNotFoundException ex)
-    {
-        return Map.of(
-                "success", false,
-                "message", ex.getMessage(),
-                "errorCode", "CATEGORY_NOT_FOUND"
-        );
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleCategoryNotFound(CategoryNotFoundException ex) {
 
+        return buildError(
+                HttpStatus.NOT_FOUND,
+                ex.getMessage(),
+                "CATEGORY_NOT_FOUND"
+        );
     }
 
     // =========================
-    // SUBCATEGORY ALREADY EXISTS
+    // SUBCATEGORY
     // =========================
 
     @ExceptionHandler(SubCategoryAlreadyExistsException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public Map<String, Object> handleSubCategoryAlreadyExists(
+    public ResponseEntity<ApiResponse> handleSubCategoryAlreadyExists(
             SubCategoryAlreadyExistsException ex) {
 
-        return Map.of(
-                "success", false,
-                "message", ex.getMessage(),
-                "errorCode", "SUBCATEGORY_ALREADY_EXISTS"
-        );
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(
+                        new ApiResponse(
+                                false,
+                                ex.getMessage(),
+                                "SUBCATEGORY_ALREADY_EXISTS"
+                        )
+                );
     }
-
-
-// =========================
-// SUBCATEGORY NOT FOUND
-// =========================
 
     @ExceptionHandler(SubCategoryNotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    public Map<String, Object> handleSubCategoryNotFound(
+    public ResponseEntity<ApiResponse> handleSubCategoryNotFound(
             SubCategoryNotFoundException ex) {
 
-        return Map.of(
-                "success", false,
-                "message", ex.getMessage(),
-                "errorCode", "SUBCATEGORY_NOT_FOUND"
-        );
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(
+                        new ApiResponse(
+                                false,
+                                ex.getMessage(),
+                                "SUBCATEGORY_NOT_FOUND"
+                        )
+                );
     }
-
-
-// =========================
-// BRAND ALREADY EXISTS
-// =========================
+    // =========================
+    // BRAND
+    // =========================
 
     @ExceptionHandler(BrandAlreadyExistsException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public Map<String, Object> handleBrandAlreadyExists(
+    public ResponseEntity<ApiResponse<Void>> handleBrandAlreadyExists(
             BrandAlreadyExistsException ex) {
 
-        return Map.of(
-                "success", false,
-                "message", ex.getMessage(),
-                "errorCode", "BRAND_ALREADY_EXISTS"
-        );
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(
+                        new ApiResponse<>(
+                                false,
+                                ex.getMessage(),
+                                null
+                        )
+                );
     }
-
-
-// =========================
-// BRAND NOT FOUND
-// =========================
 
     @ExceptionHandler(BrandNotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    public Map<String, Object> handleBrandNotFound(
+    public ResponseEntity<ApiResponse<Void>> handleBrandNotFound(
             BrandNotFoundException ex) {
 
-        return Map.of(
-                "success", false,
-                "message", ex.getMessage(),
-                "errorCode", "BRAND_NOT_FOUND"
-        );
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(
+                        new ApiResponse<>(
+                                false,
+                                ex.getMessage(),
+                                null
+                        )
+                );
     }
+
+    // =========================
+    // PRODUCT
+    // =========================
 
     @ExceptionHandler(ProductAlreadyExistsException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public Map<String, Object> handleProductAlreadyExists(
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleProductAlreadyExists(
             ProductAlreadyExistsException ex) {
 
-        return Map.of(
-                "success", false,
-                "message", ex.getMessage(),
-                "errorCode", "PRODUCT_ALREADY_EXISTS"
+        return buildError(
+                HttpStatus.BAD_REQUEST,
+                ex.getMessage(),
+                "PRODUCT_ALREADY_EXISTS"
         );
     }
-    @ExceptionHandler(ProductNotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    public Map<String, Object> handleProductNotFound(
-            ProductNotFoundException ex) {
 
-        return Map.of(
-                "success", false,
-                "message", ex.getMessage(),
-                "errorCode", "PRODUCT_NOT_FOUND"
+    @ExceptionHandler(ProductNotFoundException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleProductNotFound(ProductNotFoundException ex) {
+
+        return buildError(
+                HttpStatus.NOT_FOUND,
+                ex.getMessage(),
+                "PRODUCT_NOT_FOUND"
         );
     }
+
+    // =========================
+    // PRODUCT VARIANT
+    // =========================
 
     @ExceptionHandler(ProductVariantAlreadyExistsException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public Map<String, Object> handleProductVariantAlreadyExists(
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleProductVariantAlreadyExists(
             ProductVariantAlreadyExistsException ex) {
 
-        return Map.of(
-                "success", false,
-                "message", ex.getMessage(),
-                "errorCode", "PRODUCT_VARIANT_ALREADY_EXISTS"
+        return buildError(
+                HttpStatus.BAD_REQUEST,
+                ex.getMessage(),
+                "PRODUCT_VARIANT_ALREADY_EXISTS"
         );
     }
+
+    // =========================
+    // INVENTORY
+    // =========================
+
     @ExceptionHandler(InventoryAlreadyExistsException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public Map<String, Object> handleInventoryAlreadyExists(
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleInventoryAlreadyExists(
             InventoryAlreadyExistsException ex) {
 
-        return Map.of(
-                "success", false,
-                "message", ex.getMessage(),
-                "errorCode", "INVENTORY_ALREADY_EXISTS"
+        return buildError(
+                HttpStatus.BAD_REQUEST,
+                ex.getMessage(),
+                "INVENTORY_ALREADY_EXISTS"
         );
     }
 
     @ExceptionHandler(InventoryNotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    public Map<String, Object> handleInventoryNotFound(
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleInventoryNotFound(
             InventoryNotFoundException ex) {
 
-        return Map.of(
-                "success", false,
-                "message", ex.getMessage(),
-                "errorCode", "INVENTORY_NOT_FOUND"
+        return buildError(
+                HttpStatus.NOT_FOUND,
+                ex.getMessage(),
+                "INVENTORY_NOT_FOUND"
         );
     }
+
+    // =========================
+    // PRODUCT IMAGE
+    // =========================
 
     @ExceptionHandler(ProductImageNotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    public Map<String, Object> handleProductImageNotFound(
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleProductImageNotFound(
             ProductImageNotFoundException ex) {
 
-        return Map.of(
-                "success", false,
-                "message", ex.getMessage(),
-                "errorCode", "PRODUCT_IMAGE_NOT_FOUND"
+        return buildError(
+                HttpStatus.NOT_FOUND,
+                ex.getMessage(),
+                "PRODUCT_IMAGE_NOT_FOUND"
         );
     }
+
+    // =========================
+    // PRODUCT SPECIFICATION
+    // =========================
+
     @ExceptionHandler(ProductSpecificationNotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    public Map<String, Object> handleProductSpecificationNotFound(
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleProductSpecificationNotFound(
             ProductSpecificationNotFoundException ex) {
 
-        return Map.of(
-                "success", false,
-                "message", ex.getMessage(),
-                "errorCode", "PRODUCT_SPECIFICATION_NOT_FOUND"
+        return buildError(
+                HttpStatus.NOT_FOUND,
+                ex.getMessage(),
+                "PRODUCT_SPECIFICATION_NOT_FOUND"
         );
     }
+
+    // =========================
+    // VARIANT ATTRIBUTE
+    // =========================
+
     @ExceptionHandler(VariantAttributeAlreadyExistsException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public Map<String, Object> handleVariantAttributeAlreadyExists(
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleVariantAttributeAlreadyExists(
             VariantAttributeAlreadyExistsException ex) {
 
-        return Map.of(
-                "success", false,
-                "message", ex.getMessage(),
-                "errorCode", "VARIANT_ATTRIBUTE_ALREADY_EXISTS"
+        return buildError(
+                HttpStatus.BAD_REQUEST,
+                ex.getMessage(),
+                "VARIANT_ATTRIBUTE_ALREADY_EXISTS"
         );
     }
+
     @ExceptionHandler(VariantAttributeNotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    public Map<String, Object> handleVariantAttributeNotFound(
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleVariantAttributeNotFound(
             VariantAttributeNotFoundException ex) {
 
-        return Map.of(
-                "success", false,
-                "message", ex.getMessage(),
-                "errorCode", "VARIANT_ATTRIBUTE_NOT_FOUND"
+        return buildError(
+                HttpStatus.NOT_FOUND,
+                ex.getMessage(),
+                "VARIANT_ATTRIBUTE_NOT_FOUND"
         );
     }
 
+    // =========================
+    // PRODUCT INFORMATION
+    // =========================
+
     @ExceptionHandler(ProductInformationAlreadyExistsException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public Map<String, Object> handleProductInformationAlreadyExists(
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleProductInformationAlreadyExists(
             ProductInformationAlreadyExistsException ex) {
 
-        return Map.of(
-                "success", false,
-                "message", ex.getMessage(),
-                "errorCode", "PRODUCT_INFORMATION_ALREADY_EXISTS"
+        return buildError(
+                HttpStatus.BAD_REQUEST,
+                ex.getMessage(),
+                "PRODUCT_INFORMATION_ALREADY_EXISTS"
         );
     }
 
     @ExceptionHandler(ProductInformationNotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    public Map<String, Object> handleProductInformationNotFound(
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleProductInformationNotFound(
             ProductInformationNotFoundException ex) {
 
-        return Map.of(
-                "success", false,
-                "message", ex.getMessage(),
-                "errorCode", "PRODUCT_INFORMATION_NOT_FOUND"
+        return buildError(
+                HttpStatus.NOT_FOUND,
+                ex.getMessage(),
+                "PRODUCT_INFORMATION_NOT_FOUND"
         );
     }
 
+    // =========================
+    // VALIDATION
+    // =========================
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleValidationException(
+            MethodArgumentNotValidException ex) {
+
+        String message = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .findFirst()
+                .map(error -> error.getDefaultMessage())
+                .orElse("Validation failed");
+
+        return buildError(
+                HttpStatus.BAD_REQUEST,
+                message,
+                "VALIDATION_ERROR"
+        );
+    }
+
+    // =========================
+    // GENERIC EXCEPTION
+    // =========================
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleGenericException(Exception ex) {
+
+        return buildError(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "An unexpected error occurred",
+                "INTERNAL_SERVER_ERROR"
+        );
+    }
+
+    // =========================
+    // COMMON ERROR BUILDER
+    // =========================
+
+    private ResponseEntity<ApiResponse<Map<String, String>>> buildError(
+            HttpStatus status,
+            String message,
+            String errorCode) {
+
+        ApiResponse<Map<String, String>> response =
+                new ApiResponse<>(
+                        false,
+                        message,
+                        Map.of("errorCode", errorCode)
+                );
+
+        return ResponseEntity
+                .status(status)
+                .body(response);
+    }
 }

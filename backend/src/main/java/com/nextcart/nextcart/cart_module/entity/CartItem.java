@@ -1,9 +1,9 @@
 package com.nextcart.nextcart.cart_module.entity;
 
 import com.nextcart.nextcart.adcommon.entity.BaseEntity;
-import com.nextcart.nextcart.product_module.entity.Product;
-import com.nextcart.nextcart.product_module.entity.ProductVariant;
+import com.nextcart.nextcart.product_module.productVariant.ProductVariantEntity;
 
+import com.nextcart.nextcart.product_module.product_base.ProductEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -31,12 +31,12 @@ public class CartItem extends BaseEntity {
     // Existing product_id - KEEP IT
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn( nullable = false)
-    private Product product;
+    private ProductEntity productEntity;
 
     // New product_variant_id
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn( nullable = false)
-    private ProductVariant productVariant;
+    private ProductVariantEntity productVariant;
 
     // Existing quantity
     @Column(nullable = false)
@@ -46,12 +46,12 @@ public class CartItem extends BaseEntity {
 
     public CartItem(
             Cart cart,
-            Product product,
-            ProductVariant productVariant,
+            ProductEntity productEntity,
+            ProductVariantEntity productVariant,
             Integer quantity) {
 
         this.cart = cart;
-        this.product = product;
+        this.productEntity = productEntity;
         this.productVariant = productVariant;
         this.quantity = quantity;
     }

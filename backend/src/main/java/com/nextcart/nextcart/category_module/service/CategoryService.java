@@ -1,10 +1,10 @@
 package com.nextcart.nextcart.category_module.service;
 
 import com.nextcart.nextcart.category_module.dto.CategoryCreateRequest;
-import com.nextcart.nextcart.category_module.dto.CategoryUpdateRequest;
 import com.nextcart.nextcart.category_module.dto.CategoryResponse;
-
-import java.util.List;
+import com.nextcart.nextcart.category_module.dto.CategoryUpdateRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface CategoryService {
 
@@ -12,12 +12,11 @@ public interface CategoryService {
 
     CategoryResponse getCategoryById(Long id);
 
-    List<CategoryResponse> getAllCategories();
+    Page<CategoryResponse> getAllCategories(Pageable pageable);
 
-    CategoryResponse updateCategory(
-            Long id,
-            CategoryUpdateRequest request
-    );
+    CategoryResponse updateCategory(Long id, CategoryUpdateRequest request);
 
-    void deleteCategory(Long id);
+    void deactivateCategory(Long id);
+
+    CategoryResponse restoreCategory(Long id);
 }

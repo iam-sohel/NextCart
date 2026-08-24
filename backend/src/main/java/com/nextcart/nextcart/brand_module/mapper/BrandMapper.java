@@ -13,25 +13,24 @@ public class BrandMapper {
 
         Brand brand = new Brand();
 
-        brand.setName(request.getName());
+        brand.setName(request.getName().trim());
 
         return brand;
     }
 
     public BrandResponse toResponse(Brand brand) {
 
-        BrandResponse response = new BrandResponse();
-
-        response.setId(brand.getId());
-        response.setName(brand.getName());
-
-        return response;
+        return BrandResponse.builder()
+                .id(brand.getId())
+                .name(brand.getName())
+                .status(brand.getStatus())
+                .build();
     }
 
     public void updateEntity(
             BrandUpdateRequest request,
             Brand brand) {
 
-        brand.setName(request.getName());
+        brand.setName(request.getName().trim());
     }
 }

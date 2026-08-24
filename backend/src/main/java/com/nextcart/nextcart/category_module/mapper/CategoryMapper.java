@@ -1,6 +1,5 @@
 package com.nextcart.nextcart.category_module.mapper;
 
-
 import com.nextcart.nextcart.category_module.dto.CategoryCreateRequest;
 import com.nextcart.nextcart.category_module.dto.CategoryResponse;
 import com.nextcart.nextcart.category_module.dto.CategoryUpdateRequest;
@@ -25,6 +24,9 @@ public class CategoryMapper {
 
         response.setId(category.getId());
         response.setName(category.getName());
+        response.setStatus(category.getStatus());
+        response.setCreatedAt(category.getCreatedAt());
+        response.setUpdatedAt(category.getUpdatedAt());
 
         return response;
     }
@@ -34,6 +36,5 @@ public class CategoryMapper {
             Category category) {
 
         category.setName(request.getName());
-
     }
 }
