@@ -338,6 +338,8 @@ export default function CartPage() {
               </Box>
 
               <Button
+                component={Link}
+                href="/checkout"
                 fullWidth
                 variant="contained"
                 size="large"

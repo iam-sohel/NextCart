@@ -19,7 +19,6 @@ import StarIcon from "@mui/icons-material/Star";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 
-import useCartStore from "@/store/cartStore";
 import useWishlistStore from "@/store/wishlistStore";
 import useAuthStore from "@/store/authStore";
 import { UNIVERSAL_FALLBACK } from "@/utils/productImages";
@@ -86,12 +85,9 @@ export default function ProductCard({
   bestseller = false,
   newArrival = false,
 }: ProductCardProps) {
-  const [isAdding, setIsAdding] = useState(false);
   const [resolvedImage, setResolvedImage] = useState<string>(image);
 
   const router = useRouter();
-
-  const addToCart = useCartStore((state) => state.addToCart);
 
   const token = useAuthStore((state) => state.token);
 
@@ -103,21 +99,11 @@ export default function ProductCard({
 
   const isWishlisted = has(id);
 
+  // The grid card has no variant selection, but the backend requires a
+  // specific variant to add to the cart. Send the shopper to the product
+  // page to choose options rather than firing an add that can't succeed.
   const handleAddToCart = () => {
-    setIsAdding(true);
-
-    addToCart({
-      id,
-      slug,
-      title,
-      image: resolvedImage,
-      price: Number(price),
-      quantity: 1,
-    });
-
-    setTimeout(() => {
-      setIsAdding(false);
-    }, 300);
+    router.push(`/products/${slug}`);
   };
 
   const handleWishlistToggle = () => {
@@ -434,9 +420,8 @@ export default function ProductCard({
             borderRadius: 2,
           }}
           onClick={handleAddToCart}
-          disabled={isAdding}
         >
-          {isAdding ? "Adding..." : "Add to Cart"}
+          Add to Cart
         </Button>
       </CardContent>
     </Card>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
 import {
@@ -13,7 +13,11 @@ import {
 import BoltIcon from "@mui/icons-material/Bolt";
 
 import useCartStore from "@/store/cartStore";
+import useAuthStore from "@/store/authStore";
 import type { Product } from "@/types/product";
+
+const loginRedirect = (returnTo: string) =>
+  `/login?reason=login-required&return=${encodeURIComponent(returnTo)}`;
 
 interface AddToCartButtonProps {
   product: Product;
@@ -28,7 +32,7 @@ interface AddToCartButtonProps {
   disabled?: boolean;
   /** True when the Add to Cart action is preparing (e.g. validating). */
   loading?: boolean;
-  /** Optional user-facing message (success/error). */
+  /** Optional user-facing success message from the parent. */
   feedback?: { type: "success" | "error"; message: string } | null;
   onAfterAdd?: () => void;
   fullWidth?: boolean;
@@ -43,12 +47,28 @@ export function AddToCartButton({
   disabled,
   loading,
   feedback,
+  onAfterAdd,
   fullWidth = true,
 }: AddToCartButtonProps) {
   const addToCart = useCartStore((state) => state.addToCart);
+  const token = useAuthStore((state) => state.token);
+  const router = useRouter();
+  const pathname = usePathname();
 
-  const handleClick = () => {
-    addToCart({
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleClick = async () => {
+    setError(null);
+
+    // The cart API is authenticated; send guests to login first.
+    if (!token) {
+      router.push(loginRedirect(pathname || `/products/${product.slug}`));
+      return;
+    }
+
+    setSubmitting(true);
+    const result = await addToCart({
       id: product.id,
       slug: product.slug,
       title: product.title,
@@ -58,10 +78,17 @@ export function AddToCartButton({
       variantId,
       variantLabel,
     });
+    setSubmitting(false);
+
+    if (result.ok) {
+      onAfterAdd?.();
+    } else {
+      setError(result.message);
+    }
   };
 
-  const label =
-    loading || feedback?.type === "error" ? "Adding…" : "Add to cart";
+  const busy = submitting || loading;
+  const label = busy ? "Adding…" : "Add to cart";
 
   return (
     <Box sx={{ width: fullWidth ? "100%" : undefined }}>
@@ -69,22 +96,26 @@ export function AddToCartButton({
         variant="contained"
         size="large"
         onClick={handleClick}
-        disabled={disabled || loading}
+        disabled={disabled || busy}
         fullWidth={fullWidth}
         startIcon={
-          loading ? (
-            <CircularProgress size={16} color="inherit" />
-          ) : undefined
+          busy ? <CircularProgress size={16} color="inherit" /> : undefined
         }
         sx={{ fontWeight: 700 }}
       >
         {label}
       </Button>
 
-      {feedback && feedback.type === "success" && (
-        <Alert severity="success" sx={{ mt: 1.5, py: 0.5 }}>
-          {feedback.message}
+      {error ? (
+        <Alert severity="error" sx={{ mt: 1.5, py: 0.5 }}>
+          {error}
         </Alert>
+      ) : (
+        feedback?.type === "success" && (
+          <Alert severity="success" sx={{ mt: 1.5, py: 0.5 }}>
+            {feedback.message}
+          </Alert>
+        )
       )}
     </Box>
   );
@@ -109,9 +140,21 @@ export function BuyNowButton({
 }: BuyNowButtonProps) {
   const router = useRouter();
   const addToCart = useCartStore((state) => state.addToCart);
+  const token = useAuthStore((state) => state.token);
 
-  const handleClick = () => {
-    addToCart({
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleClick = async () => {
+    setError(null);
+
+    if (!token) {
+      router.push(loginRedirect("/checkout"));
+      return;
+    }
+
+    setSubmitting(true);
+    const result = await addToCart({
       id: product.id,
       slug: product.slug,
       title: product.title,
@@ -121,22 +164,44 @@ export function BuyNowButton({
       variantId,
       variantLabel,
     });
-    router.push("/checkout");
+    setSubmitting(false);
+
+    // Never advance to checkout unless the item actually made it into the
+    // server cart — the backend builds the order from the cart contents.
+    if (result.ok) {
+      router.push("/checkout");
+    } else {
+      setError(result.message);
+    }
   };
 
   return (
-    <Button
-      variant="contained"
-      color="secondary"
-      size="large"
-      onClick={handleClick}
-      disabled={disabled}
-      startIcon={<BoltIcon />}
-      sx={{ fontWeight: 700 }}
-      fullWidth
-    >
-      Buy now
-    </Button>
+    <Box sx={{ width: "100%" }}>
+      <Button
+        variant="contained"
+        color="secondary"
+        size="large"
+        onClick={handleClick}
+        disabled={disabled || submitting}
+        startIcon={
+          submitting ? (
+            <CircularProgress size={16} color="inherit" />
+          ) : (
+            <BoltIcon />
+          )
+        }
+        sx={{ fontWeight: 700 }}
+        fullWidth
+      >
+        {submitting ? "Processing…" : "Buy now"}
+      </Button>
+
+      {error && (
+        <Alert severity="error" sx={{ mt: 1.5, py: 0.5 }}>
+          {error}
+        </Alert>
+      )}
+    </Box>
   );
 }
 

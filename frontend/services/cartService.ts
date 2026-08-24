@@ -10,9 +10,15 @@
  *   - `price`, `itemTotal`, `grandTotal` are BigDecimal on the server,
  *     which serialises as a JSON string (e.g. "69999.00"). We coerce
  *     to number on the way in so the UI can keep using arithmetic.
- *   - Backend cart lines are identified by `productId` only — there is
- *     no variantId field. The frontend still accepts variantId in its
- *     public API for forward compatibility but never sends it.
+ *   - Adding a line REQUIRES `variantId` (backend `@NotNull`); the
+ *     server resolves the line by variant and derives the product from
+ *     it. Update/remove target `/cart/items/{id}` where `{id}` is the
+ *     VARIANT id (the controller's path var is misleadingly named
+ *     `productId` but is passed straight to a `findByProductVariantId`
+ *     lookup). We therefore send the variantId on every mutation.
+ *   - The response `CartItemResponseDTO` does NOT echo the variantId
+ *     back and `productImage` is always null — the store retains the
+ *     variantId it sent so later mutations can address the line.
  */
 
 import { apiRequest, type ApiResult } from "@/lib/api";
@@ -81,10 +87,12 @@ function normaliseCart(raw: CartResponseWire): CartResponseWire {
 const ENDPOINTS = {
   cart: "/api/v1/cart",
   addItem: "/api/v1/cart/items",
-  updateItem: (productId: number) =>
-    `/api/v1/cart/items/${encodeURIComponent(String(productId))}`,
-  removeItem: (productId: number) =>
-    `/api/v1/cart/items/${encodeURIComponent(String(productId))}`,
+  // NOTE: the backend path variable is named `{productId}` but is read as
+  // the VARIANT id (findByCartIdAndProductVariantId). We pass the variantId.
+  updateItem: (variantId: number) =>
+    `/api/v1/cart/items/${encodeURIComponent(String(variantId))}`,
+  removeItem: (variantId: number) =>
+    `/api/v1/cart/items/${encodeURIComponent(String(variantId))}`,
 } as const;
 
 /* ─────────────────────────────────────────────────────────────────────
@@ -103,42 +111,44 @@ export async function getCart(
   return { ok: true, status: res.status, data: normaliseCart(res.data) };
 }
 
-/** POST /api/v1/cart/items — add a product. */
+/** POST /api/v1/cart/items — add a variant to the cart.
+ *  Backend requires BOTH productId and variantId (@NotNull). */
 export async function addItemToCart(
   productId: number,
+  variantId: number,
   quantity: number,
   signal?: AbortSignal,
 ): Promise<ApiResult<CartResponseWire>> {
   const res = await apiRequest<CartResponseWire>(ENDPOINTS.addItem, {
     method: "POST",
-    body: { productId, quantity },
+    body: { productId, variantId, quantity },
     signal,
   });
   if (!res.ok) return res;
   return { ok: true, status: res.status, data: normaliseCart(res.data) };
 }
 
-/** PUT /api/v1/cart/items/{productId} — set quantity. */
+/** PUT /api/v1/cart/items/{variantId} — set quantity. */
 export async function updateCartItem(
-  productId: number,
+  variantId: number,
   quantity: number,
   signal?: AbortSignal,
 ): Promise<ApiResult<CartResponseWire>> {
   const res = await apiRequest<CartResponseWire>(
-    ENDPOINTS.updateItem(productId),
+    ENDPOINTS.updateItem(variantId),
     { method: "PUT", body: { quantity }, signal },
   );
   if (!res.ok) return res;
   return { ok: true, status: res.status, data: normaliseCart(res.data) };
 }
 
-/** DELETE /api/v1/cart/items/{productId} */
+/** DELETE /api/v1/cart/items/{variantId} */
 export async function removeCartItem(
-  productId: number,
+  variantId: number,
   signal?: AbortSignal,
 ): Promise<ApiResult<CartResponseWire>> {
   const res = await apiRequest<CartResponseWire>(
-    ENDPOINTS.removeItem(productId),
+    ENDPOINTS.removeItem(variantId),
     { method: "DELETE", signal },
   );
   if (!res.ok) return res;
