@@ -9,16 +9,25 @@
  *   - `user` is the domain user object on success. `null` means "guest".
  *   - `token` is the JWT bearer token. `lib/api.ts` reads it via the
  *     registered token-getter and sends it as `Authorization: Bearer …`.
+ *   - `refreshToken` is the opaque, rotating refresh token. When `lib/api.ts`
+ *     sees an authenticated request rejected (the access token has expired),
+ *     it calls the registered refresher (`lib/tokenRefresh.ts`), which trades
+ *     this refresh token for a fresh access token + a new refresh token and
+ *     writes both back here via `applyRefreshedTokens`. Only ONE refresh token
+ *     is valid per user at a time (the backend rotates + deletes on refresh),
+ *     so it must always be the latest value.
  *   - Persistence: the backend is a STATELESS bearer-JWT API (confirmed from
- *     the Spring Security config) — it issues no HttpOnly cookie and no
- *     refresh token, and it is owned by another team. To make the session
+ *     the Spring Security config) — it issues no HttpOnly cookie. The access
+ *     token lives 24h; the refresh token lives 7 days. To make the session
  *     survive a page reload (required for cart/wishlist/checkout/addresses,
- *     which all need the token), we persist `{ token, user }` with Zustand's
- *     `persist` middleware backed by localStorage. This is the conventional
- *     bearer-token SPA pattern; it does NOT invent a new auth protocol. The
- *     known trade-off is XSS exposure of the token — acceptable here given
- *     (a) the backend offers no cookie alternative and (b) the token expires
- *     in 24h. `partialize` guarantees only token+user are stored (never
+ *     which all need the token) AND to allow a silent access-token refresh
+ *     after the 24h access token lapses, we persist `{ token, refreshToken,
+ *     user }` with Zustand's `persist` middleware backed by localStorage. This
+ *     is the conventional bearer-token SPA pattern; it does NOT invent a new
+ *     auth protocol. The known trade-off is XSS exposure of the tokens —
+ *     accepted here given (a) the backend offers no cookie alternative and
+ *     (b) the tokens are the only session mechanism the backend provides.
+ *     `partialize` guarantees only token+refreshToken+user are stored (never
  *     transient loading/error flags).
  *   - `hasHydrated` flips to true only after rehydration runs on the client.
  *     Route guards and the navbar wait for it so a logged-in user is never
@@ -47,6 +56,7 @@ import { authService, type AuthUser } from "@/services/authService";
 interface AuthState {
   user: AuthUser | null;
   token: string | null;
+  refreshToken: string | null;
   loading: boolean;
   error: string | null;
 
@@ -70,6 +80,15 @@ interface AuthState {
 
   logout: () => void;
 
+  /**
+   * Replace the access + refresh tokens after a successful silent refresh.
+   * Called by `lib/tokenRefresh.ts`. Intentionally leaves `user` untouched —
+   * a refresh renews credentials, it does not change who is logged in — so
+   * every existing consumer (navbar keys off `user`, guards key off `token`)
+   * keeps working across a refresh with no flicker or logout.
+   */
+  applyRefreshedTokens: (accessToken: string, refreshToken: string) => void;
+
   clearError: () => void;
 
   setHasHydrated: (value: boolean) => void;
@@ -80,6 +99,7 @@ const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       token: null,
+      refreshToken: null,
       loading: false,
       error: null,
       isAuthenticating: false,
@@ -105,6 +125,7 @@ const useAuthStore = create<AuthState>()(
 
         set({
           token: result.data.token,
+          refreshToken: result.data.refreshToken,
           // The login endpoint does not return user details and the backend
           // has no real /me endpoint, so we populate what we know (the email
           // the user just authenticated with). Names stay blank until/if the
@@ -146,13 +167,19 @@ const useAuthStore = create<AuthState>()(
       },
 
       logout() {
-        // The backend logout is stateless/advisory (it clears the server
-        // security context but the JWT stays valid until expiry), so the
-        // authoritative client-side logout is dropping the token here. We
-        // still notify the backend best-effort (fire-and-forget) to match
-        // the documented contract, without blocking the UI.
+        // The backend logout now deletes the refresh token server-side, but
+        // the 24h access JWT stays valid until expiry, so the authoritative
+        // client-side logout is dropping BOTH tokens here. We still notify the
+        // backend best-effort (fire-and-forget) to invalidate the refresh
+        // token, without blocking the UI.
         void authService.logout();
-        set({ user: null, token: null, error: null });
+        set({ user: null, token: null, refreshToken: null, error: null });
+      },
+
+      applyRefreshedTokens(accessToken, refreshToken) {
+        // Swap in the rotated credentials from a silent refresh. `user` is
+        // preserved so the session continues seamlessly.
+        set({ token: accessToken, refreshToken });
       },
 
       clearError() {
@@ -170,7 +197,11 @@ const useAuthStore = create<AuthState>()(
       // treats as "no storage" — so SSR never crashes.
       storage: createJSONStorage(() => localStorage),
       // Never persist transient UI state — only the durable session.
-      partialize: (state) => ({ token: state.token, user: state.user }),
+      partialize: (state) => ({
+        token: state.token,
+        refreshToken: state.refreshToken,
+        user: state.user,
+      }),
       // Rehydrate explicitly on the client (from AuthClientBootstrap) so the
       // first client render matches SSR before the token is applied.
       skipHydration: true,

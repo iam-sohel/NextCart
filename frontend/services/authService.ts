@@ -76,7 +76,20 @@ interface BackendRegisterResponse {
 
 interface BackendLoginResponse {
   token?: string;
+  refreshToken?: string;
   message?: string;
+}
+
+/**
+ * Response from `POST /api/v1/auth/refresh` (Spring `TokenRefreshResponse`).
+ * NOTE the field-name mismatch with login, confirmed against the backend:
+ * login returns the access token as `token`, whereas refresh returns it as
+ * `accessToken`. Both also return a rotated `refreshToken`.
+ */
+interface BackendTokenRefreshResponse {
+  accessToken?: string;
+  refreshToken?: string;
+  tokenType?: string;
 }
 
 /* ──────────────────────────────────────────────────────────────────────
@@ -111,20 +124,24 @@ function isLikelyBadCredentials(status: number): boolean {
 export const authService = {
   /**
    * POST /api/v1/auth/login
-   * Returns the JWT `token` plus the backend's confirmation message.
-   * Persistence of the token is handled by the auth store (localStorage via
-   * Zustand `persist`); the backend is bearer-only and issues no cookie.
+   * Returns the JWT `token`, a `refreshToken`, plus the backend's confirmation
+   * message. Persistence of both tokens is handled by the auth store
+   * (localStorage via Zustand `persist`); the backend is bearer-only and
+   * issues no cookie. `skipAuthRefresh` keeps this call out of the automatic
+   * refresh-on-401 machinery — a failed login is a credentials problem, not an
+   * expired session.
    */
   async login(
     credentials: LoginCredentials,
     signal?: AbortSignal,
-  ): Promise<ApiResult<{ token: string; message: string }>> {
+  ): Promise<ApiResult<{ token: string; refreshToken: string; message: string }>> {
     const res = await apiRequest<BackendLoginResponse>("/api/v1/auth/login", {
       method: "POST",
       body: {
         email: credentials.email,
         password: credentials.password,
       },
+      skipAuthRefresh: true,
       signal,
     });
 
@@ -139,8 +156,9 @@ export const authService = {
     }
 
     const token = res.data?.token ?? "";
+    const refreshToken = res.data?.refreshToken ?? "";
     const message = res.data?.message ?? "Login successful";
-    return { ok: true, status: res.status, data: { token, message } };
+    return { ok: true, status: res.status, data: { token, refreshToken, message } };
   },
 
   /**
@@ -164,6 +182,7 @@ export const authService = {
     const res = await apiRequest<BackendRegisterResponse>("/api/v1/auth/register", {
       method: "POST",
       body,
+      skipAuthRefresh: true,
       signal,
     });
 
@@ -193,19 +212,74 @@ export const authService = {
   },
 
   /**
+   * POST /api/v1/auth/refresh
+   *
+   * Exchanges a still-valid refresh token for a NEW access token AND a NEW
+   * refresh token (the backend rotates the refresh token on every call and
+   * deletes the previous one, so only one refresh token per user is ever
+   * live). The request carries the refresh token in the BODY — never as a
+   * Bearer header — so we pass `token: null` to suppress attaching the
+   * (possibly expired) access token, and `skipAuthRefresh: true` so a failed
+   * refresh can never recursively try to refresh itself.
+   *
+   * Returns the mapped `{ accessToken, refreshToken }`. A non-ok result is
+   * passed through so the caller can distinguish an invalid/expired refresh
+   * token (status ≥ 400 → session over) from a network failure (status 0 →
+   * transient, keep the session).
+   */
+  async refreshSession(
+    refreshToken: string,
+    signal?: AbortSignal,
+  ): Promise<ApiResult<{ accessToken: string; refreshToken: string }>> {
+    const res = await apiRequest<BackendTokenRefreshResponse>("/api/v1/auth/refresh", {
+      method: "POST",
+      body: { refreshToken },
+      token: null,
+      skipAuthRefresh: true,
+      signal,
+    });
+
+    if (!res.ok) return res;
+
+    const accessToken = res.data?.accessToken ?? "";
+    const rotatedRefreshToken = res.data?.refreshToken ?? "";
+
+    // A 2xx that is missing either token is not a usable session — treat it as
+    // a failed refresh rather than storing empty credentials.
+    if (!accessToken || !rotatedRefreshToken) {
+      return {
+        ok: false,
+        status: res.status,
+        message: "Refresh response did not contain the expected tokens.",
+      };
+    }
+
+    return {
+      ok: true,
+      status: res.status,
+      data: { accessToken, refreshToken: rotatedRefreshToken },
+    };
+  },
+
+  /**
    * POST /api/v1/auth/logout
    *
-   * The backend JWT is stateless — logout on the server only clears the
-   * SecurityContext and does NOT invalidate the token (it stays valid until
-   * its 24h expiry). The authoritative logout is therefore the client
-   * dropping the token from its store. We still call the endpoint
-   * best-effort to honor the documented contract, and we deliberately
-   * swallow any error: a failed logout call must never block the user from
-   * ending their session locally.
+   * The backend now deletes the user's refresh token(s) server-side, so this
+   * call genuinely ends the refreshable session — but the 24h access JWT is
+   * still stateless and cannot be revoked, so the authoritative client-side
+   * logout remains dropping the tokens from the store. We call the endpoint
+   * best-effort to honor the contract, mark it `skipAuthRefresh` so a 401/500
+   * during logout never triggers a refresh, and deliberately swallow any
+   * error: a failed logout call must never block the user from ending their
+   * session locally.
    */
   async logout(signal?: AbortSignal): Promise<void> {
     try {
-      await apiRequest("/api/v1/auth/logout", { method: "POST", signal });
+      await apiRequest("/api/v1/auth/logout", {
+        method: "POST",
+        skipAuthRefresh: true,
+        signal,
+      });
     } catch {
       // Intentionally ignored — client-side token removal is authoritative.
     }

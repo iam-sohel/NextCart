@@ -1,23 +1,32 @@
 /**
- * NEXTCART — Auth failure interceptor
+ * NEXTCART — Auth bootstrap + terminal auth-failure interceptor
  *
- * Receives every 401 surfaced by `lib/api.ts` and turns it into a single
- * side-effect: clear the in-memory auth store and navigate the user to
+ * Mounted once on the client (`app/layout.tsx`). It wires three things into
+ * the framework-agnostic HTTP layer (`lib/api.ts`):
+ *   1. the live access-token getter (reads the Zustand store),
+ *   2. the single-flight token refresher (`lib/tokenRefresh.ts`), and
+ *   3. the terminal auth-failure handler.
+ *
+ * With the refresh flow in place, an expired access token is renewed silently
+ * and the original request is retried — the user never notices. The failure
+ * handler here is the LAST resort: it runs only when the refresher reports the
+ * session is genuinely over (refresh token missing/invalid/expired). Its one
+ * side-effect is to clear the in-memory auth store and navigate the user to
  * `/login?reason=session-expired`.
  *
  * Why a separate module?
  *   - `lib/api.ts` must stay framework-agnostic; we don't want a direct
  *     React / Next.js import in the HTTP layer.
  *   - Routing belongs in client components. A tiny client-only registrar
- *     (`<AuthClientBootstrap />`) wires the handler on app boot.
+ *     (`<AuthClientBootstrap />`) wires the handlers on app boot.
  *
  * Concurrency:
- *   - Multiple in-flight calls can 401 simultaneously (cart + wishlist +
- *     addresses may all be requested on page load). Without dedupe the
- *     router.push would fire several times and the store would be cleared
- *     multiple times — harmless but noisy. We dedupe with a short in-flight
+ *   - Multiple in-flight calls can fail simultaneously (cart + wishlist +
+ *     addresses may all be requested on page load). Refresh is coalesced into
+ *     one call by `lib/tokenRefresh.ts`; and if the session is truly over,
+ *     this handler dedupes the resulting redirect/clear with a short in-flight
  *     flag that resets on the next animation frame so the next genuine
- *     401 after recovery is still handled.
+ *     failure after recovery is still handled.
  */
 
 "use client";
@@ -29,7 +38,9 @@ import { useRouter, usePathname } from "next/navigation";
 import {
   registerAuthFailureHandler,
   registerAuthTokenGetter,
+  registerTokenRefresher,
 } from "@/lib/api";
+import { refreshAuthSession } from "@/lib/tokenRefresh";
 import useAuthStore from "@/store/authStore";
 
 /** Routes that are themselves the "auth surface" — never redirect on these. */
@@ -58,6 +69,13 @@ export default function AuthClientBootstrap(): null {
     const unregisterToken = registerAuthTokenGetter(() =>
       useAuthStore.getState().token,
     );
+
+    // Provide the single-flight refresher that `lib/api.ts` uses to silently
+    // renew an expired access token and retry the request. The failure handler
+    // below now fires ONLY when this refresher reports the session is truly
+    // over (refresh token missing/invalid/expired) — a mere access-token lapse
+    // is recovered transparently and never reaches the redirect.
+    const unregisterRefresher = registerTokenRefresher(refreshAuthSession);
 
     let inFlight = false;
     const handleAuthFailure = (status: number) => {
@@ -92,6 +110,7 @@ export default function AuthClientBootstrap(): null {
 
     return () => {
       unregisterToken();
+      unregisterRefresher();
       unregisterHandler();
     };
   }, [router, pathname]);
