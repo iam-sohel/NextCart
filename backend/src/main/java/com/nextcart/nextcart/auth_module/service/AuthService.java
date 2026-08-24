@@ -7,13 +7,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.nextcart.nextcart.auth_module.dto.LoginRequest;
 import com.nextcart.nextcart.auth_module.dto.LoginResponse;
+import com.nextcart.nextcart.auth_module.dto.RefreshTokenRequest;
 import com.nextcart.nextcart.auth_module.dto.RegisterRequest;
 import com.nextcart.nextcart.auth_module.dto.RegisterResponse;
+import com.nextcart.nextcart.auth_module.dto.TokenRefreshResponse;
+import com.nextcart.nextcart.auth_module.entity.RefreshToken;
+import com.nextcart.nextcart.auth_module.security.JwtUtil;
 import com.nextcart.nextcart.user_module.entity.Role;
 import com.nextcart.nextcart.user_module.entity.User;
 import com.nextcart.nextcart.user_module.repository.RoleRepository;
 import com.nextcart.nextcart.user_module.repository.UserRepository;
-import com.nextcart.nextcart.auth_module.security.JwtUtil;
 
 @Service
 public class AuthService {
@@ -23,19 +26,22 @@ public class AuthService {
     private final ModelMapper modelMapper;
     private final RoleRepository roleRepository;
     private final JwtUtil jwtUtil;
+    private final RefreshTokenService refreshTokenService;
 
     public AuthService(
             UserRepository userRepository,
             RoleRepository roleRepository,
             PasswordEncoder passwordEncoder,
             ModelMapper modelMapper,
-            JwtUtil jwtUtil) {
+            JwtUtil jwtUtil,
+            RefreshTokenService refreshTokenService) {
 
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.modelMapper = modelMapper;
         this.jwtUtil = jwtUtil;
+        this.refreshTokenService = refreshTokenService;
     }
 
     @Transactional
@@ -81,52 +87,57 @@ public class AuthService {
         return response;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public LoginResponse login(LoginRequest request) {
 
         User user;
 
         // Login using email
-        if (request.getEmail() != null
-                && !request.getEmail().isBlank()) {
-
+        if (request.getEmail() != null && !request.getEmail().isBlank()) {
             user = userRepository.findByEmail(request.getEmail())
-                    .orElseThrow(() ->
-                            new RuntimeException(
-                                    "Invalid email or password"));
+                    .orElseThrow(() -> new RuntimeException("Invalid email or password"));
         }
-
         // Login using phone
-        else if (request.getPhone() != null
-                && !request.getPhone().isBlank()) {
-
+        else if (request.getPhone() != null && !request.getPhone().isBlank()) {
             user = userRepository.findByPhone(request.getPhone())
-                    .orElseThrow(() ->
-                            new RuntimeException(
-                                    "Invalid phone or password"));
-        }
-
-        // Neither email nor phone provided
-        else {
-            throw new RuntimeException(
-                    "Email or phone is required");
+                    .orElseThrow(() -> new RuntimeException("Invalid phone or password"));
+        } else {
+            throw new RuntimeException("Email or phone is required");
         }
 
         // Verify password
-        if (!passwordEncoder.matches(
-                request.getPassword(),
-                user.getPassword())) {
-
-            throw new RuntimeException(
-                    "Invalid credentials");
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new RuntimeException("Invalid credentials");
         }
 
-        // Generate JWT
-        String token = jwtUtil.generateToken(user.getEmail());
+        // Generate Access Token (JWT) & Refresh Token
+        String accessToken = jwtUtil.generateToken(user.getEmail());
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
         return new LoginResponse(
-                token,
+                accessToken,
+                refreshToken.getToken(),
                 "Login successful"
         );
+    }
+
+    @Transactional
+    public TokenRefreshResponse refreshAccessToken(RefreshTokenRequest request) {
+        return refreshTokenService.findByToken(request.getRefreshToken())
+                .map(refreshTokenService::verifyExpiration)
+                .map(RefreshToken::getUser)
+                .map(user -> {
+                    String newAccessToken = jwtUtil.generateToken(user.getEmail());
+                    RefreshToken newRefreshToken = refreshTokenService.createRefreshToken(user);
+                    return new TokenRefreshResponse(newAccessToken, newRefreshToken.getToken());
+                })
+                .orElseThrow(() -> new RuntimeException("Refresh token is not present in database!"));
+    }
+
+    @Transactional
+    public void logout(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        refreshTokenService.deleteByUserId(user.getId());
     }
 }

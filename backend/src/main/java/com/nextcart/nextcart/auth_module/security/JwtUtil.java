@@ -1,10 +1,10 @@
 package com.nextcart.nextcart.auth_module.security;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 import javax.crypto.SecretKey;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import io.jsonwebtoken.Jwts;
@@ -13,23 +13,26 @@ import io.jsonwebtoken.security.Keys;
 @Component
 public class JwtUtil {
 
-    // Inject from configuration so the secret is sourced from an environment
-    // variable (JWT_SECRET) instead of being hardcoded in source control.
-    // Missing value -> application fails to start, which is what we want.
+    /*
+     * Local/MVP JWT secret.
+     *
+     * IMPORTANT:
+     * This is intentionally kept inside the application so local development
+     * does not require JWT_SECRET environment configuration.
+     *
+     * The secret must be at least 32 bytes for HS256.
+     */
+    private static final String JWT_SECRET =
+            "NextCart-MVP-JWT-Secret-Key-2026-Saad-Strong-Key";
+
+    private static final long JWT_EXPIRATION_MS = 24 * 60 * 60 * 1000L;
+
     private final SecretKey key;
 
-    public JwtUtil(@Value("${app.security.jwt.secret:}") String secret) {
-        if (secret == null || secret.isBlank()) {
-            throw new IllegalStateException(
-                "app.security.jwt.secret must be configured (env JWT_SECRET). "
-              + "Generate one with `openssl rand -base64 48`.");
-        }
-        if (secret.getBytes().length < 32) {
-            throw new IllegalStateException(
-                "app.security.jwt.secret must be at least 32 bytes (256 bits) "
-              + "for HS256 signing.");
-        }
-        this.key = Keys.hmacShaKeyFor(secret.getBytes());
+    public JwtUtil() {
+        this.key = Keys.hmacShaKeyFor(
+                JWT_SECRET.getBytes(StandardCharsets.UTF_8)
+        );
     }
 
     public String generateToken(String email) {
@@ -37,21 +40,30 @@ public class JwtUtil {
         return Jwts.builder()
                 .subject(email)
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + 86400000))
+                .expiration(new Date(
+                        System.currentTimeMillis() + JWT_EXPIRATION_MS
+                ))
                 .signWith(key)
                 .compact();
     }
 
     public boolean validateToken(String token, String email) {
-    return extractEmail(token).equals(email);
-}
+        try {
+            String extractedEmail = extractEmail(token);
+            return extractedEmail != null
+                    && extractedEmail.equals(email);
+        } catch (Exception e) {
+            return false;
+        }
+    }
 
     public String extractEmail(String token) {
-    return Jwts.parser()
-            .verifyWith(key)
-            .build()
-            .parseSignedClaims(token)
-            .getPayload()
-            .getSubject();
-}
+
+        return Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .getSubject();
+    }
 }
