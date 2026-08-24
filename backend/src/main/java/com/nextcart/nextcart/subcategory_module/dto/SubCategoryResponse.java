@@ -1,5 +1,6 @@
 package com.nextcart.nextcart.subcategory_module.dto;
 
+import com.nextcart.nextcart.subcategory_module.entity.SubCategoryStatus;
 import lombok.*;
 
 @Getter
@@ -17,4 +18,5 @@ public class SubCategoryResponse {
 
     private String name;
 
+    private SubCategoryStatus status;
 }

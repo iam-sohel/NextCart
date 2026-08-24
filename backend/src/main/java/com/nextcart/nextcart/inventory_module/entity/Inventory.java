@@ -1,6 +1,6 @@
 package com.nextcart.nextcart.inventory_module.entity;
 
-import com.nextcart.nextcart.product_module.entity.ProductVariant;
+import com.nextcart.nextcart.product_module.productVariant.ProductVariantEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -19,7 +19,7 @@ public class Inventory {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "variant_id", nullable = false, unique = true)
-    private ProductVariant variant;
+    private ProductVariantEntity variant;
 
     @Column(name = "quantity", nullable = false)
     private Integer quantity;

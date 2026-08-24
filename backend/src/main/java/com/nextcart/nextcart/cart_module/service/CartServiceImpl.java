@@ -8,9 +8,10 @@ import com.nextcart.nextcart.cart_module.entity.Cart;
 import com.nextcart.nextcart.cart_module.entity.CartItem;
 import com.nextcart.nextcart.cart_module.repository.CartItemRepository;
 import com.nextcart.nextcart.cart_module.repository.CartRepository;
-import com.nextcart.nextcart.product_module.entity.Product;
-import com.nextcart.nextcart.product_module.entity.ProductVariant;
-import com.nextcart.nextcart.product_module.repository.ProductVariantRepository;
+import com.nextcart.nextcart.product_module.productPrice.ProductVariantPriceEntity;
+import com.nextcart.nextcart.product_module.productPrice.ProductVariantPriceRepository;
+import com.nextcart.nextcart.product_module.productVariant.ProductVariantEntity;
+import com.nextcart.nextcart.product_module.productVariant.ProductVariantRepository;
 import com.nextcart.nextcart.user_module.entity.User;
 import com.nextcart.nextcart.user_module.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +33,7 @@ public class CartServiceImpl implements CartService {
 
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
-    private final ProductVariantRepository productVariantRepository;
+   private final ProductVariantPriceRepository productVariantPriceRepository;
     private final UserRepository userRepository;
 
     private User getAuthenticatedUser() {
@@ -107,15 +108,15 @@ public class CartServiceImpl implements CartService {
                     "Quantity must be greater than zero");
         }
 
-        ProductVariant productVariant =
-                productVariantRepository
+        ProductVariantPriceEntity productVariant =
+                productVariantPriceRepository
                         .findById(request.getVariantId())
                         .orElseThrow(() ->
                                 new RuntimeException(
                                         "Product variant not found with id: "
                                                 + request.getVariantId()));
 
-        Product product =
+        ProductVariantPriceEntity product =
                 productVariant.getProduct();
 
         if (product == null) {
@@ -286,7 +287,7 @@ public class CartServiceImpl implements CartService {
                             Product product =
                                     item.getProduct();
 
-                            ProductVariant variant =
+                            ProductVariantEntity variant =
                                     item.getProductVariant();
 
                             BigDecimal price =

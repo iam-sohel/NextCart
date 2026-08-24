@@ -1,264 +1,224 @@
 package com.nextcart.nextcart.order_module.service;
 
-import com.nextcart.nextcart.address_module.entity.Address;
-import com.nextcart.nextcart.address_module.repository.AddressRepository;
 import com.nextcart.nextcart.cart_module.entity.Cart;
 import com.nextcart.nextcart.cart_module.repository.CartRepository;
-import com.nextcart.nextcart.order_module.dto.*;
-import com.nextcart.nextcart.order_module.entity.*;
+import com.nextcart.nextcart.order_module.dto.OrderResponseDTO;
+import com.nextcart.nextcart.order_module.entity.Order;
+import com.nextcart.nextcart.order_module.entity.OrderItem;
 import com.nextcart.nextcart.order_module.repository.OrderRepository;
+import com.nextcart.nextcart.product_module.productPrice.ProductVariantPriceEntity;
+import com.nextcart.nextcart.product_module.productPrice.ProductVariantPriceRepository;
 import com.nextcart.nextcart.user_module.entity.User;
 import com.nextcart.nextcart.user_module.repository.UserRepository;
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
-    private final UserRepository userRepository;
-    private final AddressRepository addressRepository;
     private final CartRepository cartRepository;
+    private final UserRepository userRepository;
+    private final ProductVariantPriceRepository productVariantPriceRepository;
 
     @Override
-    @Transactional
-    public OrderResponseDTO createOrderFromCart(
-            String userEmail,
-            CheckoutRequestDTO requestDto) {
+    public OrderResponseDTO createOrder(
+            Long userId) {
 
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+        User user =
+                userRepository.findById(userId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "User not found with id: " + userId
+                                )
+                        );
 
-        Address address = addressRepository
-                .findByIdAndUser(requestDto.getAddressId(), user)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Address not found or access denied"));
-
-        Cart cart = cartRepository.findByUser(user)
-                .orElseThrow(() ->
-                        new RuntimeException("Cart is empty"));
+        Cart cart =
+                cartRepository.findByUserId(userId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Cart not found for user id: " + userId
+                                )
+                        );
 
         if (cart.getItems() == null ||
                 cart.getItems().isEmpty()) {
 
             throw new RuntimeException(
-                    "Cannot place order with empty cart");
+                    "Cannot create order from empty cart"
+            );
         }
 
-        // Calculate total using ProductVariant price
-        BigDecimal calculatedTotal = cart.getItems()
-                .stream()
-                .filter(item ->
-                        item.getProductVariant() != null &&
-                                item.getProductVariant().getPrice() != null)
-                .map(item ->
-                        item.getProductVariant()
-                                .getPrice()
-                                .multiply(
-                                        BigDecimal.valueOf(
-                                                item.getQuantity())))
-                .reduce(
-                        BigDecimal.ZERO,
-                        BigDecimal::add);
+        BigDecimal calculatedTotal =
+                cart.getItems()
+                        .stream()
+                        .map(item -> {
 
-        BigDecimal finalTotal =
-                (cart.getTotalAmount() != null &&
-                        cart.getTotalAmount()
-                                .compareTo(BigDecimal.ZERO) > 0)
-                        ? cart.getTotalAmount()
-                        : calculatedTotal;
+                            ProductVariantPriceEntity price =
+                                    productVariantPriceRepository
+                                            .findByProductVariant_Id(
+                                                    item.getProductVariant().getId()
+                                            )
+                                            .orElseThrow(() ->
+                                                    new RuntimeException(
+                                                            "Price not found for product variant id: "
+                                                                    + item.getProductVariant().getId()
+                                                    )
+                                            );
+
+                            return price.getSellingPrice()
+                                    .multiply(
+                                            BigDecimal.valueOf(
+                                                    item.getQuantity()
+                                            )
+                                    );
+                        })
+                        .reduce(
+                                BigDecimal.ZERO,
+                                BigDecimal::add
+                        );
 
         Order order = Order.builder()
                 .user(user)
-                .orderNumber(
-                        "ORD-" +
-                                UUID.randomUUID()
-                                        .toString()
-                                        .substring(0, 8)
-                                        .toUpperCase())
+                .totalAmount(calculatedTotal)
                 .status(OrderStatus.PENDING)
-                .paymentStatus(
-                        "COD".equalsIgnoreCase(
-                                requestDto.getPaymentMethod())
-                                ? PaymentStatus.PENDING
-                                : PaymentStatus.COMPLETED)
-                .paymentMethod(
-                        requestDto.getPaymentMethod())
-                .shippingFullName(
-                        address.getFullName())
-                .shippingPhoneNumber(
-                        address.getPhoneNumber())
-                .shippingStreetAddress(
-                        address.getStreetAddress())
-                .shippingLandmark(
-                        address.getLandmark())
-                .shippingCity(
-                        address.getCity())
-                .shippingState(
-                        address.getState())
-                .shippingPostalCode(
-                        address.getPostalCode())
-                .shippingCountry(
-                        address.getCountry())
-                .totalAmount(finalTotal)
                 .build();
 
         List<OrderItem> orderItems =
                 cart.getItems()
                         .stream()
-                        .map(cartItem ->
-                                OrderItem.builder()
-                                        .order(order)
-                                        .product(
-                                                cartItem.getProduct())
-                                        .productName(
-                                                cartItem.getProduct()
-                                                        .getName())
-                                        .quantity(
-                                                cartItem.getQuantity())
-                                        .price(
-                                                cartItem
-                                                        .getProductVariant()
-                                                        .getPrice())
-                                        .build()
-                        )
-                        .collect(Collectors.toList());
+                        .map(cartItem -> {
+
+                            ProductVariantPriceEntity price =
+                                    productVariantPriceRepository
+                                            .findByProductVariant_Id(
+                                                    cartItem
+                                                            .getProductVariant()
+                                                            .getId()
+                                            )
+                                            .orElseThrow(() ->
+                                                    new RuntimeException(
+                                                            "Price not found for product variant id: "
+                                                                    + cartItem
+                                                                    .getProductVariant()
+                                                                    .getId()
+                                                    )
+                                            );
+
+                            return OrderItem.builder()
+                                    .order(order)
+                                    .productEntity(
+                                            cartItem.getProductEntity()
+                                    )
+                                    .productName(
+                                            cartItem
+                                                    .getProductEntity()
+                                                    .getName()
+                                    )
+                                    .quantity(
+                                            cartItem.getQuantity()
+                                    )
+                                    .price(
+                                            price.getSellingPrice()
+                                    )
+                                    .build();
+                        })
+                        .toList();
 
         order.setItems(orderItems);
 
         Order savedOrder =
                 orderRepository.save(order);
 
-        // Clear user cart after checkout
-        cart.getItems().clear();
-        cart.setTotalAmount(BigDecimal.ZERO);
-        cartRepository.save(cart);
-
-        return mapToResponseDTO(savedOrder);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<OrderResponseDTO> getUserOrders(
-            String userEmail) {
-
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "User not found"));
-
-        return orderRepository
-                .findByUserOrderByCreatedAtDesc(user)
-                .stream()
-                .map(this::mapToResponseDTO)
-                .collect(Collectors.toList());
+        return mapToResponse(savedOrder);
     }
 
     @Override
     @Transactional(readOnly = true)
     public OrderResponseDTO getOrderById(
-            String userEmail,
             Long orderId) {
 
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "User not found"));
+        Order order =
+                orderRepository.findById(orderId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Order not found with id: "
+                                                + orderId
+                                )
+                        );
 
-        Order order = orderRepository
-                .findByIdAndUser(orderId, user)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Order not found"));
-
-        return mapToResponseDTO(order);
+        return mapToResponse(order);
     }
 
     @Override
-    @Transactional
-    public OrderResponseDTO cancelOrder(
-            String userEmail,
-            Long orderId) {
+    @Transactional(readOnly = true)
+    public List<OrderResponseDTO> getUserOrders(
+            Long userId) {
 
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "User not found"));
-
-        Order order = orderRepository
-                .findByIdAndUser(orderId, user)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Order not found"));
-
-        if (order.getStatus() == OrderStatus.DELIVERED ||
-                order.getStatus() == OrderStatus.SHIPPED) {
-
+        if (!userRepository.existsById(userId)) {
             throw new RuntimeException(
-                    "Cannot cancel order that is already shipped or delivered");
+                    "User not found with id: " + userId
+            );
         }
 
-        order.setStatus(OrderStatus.CANCELLED);
-
-        Order updatedOrder =
-                orderRepository.save(order);
-
-        return mapToResponseDTO(updatedOrder);
+        return orderRepository
+                .findByUserIdOrderByCreatedAtDesc(userId)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
     }
 
-    private OrderResponseDTO mapToResponseDTO(
+    @Override
+    public OrderResponseDTO updateOrderStatus(
+            Long orderId,
+            OrderStatus status) {
+
+        Order order =
+                orderRepository.findById(orderId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Order not found with id: "
+                                                + orderId
+                                )
+                        );
+
+        order.setStatus(status);
+
+        return mapToResponse(
+                orderRepository.save(order)
+        );
+    }
+
+    private OrderResponseDTO mapToResponse(
             Order order) {
 
-        List<OrderItemResponseDTO> itemDTOs =
+        List<OrderResponseDTO.OrderItemResponse> items =
                 order.getItems()
                         .stream()
                         .map(item ->
-                                OrderItemResponseDTO.builder()
-                                        .id(item.getId())
-                                        .productId(
-                                                item.getProduct()
-                                                        .getId())
-                                        .productName(
-                                                item.getProductName())
-                                        .quantity(
-                                                item.getQuantity())
-                                        .price(
-                                                item.getPrice())
-                                        .build()
+                                new OrderResponseDTO.OrderItemResponse(
+                                        item.getId(),
+                                        item.getProductEntity().getId(),
+                                        item.getProductName(),
+                                        item.getQuantity(),
+                                        item.getPrice()
+                                )
                         )
-                        .collect(Collectors.toList());
+                        .toList();
 
-        return OrderResponseDTO.builder()
-                .id(order.getId())
-                .orderNumber(order.getOrderNumber())
-                .status(order.getStatus())
-                .paymentStatus(
-                        order.getPaymentStatus())
-                .paymentMethod(
-                        order.getPaymentMethod())
-                .totalAmount(
-                        order.getTotalAmount())
-                .shippingFullName(
-                        order.getShippingFullName())
-                .shippingStreetAddress(
-                        order.getShippingStreetAddress())
-                .shippingCity(
-                        order.getShippingCity())
-                .shippingPostalCode(
-                        order.getShippingPostalCode())
-                .items(itemDTOs)
-                .createdAt(
-                        order.getCreatedAt())
-                .build();
+        return new OrderResponseDTO(
+                order.getId(),
+                order.getUser().getId(),
+                order.getTotalAmount(),
+                order.getStatus(),
+                items,
+                order.getCreatedAt()
+        );
     }
 }

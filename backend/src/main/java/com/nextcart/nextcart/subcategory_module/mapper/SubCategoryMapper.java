@@ -1,8 +1,11 @@
 package com.nextcart.nextcart.subcategory_module.mapper;
 
 import com.nextcart.nextcart.category_module.entity.Category;
-import com.nextcart.nextcart.subcategory_module.dto.*;
+import com.nextcart.nextcart.subcategory_module.dto.SubCategoryCreateRequest;
+import com.nextcart.nextcart.subcategory_module.dto.SubCategoryResponse;
+import com.nextcart.nextcart.subcategory_module.dto.SubCategoryUpdateRequest;
 import com.nextcart.nextcart.subcategory_module.entity.SubCategory;
+import com.nextcart.nextcart.subcategory_module.entity.SubCategoryStatus;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -12,33 +15,23 @@ public class SubCategoryMapper {
             SubCategoryCreateRequest request,
             Category category) {
 
-        SubCategory subCategory = new SubCategory();
-
-        subCategory.setCategory(category);
-        subCategory.setName(request.getName());
-        subCategory.setStatus("ACTIVE");
-
-        return subCategory;
+        return SubCategory.builder()
+                .category(category)
+                .name(request.getName().trim())
+                .status(SubCategoryStatus.ACTIVE)
+                .build();
     }
 
-    public SubCategoryResponse toResponse(SubCategory subCategory) {
+    public SubCategoryResponse toResponse(
+            SubCategory subCategory) {
 
-        SubCategoryResponse response = new SubCategoryResponse();
-
-        response.setId(subCategory.getId());
-
-        response.setCategoryId(
-                subCategory.getCategory().getId()
-        );
-
-        response.setCategoryName(
-                subCategory.getCategory().getName()
-        );
-
-        response.setName(subCategory.getName());
-
-
-        return response;
+        return SubCategoryResponse.builder()
+                .id(subCategory.getId())
+                .categoryId(subCategory.getCategory().getId())
+                .categoryName(subCategory.getCategory().getName())
+                .name(subCategory.getName())
+                .status(subCategory.getStatus())
+                .build();
     }
 
     public void updateEntity(
@@ -47,7 +40,6 @@ public class SubCategoryMapper {
             SubCategory subCategory) {
 
         subCategory.setCategory(category);
-        subCategory.setName(request.getName());
-        subCategory.setStatus(request.getStatus());
+        subCategory.setName(request.getName().trim());
     }
 }
