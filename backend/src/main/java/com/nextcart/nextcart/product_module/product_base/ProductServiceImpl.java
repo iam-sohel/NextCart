@@ -3,23 +3,36 @@ package com.nextcart.nextcart.product_module.product_base;
 import com.nextcart.nextcart.brand_module.entity.Brand;
 import com.nextcart.nextcart.brand_module.entity.BrandStatus;
 import com.nextcart.nextcart.brand_module.repository.BrandRepository;
+
 import com.nextcart.nextcart.category_module.entity.Category;
 import com.nextcart.nextcart.category_module.entity.CategoryStatus;
 import com.nextcart.nextcart.category_module.repository.CategoryRepository;
-import com.nextcart.nextcart.product_module.product_base.dto.ProductCreateRequest;
-import com.nextcart.nextcart.product_module.product_base.dto.ProductResponse;
-import com.nextcart.nextcart.product_module.product_base.dto.ProductUpdateRequest;
+
 import com.nextcart.nextcart.product_module.exceptions.ProductAlreadyExistsException;
 import com.nextcart.nextcart.product_module.exceptions.ProductNotFoundException;
 import com.nextcart.nextcart.product_module.exceptions.ProductValidationException;
+
+import com.nextcart.nextcart.product_module.productVariant.ProductVariantEntity;
+import com.nextcart.nextcart.product_module.productVariant.ProductVariantRepository;
+import com.nextcart.nextcart.product_module.productVariant.dto.ProductVariantResponse;
+
+import com.nextcart.nextcart.product_module.product_base.dto.ProductCreateRequest;
+import com.nextcart.nextcart.product_module.product_base.dto.ProductDetailsResponse;
+import com.nextcart.nextcart.product_module.product_base.dto.ProductResponse;
+import com.nextcart.nextcart.product_module.product_base.dto.ProductUpdateRequest;
+
 import com.nextcart.nextcart.subcategory_module.entity.SubCategory;
 import com.nextcart.nextcart.subcategory_module.entity.SubCategoryStatus;
 import com.nextcart.nextcart.subcategory_module.repository.SubCategoryRepository;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -33,85 +46,205 @@ public class ProductServiceImpl implements ProductService {
     private final SubCategoryRepository subCategoryRepository;
     private final BrandRepository brandRepository;
 
+    private final ProductVariantRepository productVariantRepository;
+
+
+    // =========================================================
+    // CREATE PRODUCT
+    // =========================================================
+
     @Override
     public ProductResponse createProduct(
             ProductCreateRequest request) {
 
-        // 1. Validate slug uniqueness
-        validateSlugForCreate(request.getSlug());
-
-        // 2. Validate category
-        Category category = getActiveCategory(
-                request.getCategoryId()
+        validateSlugForCreate(
+                request.getSlug()
         );
 
-        // 3. Validate subcategory
-        SubCategory subCategory = getActiveSubCategory(
-                request.getSubCategoryId()
-        );
+        Category category =
+                getActiveCategory(
+                        request.getCategoryId()
+                );
 
-        // 4. Validate category-subcategory relationship
+        SubCategory subCategory =
+                getActiveSubCategory(
+                        request.getSubCategoryId()
+                );
+
         validateSubCategoryBelongsToCategory(
                 subCategory,
                 category
         );
 
-        // 5. Validate brand
-        Brand brand = getActiveBrand(
-                request.getBrandId()
-        );
+        Brand brand =
+                getActiveBrand(
+                        request.getBrandId()
+                );
 
-        // 6. Map request
         ProductEntity product =
                 productMapper.toEntity(request);
 
-        // 7. Set relationships
         product.setCategory(category);
         product.setSubCategory(subCategory);
         product.setBrand(brand);
 
-        // 8. Save
         ProductEntity savedProduct =
                 productRepository.save(product);
 
-        return productMapper.toResponse(savedProduct);
+        return productMapper.toResponse(
+                savedProduct
+        );
     }
+
+
+    // =========================================================
+    // GET PRODUCT BY ID
+    // =========================================================
 
     @Override
     @Transactional(readOnly = true)
-    public ProductResponse getProductById(Long id) {
+    public ProductResponse getProductById(
+            Long id) {
 
-        ProductEntity productEntity = productRepository
-                .findByIdAndStatus(
-                        id,
-                        ProductStatus.ACTIVE
-                )
-                .orElseThrow(() ->
-                        new ProductNotFoundException(
-                                "Product not found with id: " + id
+        ProductEntity productEntity =
+                productRepository.findByIdAndStatus(
+                                id,
+                                ProductStatus.ACTIVE
                         )
-                );
+                        .orElseThrow(() ->
+                                new ProductNotFoundException(
+                                        "Product not found with id: "
+                                                + id
+                                )
+                        );
 
-        return productMapper.toResponse(productEntity);
+        return productMapper.toResponse(
+                productEntity
+        );
     }
+
+
+    // =========================================================
+    // GET PRODUCT BY SLUG
+    // =========================================================
 
     @Override
     @Transactional(readOnly = true)
-    public ProductResponse getProductBySlug(String slug) {
+    public ProductResponse getProductBySlug(
+            String slug) {
 
-        ProductEntity productEntity = productRepository
-                .findBySlugIgnoreCaseAndStatus(
-                        slug,
-                        ProductStatus.ACTIVE
-                )
-                .orElseThrow(() ->
-                        new ProductNotFoundException(
-                                "Product not found with slug: " + slug
+        ProductEntity productEntity =
+                productRepository
+                        .findBySlugIgnoreCaseAndStatus(
+                                slug,
+                                ProductStatus.ACTIVE
                         )
-                );
+                        .orElseThrow(() ->
+                                new ProductNotFoundException(
+                                        "Product not found with slug: "
+                                                + slug
+                                )
+                        );
 
-        return productMapper.toResponse(productEntity);
+        return productMapper.toResponse(
+                productEntity
+        );
     }
+
+
+    // =========================================================
+    // GET COMPLETE PRODUCT DETAILS
+    // =========================================================
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductDetailsResponse getProductDetailsById(
+            Long id) {
+
+        ProductEntity productEntity =
+                productRepository.findByIdAndStatus(
+                                id,
+                                ProductStatus.ACTIVE
+                        )
+                        .orElseThrow(() ->
+                                new ProductNotFoundException(
+                                        "Product not found with id: "
+                                                + id
+                                )
+                        );
+
+        /*
+         * IMPORTANT:
+         *
+         * ProductVariantEntity contains:
+         *
+         *     productEntity
+         *
+         * Therefore the repository method is:
+         *
+         *     findByProductEntity_Id(...)
+         *
+         * NOT:
+         *
+         *     findByProductId(...)
+         */
+        List<ProductVariantEntity> variants =
+                productVariantRepository
+                        .findByProductEntity_Id(id);
+
+
+        /*
+         * Map product variants.
+         *
+         * Inventory mapping is intentionally not performed here
+         * until the actual InventoryEntity relationship is confirmed.
+         */
+        List<ProductVariantResponse> variantResponses =
+                variants.stream()
+                        .map(variant ->
+                                ProductVariantResponse
+                                        .builder()
+                                        .id(
+                                                variant.getId()
+                                        )
+                                        .productId(
+                                                productEntity.getId()
+                                        )
+                                        .sku(
+                                                variant.getSku()
+                                        )
+                                        .status(
+                                                variant.getStatus()
+                                        )
+                                        .build()
+                        )
+                        .toList();
+
+
+        return ProductDetailsResponse
+                .builder()
+                .id(
+                        productEntity.getId()
+                )
+                .name(
+                        productEntity.getName()
+                )
+                .slug(
+                        productEntity.getSlug()
+                )
+                .description(
+                        productEntity.getDescription()
+                )
+                .variants(
+                        variantResponses
+                )
+                .build();
+    }
+
+
+    // =========================================================
+    // GET ALL PRODUCTS
+    // =========================================================
 
     @Override
     @Transactional(readOnly = true)
@@ -126,14 +259,20 @@ public class ProductServiceImpl implements ProductService {
                 .map(productMapper::toResponse);
     }
 
+
+    // =========================================================
+    // GET PRODUCTS BY CATEGORY
+    // =========================================================
+
     @Override
     @Transactional(readOnly = true)
     public Page<ProductResponse> getProductsByCategory(
             Long categoryId,
             Pageable pageable) {
 
-        // Validate that category itself is active
-        getActiveCategory(categoryId);
+        getActiveCategory(
+                categoryId
+        );
 
         return productRepository
                 .findAllByCategoryIdAndStatus(
@@ -144,14 +283,20 @@ public class ProductServiceImpl implements ProductService {
                 .map(productMapper::toResponse);
     }
 
+
+    // =========================================================
+    // GET PRODUCTS BY SUBCATEGORY
+    // =========================================================
+
     @Override
     @Transactional(readOnly = true)
     public Page<ProductResponse> getProductsBySubCategory(
             Long subCategoryId,
             Pageable pageable) {
 
-        // Validate that subcategory itself is active
-        getActiveSubCategory(subCategoryId);
+        getActiveSubCategory(
+                subCategoryId
+        );
 
         return productRepository
                 .findAllBySubCategoryIdAndStatus(
@@ -162,14 +307,20 @@ public class ProductServiceImpl implements ProductService {
                 .map(productMapper::toResponse);
     }
 
+
+    // =========================================================
+    // GET PRODUCTS BY BRAND
+    // =========================================================
+
     @Override
     @Transactional(readOnly = true)
     public Page<ProductResponse> getProductsByBrand(
             Long brandId,
             Pageable pageable) {
 
-        // Validate that brand itself is active
-        getActiveBrand(brandId);
+        getActiveBrand(
+                brandId
+        );
 
         return productRepository
                 .findAllByBrandIdAndStatus(
@@ -180,132 +331,182 @@ public class ProductServiceImpl implements ProductService {
                 .map(productMapper::toResponse);
     }
 
+
+    // =========================================================
+    // UPDATE PRODUCT
+    // =========================================================
+
     @Override
     public ProductResponse updateProduct(
             Long id,
             ProductUpdateRequest request) {
 
-        // 1. Find existing product
-        ProductEntity productEntity = productRepository
-                .findById(id)
-                .orElseThrow(() ->
-                        new ProductNotFoundException(
-                                "Product not found with id: " + id
-                        )
-                );
+        ProductEntity productEntity =
+                productRepository.findById(id)
+                        .orElseThrow(() ->
+                                new ProductNotFoundException(
+                                        "Product not found with id: "
+                                                + id
+                                )
+                        );
 
-        // 2. Validate slug uniqueness
         validateSlugForUpdate(
                 request.getSlug(),
                 id
         );
 
-        // 3. Validate category
-        Category category = getActiveCategory(
-                request.getCategoryId()
-        );
+        Category category =
+                getActiveCategory(
+                        request.getCategoryId()
+                );
 
-        // 4. Validate subcategory
         SubCategory subCategory =
                 getActiveSubCategory(
                         request.getSubCategoryId()
                 );
 
-        // 5. Validate category-subcategory relationship
         validateSubCategoryBelongsToCategory(
                 subCategory,
                 category
         );
 
-        // 6. Validate brand
-        Brand brand = getActiveBrand(
-                request.getBrandId()
-        );
+        Brand brand =
+                getActiveBrand(
+                        request.getBrandId()
+                );
 
-        // 7. Update basic fields
         productMapper.updateEntity(
                 request,
                 productEntity
         );
 
-        // 8. Update slug
-        productEntity.setSlug(request.getSlug());
+        productEntity.setSlug(
+                request.getSlug()
+        );
 
-        // 9. Update relationships
-        productEntity.setCategory(category);
-        productEntity.setSubCategory(subCategory);
-        productEntity.setBrand(brand);
+        productEntity.setCategory(
+                category
+        );
 
-        // 10. Save
+        productEntity.setSubCategory(
+                subCategory
+        );
+
+        productEntity.setBrand(
+                brand
+        );
+
         ProductEntity updatedProduct =
-                productRepository.save(productEntity);
-
-        return productMapper.toResponse(updatedProduct);
-    }
-
-    @Override
-    public void deactivateProduct(Long id) {
-
-        ProductEntity productEntity = productRepository
-                .findById(id)
-                .orElseThrow(() ->
-                        new ProductNotFoundException(
-                                "Product not found with id: " + id
-                        )
+                productRepository.save(
+                        productEntity
                 );
 
-        if (productEntity.getStatus() == ProductStatus.INACTIVE) {
+        return productMapper.toResponse(
+                updatedProduct
+        );
+    }
+
+
+    // =========================================================
+    // DEACTIVATE PRODUCT
+    // =========================================================
+
+    @Override
+    public void deactivateProduct(
+            Long id) {
+
+        ProductEntity productEntity =
+                productRepository.findById(id)
+                        .orElseThrow(() ->
+                                new ProductNotFoundException(
+                                        "Product not found with id: "
+                                                + id
+                                )
+                        );
+
+        if (productEntity.getStatus()
+                == ProductStatus.INACTIVE) {
+
             throw new ProductValidationException(
                     "Product is already inactive"
             );
         }
 
-        productEntity.setStatus(ProductStatus.INACTIVE);
+        productEntity.setStatus(
+                ProductStatus.INACTIVE
+        );
 
-        productRepository.save(productEntity);
+        productRepository.save(
+                productEntity
+        );
     }
 
+
+    // =========================================================
+    // RESTORE PRODUCT
+    // =========================================================
+
     @Override
-    public ProductResponse restoreProduct(Long id) {
+    public ProductResponse restoreProduct(
+            Long id) {
 
-        ProductEntity productEntity = productRepository
-                .findById(id)
-                .orElseThrow(() ->
-                        new ProductNotFoundException(
-                                "Product not found with id: " + id
-                        )
-                );
+        ProductEntity productEntity =
+                productRepository.findById(id)
+                        .orElseThrow(() ->
+                                new ProductNotFoundException(
+                                        "Product not found with id: "
+                                                + id
+                                )
+                        );
 
-        if (productEntity.getStatus() == ProductStatus.ACTIVE) {
+        if (productEntity.getStatus()
+                == ProductStatus.ACTIVE) {
+
             throw new ProductValidationException(
                     "Product is already active"
             );
         }
 
-        // Before restoring, make sure its dependencies
-        // are still active.
-        validateRestoreDependencies(productEntity);
+        validateRestoreDependencies(
+                productEntity
+        );
 
-        productEntity.setStatus(ProductStatus.ACTIVE);
+        productEntity.setStatus(
+                ProductStatus.ACTIVE
+        );
 
         ProductEntity restoredProduct =
-                productRepository.save(productEntity);
+                productRepository.save(
+                        productEntity
+                );
 
-        return productMapper.toResponse(restoredProduct);
+        return productMapper.toResponse(
+                restoredProduct
+        );
     }
 
-    // ---------------------------------------------------------
-    // Private validation methods
-    // ---------------------------------------------------------
 
-    private void validateSlugForCreate(String slug) {
+    // =========================================================
+    // VALIDATE CREATE SLUG
+    // =========================================================
 
-        if (productRepository.existsBySlugIgnoreCase(slug)) {
+    private void validateSlugForCreate(
+            String slug) {
+
+        if (productRepository
+                .existsBySlugIgnoreCase(slug)) {
+
             throw new ProductAlreadyExistsException(
-                    "Product slug already exists: " + slug
+                    "Product slug already exists: "
+                            + slug
             );
         }
     }
+
+
+    // =========================================================
+    // VALIDATE UPDATE SLUG
+    // =========================================================
 
     private void validateSlugForUpdate(
             String slug,
@@ -318,12 +519,19 @@ public class ProductServiceImpl implements ProductService {
                 )) {
 
             throw new ProductAlreadyExistsException(
-                    "Product slug already exists: " + slug
+                    "Product slug already exists: "
+                            + slug
             );
         }
     }
 
-    private Category getActiveCategory(Long categoryId) {
+
+    // =========================================================
+    // GET ACTIVE CATEGORY
+    // =========================================================
+
+    private Category getActiveCategory(
+            Long categoryId) {
 
         return categoryRepository
                 .findByIdAndStatus(
@@ -337,6 +545,11 @@ public class ProductServiceImpl implements ProductService {
                         )
                 );
     }
+
+
+    // =========================================================
+    // GET ACTIVE SUBCATEGORY
+    // =========================================================
 
     private SubCategory getActiveSubCategory(
             Long subCategoryId) {
@@ -354,7 +567,13 @@ public class ProductServiceImpl implements ProductService {
                 );
     }
 
-    private Brand getActiveBrand(Long brandId) {
+
+    // =========================================================
+    // GET ACTIVE BRAND
+    // =========================================================
+
+    private Brand getActiveBrand(
+            Long brandId) {
 
         return brandRepository
                 .findByIdAndStatus(
@@ -368,6 +587,11 @@ public class ProductServiceImpl implements ProductService {
                         )
                 );
     }
+
+
+    // =========================================================
+    // VALIDATE CATEGORY / SUBCATEGORY
+    // =========================================================
 
     private void validateSubCategoryBelongsToCategory(
             SubCategory subCategory,
@@ -385,19 +609,30 @@ public class ProductServiceImpl implements ProductService {
         }
     }
 
+
+    // =========================================================
+    // VALIDATE RESTORE DEPENDENCIES
+    // =========================================================
+
     private void validateRestoreDependencies(
             ProductEntity productEntity) {
 
         getActiveCategory(
-                productEntity.getCategory().getId()
+                productEntity
+                        .getCategory()
+                        .getId()
         );
 
         getActiveSubCategory(
-                productEntity.getSubCategory().getId()
+                productEntity
+                        .getSubCategory()
+                        .getId()
         );
 
         getActiveBrand(
-                productEntity.getBrand().getId()
+                productEntity
+                        .getBrand()
+                        .getId()
         );
 
         validateSubCategoryBelongsToCategory(

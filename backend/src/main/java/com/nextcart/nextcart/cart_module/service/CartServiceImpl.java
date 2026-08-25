@@ -24,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -33,8 +32,13 @@ public class CartServiceImpl implements CartService {
 
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
-   private final ProductVariantPriceRepository productVariantPriceRepository;
+    private final ProductVariantRepository productVariantRepository;
+    private final ProductVariantPriceRepository productVariantPriceRepository;
     private final UserRepository userRepository;
+
+    // =========================================================
+    // GET AUTHENTICATED USER
+    // =========================================================
 
     private User getAuthenticatedUser() {
 
@@ -47,7 +51,8 @@ public class CartServiceImpl implements CartService {
                 !authentication.isAuthenticated()) {
 
             throw new RuntimeException(
-                    "User is not authenticated");
+                    "User is not authenticated"
+            );
         }
 
         Object principal =
@@ -56,10 +61,15 @@ public class CartServiceImpl implements CartService {
         String email;
 
         if (principal instanceof UserDetails userDetails) {
+
             email = userDetails.getUsername();
+
         } else if (principal instanceof String principalString) {
+
             email = principalString;
+
         } else {
+
             email = authentication.getName();
         }
 
@@ -67,8 +77,15 @@ public class CartServiceImpl implements CartService {
                 .findByEmail(email)
                 .orElseThrow(() ->
                         new RuntimeException(
-                                "User not found with email: " + email));
+                                "User not found with email: "
+                                        + email
+                        )
+                );
     }
+
+    // =========================================================
+    // GET OR CREATE CART
+    // =========================================================
 
     private Cart getOrCreateCart() {
 
@@ -78,8 +95,17 @@ public class CartServiceImpl implements CartService {
                 .findByUser(user)
                 .orElseGet(() ->
                         cartRepository.save(
-                                new Cart(user)));
+                                Cart.builder()
+                                        .user(user)
+                                        .totalAmount(BigDecimal.ZERO)
+                                        .build()
+                        )
+                );
     }
+
+    // =========================================================
+    // GET CART
+    // =========================================================
 
     @Override
     @Transactional(readOnly = true)
@@ -87,73 +113,113 @@ public class CartServiceImpl implements CartService {
 
         Cart cart = getOrCreateCart();
 
-        return mapToCartResponseDTO(cart);
+        return mapToResponse(cart);
     }
+
+    // =========================================================
+    // ADD TO CART
+    // =========================================================
 
     @Override
     public CartResponseDTO addToCart(
             AddToCartRequestDTO request) {
 
-        Cart cart = getOrCreateCart();
+        if (request == null) {
+
+            throw new RuntimeException(
+                    "Add to cart request is required"
+            );
+        }
 
         if (request.getVariantId() == null) {
+
             throw new RuntimeException(
-                    "Variant ID is required");
+                    "Product variant ID is required"
+            );
         }
 
         if (request.getQuantity() == null ||
                 request.getQuantity() <= 0) {
 
             throw new RuntimeException(
-                    "Quantity must be greater than zero");
+                    "Quantity must be greater than zero"
+            );
         }
 
-        ProductVariantPriceEntity productVariant =
-                productVariantPriceRepository
-                        .findById(request.getVariantId())
+        Long variantId =
+                request.getVariantId();
+
+        Cart cart =
+                getOrCreateCart();
+
+        ProductVariantEntity variant =
+                productVariantRepository
+                        .findById(variantId)
                         .orElseThrow(() ->
                                 new RuntimeException(
                                         "Product variant not found with id: "
-                                                + request.getVariantId()));
+                                                + variantId
+                                )
+                        );
 
-        ProductVariantPriceEntity product =
-                productVariant.getProduct();
+        if (variant.getProductEntity() == null) {
 
-        if (product == null) {
             throw new RuntimeException(
-                    "Product not found for variant");
+                    "Product not found for product variant id: "
+                            + variantId
+            );
         }
 
-        if (productVariant.getPrice() == null) {
+        /*
+         * If productId is supplied,
+         * verify that it belongs to this variant.
+         */
+        if (request.getProductId() != null &&
+                !request.getProductId()
+                        .equals(
+                                variant
+                                        .getProductEntity()
+                                        .getId()
+                        )) {
+
             throw new RuntimeException(
-                    "Price not found for product variant");
+                    "Product ID does not match the product variant"
+            );
         }
 
-        Optional<CartItem> existingItemOptional =
+        /*
+         * Make sure selling price exists.
+         */
+        getSellingPrice(variantId);
+
+        Optional<CartItem> existingItem =
                 cartItemRepository
                         .findByCartIdAndProductVariantId(
                                 cart.getId(),
-                                productVariant.getId());
+                                variantId
+                        );
 
-        if (existingItemOptional.isPresent()) {
+        if (existingItem.isPresent()) {
 
-            CartItem existingItem =
-                    existingItemOptional.get();
+            CartItem cartItem =
+                    existingItem.get();
 
-            existingItem.setQuantity(
-                    existingItem.getQuantity()
-                            + request.getQuantity());
+            cartItem.setQuantity(
+                    cartItem.getQuantity()
+                            + request.getQuantity()
+            );
 
-            cartItemRepository.save(existingItem);
+            cartItemRepository.save(cartItem);
 
         } else {
 
             CartItem cartItem =
                     new CartItem(
                             cart,
-                            product,
-                            productVariant,
-                            request.getQuantity());
+                            variant.getProductEntity(),
+                            variant,
+                            request.getQuantity()
+                    );
 
             cartItemRepository.save(cartItem);
 
@@ -162,59 +228,99 @@ public class CartServiceImpl implements CartService {
 
         updateCartTotal(cart);
 
-        Cart savedCart =
-                cartRepository.save(cart);
+        cartRepository.save(cart);
 
-        return mapToCartResponseDTO(savedCart);
+        return mapToResponse(cart);
     }
+
+    // =========================================================
+    // UPDATE CART ITEM
+    // =========================================================
 
     @Override
     public CartResponseDTO updateCartItem(
             Long variantId,
             UpdateCartItemRequestDTO request) {
 
-        Cart cart = getOrCreateCart();
+        if (variantId == null) {
 
-        if (request.getQuantity() == null ||
+            throw new RuntimeException(
+                    "Product variant ID is required"
+            );
+        }
+
+        if (request == null ||
+                request.getQuantity() == null ||
                 request.getQuantity() <= 0) {
 
             throw new RuntimeException(
-                    "Quantity must be greater than zero");
+                    "Quantity must be greater than zero"
+            );
         }
+
+        Cart cart =
+                getOrCreateCart();
+
+        productVariantRepository
+                .findById(variantId)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Product variant not found with id: "
+                                        + variantId
+                        )
+                );
+
+        getSellingPrice(variantId);
 
         CartItem cartItem =
                 cartItemRepository
                         .findByCartIdAndProductVariantId(
                                 cart.getId(),
-                                variantId)
+                                variantId
+                        )
                         .orElseThrow(() ->
                                 new RuntimeException(
-                                        "Product variant not found in cart"));
+                                        "Product variant not found in cart"
+                                )
+                        );
 
         cartItem.setQuantity(
-                request.getQuantity());
+                request.getQuantity()
+        );
 
         cartItemRepository.save(cartItem);
 
         updateCartTotal(cart);
 
-        Cart savedCart =
-                cartRepository.save(cart);
+        cartRepository.save(cart);
 
-        return mapToCartResponseDTO(savedCart);
+        return mapToResponse(cart);
     }
+
+    // =========================================================
+    // REMOVE FROM CART
+    // =========================================================
 
     @Override
     public CartResponseDTO removeFromCart(
             Long variantId) {
 
-        Cart cart = getOrCreateCart();
+        if (variantId == null) {
+
+            throw new RuntimeException(
+                    "Product variant ID is required"
+            );
+        }
+
+        Cart cart =
+                getOrCreateCart();
 
         Optional<CartItem> itemOptional =
                 cartItemRepository
                         .findByCartIdAndProductVariantId(
                                 cart.getId(),
-                                variantId);
+                                variantId
+                        );
 
         if (itemOptional.isPresent()) {
 
@@ -228,124 +334,204 @@ public class CartServiceImpl implements CartService {
 
         updateCartTotal(cart);
 
-        Cart savedCart =
-                cartRepository.save(cart);
+        cartRepository.save(cart);
 
-        return mapToCartResponseDTO(savedCart);
+        return mapToResponse(cart);
     }
+
+    // =========================================================
+    // CLEAR CART
+    // =========================================================
 
     @Override
     public void clearCart() {
 
-        Cart cart = getOrCreateCart();
+        Cart cart =
+                getOrCreateCart();
 
         cartItemRepository.deleteByCartId(
-                cart.getId());
+                cart.getId()
+        );
 
         cart.getItems().clear();
 
         cart.setTotalAmount(
-                BigDecimal.ZERO);
+                BigDecimal.ZERO
+        );
 
         cartRepository.save(cart);
     }
 
-    private void updateCartTotal(Cart cart) {
+    // =========================================================
+    // GET SELLING PRICE BY VARIANT ID
+    // =========================================================
+
+    private BigDecimal getSellingPrice(
+            Long variantId) {
+
+        ProductVariantPriceEntity price =
+                productVariantPriceRepository
+                        .findByProductVariantId(variantId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Price not found for product variant id: "
+                                                + variantId
+                                )
+                        );
+
+        if (price.getSellingPrice() == null) {
+
+            throw new RuntimeException(
+                    "Selling price not found for product variant id: "
+                            + variantId
+            );
+        }
+
+        return price.getSellingPrice();
+    }
+
+    // =========================================================
+    // UPDATE CART TOTAL
+    // =========================================================
+
+    private void updateCartTotal(
+            Cart cart) {
 
         BigDecimal total =
                 cart.getItems()
                         .stream()
                         .map(item -> {
 
-                            if (item.getProductVariant() == null ||
-                                    item.getProductVariant().getPrice() == null) {
+                            ProductVariantEntity variant =
+                                    item.getProductVariant();
 
-                                return BigDecimal.ZERO;
+                            if (variant == null) {
+
+                                throw new RuntimeException(
+                                        "Product variant not found for cart item id: "
+                                                + item.getId()
+                                );
                             }
 
-                            return item.getProductVariant()
-                                    .getPrice()
-                                    .multiply(
-                                            BigDecimal.valueOf(
-                                                    item.getQuantity()));
+                            BigDecimal sellingPrice =
+                                    getSellingPrice(
+                                            variant.getId()
+                                    );
+
+                            return sellingPrice.multiply(
+                                    BigDecimal.valueOf(
+                                            item.getQuantity()
+                                    )
+                            );
                         })
                         .reduce(
                                 BigDecimal.ZERO,
-                                BigDecimal::add);
+                                BigDecimal::add
+                        );
 
         cart.setTotalAmount(total);
     }
 
-    private CartResponseDTO mapToCartResponseDTO(
+    // =========================================================
+    // MAP CART TO RESPONSE
+    // =========================================================
+
+    private CartResponseDTO mapToResponse(
             Cart cart) {
 
-        List<CartItemResponseDTO> itemDTOs =
+        List<CartItemResponseDTO> itemResponses =
                 cart.getItems()
                         .stream()
-                        .map(item -> {
+                        .map(this::mapItemToResponse)
+                        .toList();
 
-                            Product product =
-                                    item.getProduct();
-
-                            ProductVariantEntity variant =
-                                    item.getProductVariant();
-
-                            BigDecimal price =
-                                    variant != null
-                                            ? variant.getPrice()
-                                            : BigDecimal.ZERO;
-
-                            BigDecimal itemTotal =
-                                    price.multiply(
-                                            BigDecimal.valueOf(
-                                                    item.getQuantity()));
-
-                            return new CartItemResponseDTO(
-                                    item.getId(),
-                                    product.getId(),
-                                    product.getName(),
-                                    null,
-                                    price,
-                                    item.getQuantity(),
-                                    itemTotal
-                            );
-                        })
-                        .collect(Collectors.toList());
-
-        CartResponseDTO response =
-                new CartResponseDTO();
-
-        response.setId(cart.getId());
-
-        if (cart.getUser() != null) {
-            response.setUserId(
-                    cart.getUser().getId());
-        }
-
-        response.setSessionId(
-                cart.getSessionId());
-
-        response.setItems(itemDTOs);
-
-        int totalItems =
-                itemDTOs
+        Integer totalItems =
+                itemResponses
                         .stream()
                         .mapToInt(
-                                CartItemResponseDTO::getQuantity)
+                                CartItemResponseDTO::getQuantity
+                        )
                         .sum();
 
         BigDecimal grandTotal =
-                itemDTOs
+                itemResponses
                         .stream()
                         .map(
-                                CartItemResponseDTO::getItemTotal)
+                                CartItemResponseDTO::getItemTotal
+                        )
                         .reduce(
                                 BigDecimal.ZERO,
-                                BigDecimal::add);
+                                BigDecimal::add
+                        );
 
-        response.setTotalItems(totalItems);
-        response.setGrandTotal(grandTotal);
+        return CartResponseDTO.builder()
+                .id(cart.getId())
+                .userId(
+                        cart.getUser() != null
+                                ? cart.getUser().getId()
+                                : null
+                )
+                .sessionId(cart.getSessionId())
+                .items(itemResponses)
+                .totalItems(totalItems)
+                .grandTotal(grandTotal)
+                .build();
+    }
 
-        return response;
+    // =========================================================
+    // MAP CART ITEM TO RESPONSE
+    // =========================================================
+
+    private CartItemResponseDTO mapItemToResponse(
+            CartItem item) {
+
+        ProductVariantEntity variant =
+                item.getProductVariant();
+
+        if (variant == null) {
+
+            throw new RuntimeException(
+                    "Product variant not found for cart item id: "
+                            + item.getId()
+            );
+        }
+
+        if (variant.getProductEntity() == null) {
+
+            throw new RuntimeException(
+                    "Product not found for product variant id: "
+                            + variant.getId()
+            );
+        }
+
+        BigDecimal sellingPrice =
+                getSellingPrice(
+                        variant.getId()
+                );
+
+        BigDecimal itemTotal =
+                sellingPrice.multiply(
+                        BigDecimal.valueOf(
+                                item.getQuantity()
+                        )
+                );
+
+        return CartItemResponseDTO.builder()
+                .id(item.getId())
+                .productId(
+                        variant
+                                .getProductEntity()
+                                .getId()
+                )
+                .productName(
+                        variant
+                                .getProductEntity()
+                                .getName()
+                )
+                .productImage(null)
+                .price(sellingPrice)
+                .quantity(item.getQuantity())
+                .itemTotal(itemTotal)
+                .build();
     }
 }

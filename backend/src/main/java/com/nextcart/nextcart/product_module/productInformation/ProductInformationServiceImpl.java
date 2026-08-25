@@ -1,7 +1,5 @@
 package com.nextcart.nextcart.product_module.productInformation;
 
-
-
 import com.nextcart.nextcart.product_module.exceptions.ProductInformationAlreadyExistsException;
 import com.nextcart.nextcart.product_module.exceptions.ProductInformationNotFoundException;
 import com.nextcart.nextcart.product_module.exceptions.ProductNotFoundException;
@@ -11,7 +9,6 @@ import com.nextcart.nextcart.product_module.productInformation.productInformatio
 import com.nextcart.nextcart.product_module.product_base.ProductEntity;
 import com.nextcart.nextcart.product_module.product_base.ProductRepository;
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,7 +38,7 @@ public class ProductInformationServiceImpl
                         )
                 );
 
-        if (productInformationRepository.existsByProductId(productId)) {
+        if (productInformationRepository.existsByProductEntity_Id(productId)) {
             throw new ProductInformationAlreadyExistsException(
                     "Product information already exists for product id: "
                             + productId
@@ -101,7 +98,7 @@ public class ProductInformationServiceImpl
 
         ProductInformationEntity information =
                 productInformationRepository
-                        .findByProductId(productId)
+                        .findByProductEntity_Id(productId)
                         .orElseThrow(() ->
                                 new ProductInformationNotFoundException(
                                         "Product information not found for product id: "

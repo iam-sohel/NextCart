@@ -8,11 +8,18 @@ public interface CartService {
 
     CartResponseDTO getCart();
 
-    CartResponseDTO addToCart(AddToCartRequestDTO request);
+    CartResponseDTO addToCart(
+            AddToCartRequestDTO request
+    );
 
-    CartResponseDTO updateCartItem(Long productId, UpdateCartItemRequestDTO request);
+    CartResponseDTO updateCartItem(
+            Long variantId,
+            UpdateCartItemRequestDTO request
+    );
 
-    CartResponseDTO removeFromCart(Long productId);
+    CartResponseDTO removeFromCart(
+            Long variantId
+    );
 
     void clearCart();
 }

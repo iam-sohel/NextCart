@@ -1,23 +1,27 @@
 package com.nextcart.nextcart.inventory_module.dto;
 
-import lombok.*;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
 public class InventoryResponse {
 
     private Long id;
 
-    private Long variantId;
+    private Long productVariantId;
 
-    private Integer quantity;
+    private String sku;
 
-    private Integer reservedQuantity;
+    private Integer availableStock;
 
-    private Integer availableQuantity;
+    private Integer reservedStock;
 
-    private String stockStatus;
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
 }

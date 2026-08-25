@@ -1,5 +1,6 @@
 package com.nextcart.nextcart.product_module.productVariant.dto;
 
+import com.nextcart.nextcart.inventory_module.dto.InventoryResponse;
 import com.nextcart.nextcart.product_module.productVariant.ProductVariantStatus;
 import lombok.*;
 
@@ -17,4 +18,6 @@ public class ProductVariantResponse {
     private String sku;
 
     private ProductVariantStatus status;
+
+    private InventoryResponse inventory;
 }

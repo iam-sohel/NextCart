@@ -4,7 +4,6 @@ import com.nextcart.nextcart.product_module.productVariant.dto.ProductVariantCre
 import com.nextcart.nextcart.product_module.productVariant.dto.ProductVariantResponse;
 import com.nextcart.nextcart.product_module.productVariant.dto.ProductVariantUpdateRequest;
 import com.nextcart.nextcart.product_module.product_base.ProductEntity;
-
 import com.nextcart.nextcart.product_module.exceptions.ProductNotFoundException;
 import com.nextcart.nextcart.product_module.exceptions.ProductVariantAlreadyExistsException;
 import com.nextcart.nextcart.product_module.exceptions.ProductVariantNotFoundException;
@@ -99,7 +98,10 @@ public class ProductVariantServiceImpl implements ProductVariantService {
         validateProductExists(productId);
 
         return productVariantRepository
-                .findByProductId(productId, pageable)
+                .findByProductEntity_Id(
+                        productId,
+                        pageable
+                )
                 .map(productVariantMapper::toResponse);
     }
 
@@ -112,7 +114,7 @@ public class ProductVariantServiceImpl implements ProductVariantService {
         validateProductExists(productId);
 
         return productVariantRepository
-                .findByProductIdAndStatus(
+                .findByProductEntity_IdAndStatus(
                         productId,
                         ProductVariantStatus.ACTIVE,
                         pageable

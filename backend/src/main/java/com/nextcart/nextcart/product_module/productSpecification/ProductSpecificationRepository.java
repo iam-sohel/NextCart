@@ -9,26 +9,26 @@ public interface ProductSpecificationRepository
         extends JpaRepository<ProductSpecification, Long> {
 
     List<ProductSpecification>
-    findByProductIdOrderBySpecificationNameAsc(
+    findByProductEntity_IdOrderBySpecificationNameAsc(
             Long productId
     );
 
     Optional<ProductSpecification>
-    findByProductIdAndSpecificationNameIgnoreCase(
+    findByProductEntity_IdAndSpecificationNameIgnoreCase(
             Long productId,
             String specificationName
     );
 
-    boolean existsByProductIdAndSpecificationNameIgnoreCase(
+    boolean existsByProductEntity_IdAndSpecificationNameIgnoreCase(
             Long productId,
             String specificationName
     );
 
-    boolean existsByProductIdAndSpecificationNameIgnoreCaseAndIdNot(
+    boolean existsByProductEntity_IdAndSpecificationNameIgnoreCaseAndIdNot(
             Long productId,
             String specificationName,
             Long id
     );
 
-    void deleteByProductId(Long productId);
+    void deleteByProductEntity_Id(Long productId);
 }

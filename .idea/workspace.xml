@@ -5,12 +5,68 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5d57d862-a11b-4afa-b941-5c6767af27d6" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/dataSources/data_sources_history.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/data_sources_history.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/ff47119f-70c8-4aaf-93e8-808d7e66b2dd/storage_v2/_src_/database/postgres.edMnLQ/schema/auth.qN0tAA.meta" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/ff47119f-70c8-4aaf-93e8-808d7e66b2dd/storage_v2/_src_/database/postgres.edMnLQ/schema/auth.qN0tAA.meta" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/NextCartApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/NextCartApplication.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/category_module/dto/CategoryCreateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/category_module/dto/CategoryCreateRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/adcommon/exception/GlobalExceptionHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/adcommon/exception/GlobalExceptionHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/cart_module/controller/CartController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/cart_module/controller/CartController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/cart_module/dto/CartItemResponseDTO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/cart_module/dto/CartResponseDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/cart_module/dto/CartResponseDTO.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/cart_module/repository/CartItemRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/cart_module/repository/CartItemRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/cart_module/repository/CartRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/cart_module/repository/CartRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/cart_module/service/CartService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/cart_module/service/CartService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/cart_module/service/CartServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/cart_module/service/CartServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/inventory_module/controller/InventoryController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/inventory_module/dto/InventoryCreateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/inventory_module/dto/InventoryCreateRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/inventory_module/dto/InventoryResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/inventory_module/dto/InventoryResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/inventory_module/dto/InventoryUpdateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/inventory_module/dto/InventoryUpdateRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/inventory_module/entity/Inventory.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/inventory_module/mapper/InventoryMapper.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/inventory_module/repository/InventoryRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/inventory_module/service/InventoryService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/inventory_module/service/InventoryServiceImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/order_module/repository/OrderRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/order_module/repository/OrderRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/order_module/service/OrderServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/order_module/service/OrderServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/discount/DiscountType.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/discount_module/DiscountType.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/discount/ProductVariantDiscountAdminController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/discount_module/ProductVariantDiscountAdminController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/discount/ProductVariantDiscountController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/discount_module/ProductVariantDiscountController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/discount/ProductVariantDiscountEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/discount_module/ProductVariantDiscountEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/discount/ProductVariantDiscountMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/discount_module/ProductVariantDiscountMapper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/discount/ProductVariantDiscountRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/discount_module/ProductVariantDiscountRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/discount/ProductVariantDiscountService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/discount_module/ProductVariantDiscountService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/discount/ProductVariantDiscountServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/discount_module/ProductVariantDiscountServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/discount/discountExceptions/InvalidDiscountException.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/discount_module/discountExceptions/InvalidDiscountException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/discount/discountExceptions/ProductVariantDiscountAlreadyExistsException.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/discount_module/discountExceptions/ProductVariantDiscountAlreadyExistsException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/discount/discountExceptions/ProductVariantDiscountNotFoundException.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/discount_module/discountExceptions/ProductVariantDiscountNotFoundException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/discount/dto/ProductVariantDiscountCreateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/discount_module/dto/ProductVariantDiscountCreateRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/discount/dto/ProductVariantDiscountResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/discount_module/dto/ProductVariantDiscountResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/discount/dto/ProductVariantDiscountUpdateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/discount_module/dto/ProductVariantDiscountUpdateRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/inventory/InventoryController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/inventory_module/InventoryController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/inventory/InventoryEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/inventory_module/InventoryEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/inventory/InventoryMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/inventory_module/InventoryMapper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/inventory/InventoryRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/inventory_module/InventoryRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/inventory/InventoryService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/inventory_module/InventoryService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/inventory/InventoryServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/inventory_module/InventoryServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/inventory/dto/InventoryCreateRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/inventory/dto/InventoryResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/inventory/dto/InventoryUpdateRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/inventory/exceptions/InventoryAlreadyExistsException.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/inventory/exceptions/InventoryNotFoundException.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/productImage/ProductImageRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/productImage/ProductImageRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/productImage/ProductImageServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/productImage/ProductImageServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/productInformation/ProductInformationRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/productInformation/ProductInformationRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/productInformation/ProductInformationServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/productInformation/ProductInformationServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/productPrice/ProductVariantPriceEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/productPrice/ProductVariantPriceEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/productPrice/ProductVariantPriceServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/productPrice/ProductVariantPriceServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/productSpecification/ProductSpecificationRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/productSpecification/ProductSpecificationRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/productSpecification/ProductSpecificationServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/productSpecification/ProductSpecificationServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/productVariant/ProductVariantRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/productVariant/ProductVariantRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/productVariant/ProductVariantServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/productVariant/ProductVariantServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/productVariant/dto/ProductVariantResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/productVariant/dto/ProductVariantResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/product_base/ProductService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/product_base/ProductService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/product_base/ProductServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/product_base/ProductServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/wishlist_module/repository/WishlistRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/wishlist_module/repository/WishlistRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/wishlist_module/service/WishlistServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/wishlist_module/service/WishlistServiceImpl.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/resources/application.properties" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -36,6 +92,11 @@
     </option>
   </component>
   <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="master" />
+      </map>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="HighlightingSettingsPerFile">
@@ -54,61 +115,61 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="0.0" />
-      <entry key="MS500" value="1.7148278481825125E-166" />
-      <entry key="S2" value="3.618721260130596E-42" />
-      <entry key="S5" value="2.6510868084106035E-17" />
-      <entry key="S10" value="5.159617328931955E-9" />
-      <entry key="S30" value="0.0019514824930540276" />
-      <entry key="S60" value="0.05998807056533261" />
-      <entry key="M2" value="0.4461104189815041" />
-      <entry key="M5" value="2.062488110828143" />
-      <entry key="M10" value="3.999617868276609" />
-      <entry key="M15" value="5.572597401036625" />
-      <entry key="M30" value="9.77963311575937" />
-      <entry key="H1" value="15.462655197584457" />
-      <entry key="H2" value="23.95768590156652" />
-      <entry key="H4" value="44.193556273674396" />
-      <entry key="D1" value="128.50925467501406" />
-      <entry key="W1" value="163.15034416817278" />
+      <entry key="MS100" value="7.570514765645386E-78" />
+      <entry key="MS500" value="3.765521071100272E-16" />
+      <entry key="S2" value="1.3930165319377797E-4" />
+      <entry key="S5" value="0.028680221969652146" />
+      <entry key="S10" value="0.16935236038996365" />
+      <entry key="S30" value="0.553261459452486" />
+      <entry key="S60" value="0.7438154740614399" />
+      <entry key="M2" value="0.8624512144921571" />
+      <entry key="M5" value="0.9946117792411164" />
+      <entry key="M10" value="2.228637417024961" />
+      <entry key="M15" value="4.705405408749674" />
+      <entry key="M30" value="13.168489804867772" />
+      <entry key="H1" value="26.385249530072617" />
+      <entry key="H2" value="42.88465229135146" />
+      <entry key="H4" value="67.79754508135767" />
+      <entry key="D1" value="162.83355669126232" />
+      <entry key="W1" value="203.77561464404653" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="1.0" />
-      <entry key="MS500" value="1.0000000000000007" />
-      <entry key="S2" value="1.0001555860140772" />
-      <entry key="S5" value="1.0299770037289144" />
-      <entry key="S10" value="1.1731386883661257" />
-      <entry key="S30" value="1.5603879007970125" />
-      <entry key="S60" value="1.8492965172482245" />
-      <entry key="M2" value="2.631712568586244" />
-      <entry key="M5" value="5.563718940086828" />
-      <entry key="M10" value="8.785125682244805" />
-      <entry key="M15" value="10.784772748679869" />
-      <entry key="M30" value="14.592604891354165" />
-      <entry key="H1" value="18.568267363814087" />
-      <entry key="H2" value="22.455598407107537" />
-      <entry key="H4" value="27.802752370219142" />
-      <entry key="D1" value="45.04013082659568" />
-      <entry key="W1" value="51.696336080658924" />
+      <entry key="MS500" value="1.000000000369425" />
+      <entry key="S2" value="1.0043841108746037" />
+      <entry key="S5" value="1.1139600448758498" />
+      <entry key="S10" value="1.3375796867050056" />
+      <entry key="S30" value="1.696293116718047" />
+      <entry key="S60" value="1.8344417995885558" />
+      <entry key="M2" value="1.9134884068296127" />
+      <entry key="M5" value="1.976532351560159" />
+      <entry key="M10" value="2.1673260710891435" />
+      <entry key="M15" value="2.6256885766066853" />
+      <entry key="M30" value="5.5634955848205765" />
+      <entry key="H1" value="12.86592891405263" />
+      <entry key="H2" value="22.764645189828688" />
+      <entry key="H4" value="33.392521074049355" />
+      <entry key="D1" value="58.21587019823253" />
+      <entry key="W1" value="67.2351680237439" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="1.3450990184040644E-4" />
-      <entry key="MS500" value="0.1681709010652284" />
-      <entry key="S2" value="0.6404799453869974" />
-      <entry key="S5" value="0.8618305854347103" />
-      <entry key="S10" value="1.0732126629678442" />
-      <entry key="S30" value="1.5167496700952858" />
-      <entry key="S60" value="1.8813565264324479" />
-      <entry key="M2" value="3.054059507781941" />
-      <entry key="M5" value="7.595720876746347" />
-      <entry key="M10" value="12.754628348619894" />
-      <entry key="M15" value="16.3298547715478" />
-      <entry key="M30" value="24.350745522863612" />
-      <entry key="H1" value="34.01607873362365" />
-      <entry key="H2" value="46.403565693083344" />
-      <entry key="H4" value="71.98886988056294" />
-      <entry key="D1" value="173.54615020108452" />
-      <entry key="W1" value="214.84609554775972" />
+      <entry key="MS100" value="5.269669123556775E-4" />
+      <entry key="MS500" value="0.220981882765919" />
+      <entry key="S2" value="0.6859050473505157" />
+      <entry key="S5" value="0.916237032020019" />
+      <entry key="S10" value="1.2622397181547855" />
+      <entry key="S30" value="2.0769812442030355" />
+      <entry key="S60" value="2.4718716535809433" />
+      <entry key="M2" value="2.716720352669048" />
+      <entry key="M5" value="2.945813764107399" />
+      <entry key="M10" value="4.3823824052104" />
+      <entry key="M15" value="7.320570668763322" />
+      <entry key="M30" value="18.72190366373996" />
+      <entry key="H1" value="39.24002194471429" />
+      <entry key="H2" value="65.63927743857136" />
+      <entry key="H4" value="101.18172387530258" />
+      <entry key="D1" value="221.04578756023759" />
+      <entry key="W1" value="271.01011888382" />
     </decayedShown>
   </component>
   <component name="PackageJsonUpdateNotifier">
@@ -121,52 +182,55 @@
   &quot;associatedIndex&quot;: 6
 }</component>
   <component name="ProjectId" id="3HiExznZxub87jM3pKF1bHNYIkE" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="1" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Application.NextCartApplication.executor&quot;: &quot;Run&quot;,
-    &quot;Application.NextCartApplicationjwt.executor&quot;: &quot;Run&quot;,
-    &quot;Application.NextcartBackendApplication.executor&quot;: &quot;Run&quot;,
-    &quot;Application.Unnamed.executor&quot;: &quot;Run&quot;,
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RequestMappingsPanelOrder0&quot;: &quot;0&quot;,
-    &quot;RequestMappingsPanelOrder1&quot;: &quot;1&quot;,
-    &quot;RequestMappingsPanelWidth0&quot;: &quot;75&quot;,
-    &quot;RequestMappingsPanelWidth1&quot;: &quot;75&quot;,
-    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;SHELLCHECK.PATH&quot;: &quot;C:\\Users\\USER\\AppData\\Roaming\\JetBrains\\IntelliJIdea2025.3\\plugins\\Shell Script\\shellcheck.exe&quot;,
-    &quot;Spring Boot.NextCartApplication.executor&quot;: &quot;Run&quot;,
-    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/geethikaarla/Desktop/project/NextCart&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.jshint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.jshint&quot;: &quot;&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Project&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
-    &quot;ts.external.directory.path&quot;: &quot;C:\\Program Files\\JetBrains\\IntelliJ IDEA 2026.2.1\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Application.NextCartApplication.executor": "Run",
+    "Application.NextCartApplicationjwt.executor": "Run",
+    "Application.NextcartBackendApplication.executor": "Run",
+    "Application.Unnamed.executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RequestMappingsPanelOrder0": "0",
+    "RequestMappingsPanelOrder1": "1",
+    "RequestMappingsPanelWidth0": "75",
+    "RequestMappingsPanelWidth1": "75",
+    "RunOnceActivity.MCP Project settings loaded": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "SHELLCHECK.PATH": "C:\\Users\\USER\\AppData\\Roaming\\JetBrains\\IntelliJIdea2025.3\\plugins\\Shell Script\\shellcheck.exe",
+    "Spring Boot.NextCartApplication.executor": "Run",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "git-widget-placeholder": "errors",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "C:/Users/geethikaarla/Desktop/giri/NextCart",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.jshint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.jshint": "",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Project",
+    "project.structure.proportion": "0.0",
+    "project.structure.side.proportion": "0.0",
+    "settings.editor.selected.configurable": "preferences.pluginManager",
+    "ts.external.directory.path": "C:\\Program Files\\JetBrains\\IntelliJ IDEA 2026.2.1\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external"
   },
-  &quot;keyToStringList&quot;: {
-    &quot;ChangesTree.GroupingKeys&quot;: [
-      &quot;repository&quot;
+  "keyToStringList": {
+    "ChangesTree.GroupingKeys": [
+      "repository"
     ]
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CreateClassDialog.RecentsKey">
       <recent name="com.nextcart.nextcart" />
@@ -176,18 +240,6 @@
     </key>
   </component>
   <component name="RunManager">
-    <configuration name="NextCartApplicationjwt" type="Application" factoryName="Application">
-      <option name="ALTERNATIVE_JRE_PATH" value="25" />
-      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
-      <envs>
-        <env name="JWT_SECRET" value="your-long-random-secret" />
-      </envs>
-      <option name="MAIN_CLASS_NAME" value="com.nextcart.nextcart.NextCartApplication" />
-      <module name="nextcart-backend" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
     <configuration default="true" type="JetRunConfigurationType">
       <method v="2">
         <option name="Make" enabled="true" />
@@ -196,6 +248,14 @@
     <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
       <option name="filePath" />
       <method v="2" />
+    </configuration>
+    <configuration name="NextCartApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <option name="FRAME_DEACTIVATION_UPDATE_POLICY" value="UpdateClassesAndResources" />
+      <module name="nextcart-backend" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.nextcart.nextcart.NextCartApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
     </configuration>
   </component>
   <component name="SharedIndexes">
@@ -224,8 +284,13 @@
       <breakpoints>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/order_module/service/OrderServiceImpl.java</url>
-          <line>75</line>
+          <line>159</line>
           <option name="timeStamp" value="2" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/backend/src/main/java/com/nextcart/nextcart/product_module/productInformation/ProductInformationEntity.java</url>
+          <line>58</line>
+          <option name="timeStamp" value="3" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

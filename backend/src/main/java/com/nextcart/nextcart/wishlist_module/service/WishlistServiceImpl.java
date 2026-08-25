@@ -32,19 +32,14 @@ public class WishlistServiceImpl implements WishlistService {
         this.productVariantRepository = productVariantRepository;
     }
 
+    // =========================================================
+    // ADD TO WISHLIST
+    // =========================================================
+
     @Override
     public WishlistResponseDTO addToWishlist(
             Long userId,
             Long productId) {
-
-        if (wishlistRepository.existsByUserIdAndProductId(
-                userId,
-                productId)) {
-
-            throw new RuntimeException(
-                    "Product is already in the wishlist"
-            );
-        }
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() ->
@@ -55,7 +50,7 @@ public class WishlistServiceImpl implements WishlistService {
 
         List<ProductVariantEntity> variants =
                 productVariantRepository
-                        .findByProductId(productId);
+                        .findByProductEntity_Id(productId);
 
         if (variants.isEmpty()) {
             throw new RuntimeException(
@@ -67,6 +62,18 @@ public class WishlistServiceImpl implements WishlistService {
         ProductVariantEntity variant =
                 variants.get(0);
 
+        Long productVariantId =
+                variant.getId();
+
+        if (wishlistRepository.existsByUser_IdAndProductVariant_Id(
+                userId,
+                productVariantId)) {
+
+            throw new RuntimeException(
+                    "Product is already in the wishlist"
+            );
+        }
+
         Wishlist wishlist =
                 new Wishlist(user, variant);
 
@@ -75,6 +82,10 @@ public class WishlistServiceImpl implements WishlistService {
 
         return mapToDTO(savedWishlist);
     }
+
+    // =========================================================
+    // GET USER WISHLIST
+    // =========================================================
 
     @Override
     @Transactional(readOnly = true)
@@ -90,32 +101,57 @@ public class WishlistServiceImpl implements WishlistService {
 
         List<Wishlist> wishlists =
                 wishlistRepository
-                        .findByUserIdOrderByCreatedAtDesc(userId);
+                        .findByUser_IdOrderByCreatedAtDesc(userId);
 
         return wishlists.stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
 
+    // =========================================================
+    // REMOVE FROM WISHLIST
+    // =========================================================
+
     @Override
     public void removeFromWishlist(
             Long userId,
             Long productId) {
 
-        if (!wishlistRepository.existsByUserIdAndProductId(
+        List<ProductVariantEntity> variants =
+                productVariantRepository
+                        .findByProductEntity_Id(productId);
+
+        if (variants.isEmpty()) {
+            throw new RuntimeException(
+                    "No product variant found for product id: "
+                            + productId
+            );
+        }
+
+        ProductVariantEntity variant =
+                variants.get(0);
+
+        Long productVariantId =
+                variant.getId();
+
+        if (!wishlistRepository.existsByUser_IdAndProductVariant_Id(
                 userId,
-                productId)) {
+                productVariantId)) {
 
             throw new RuntimeException(
                     "Product not found in wishlist"
             );
         }
 
-        wishlistRepository.deleteByUserIdAndProductId(
+        wishlistRepository.deleteByUser_IdAndProductVariant_Id(
                 userId,
-                productId
+                productVariantId
         );
     }
+
+    // =========================================================
+    // CLEAR WISHLIST
+    // =========================================================
 
     @Override
     public void clearWishlist(Long userId) {
@@ -127,8 +163,12 @@ public class WishlistServiceImpl implements WishlistService {
             );
         }
 
-        wishlistRepository.deleteByUserId(userId);
+        wishlistRepository.deleteByUser_Id(userId);
     }
+
+    // =========================================================
+    // MAP ENTITY TO DTO
+    // =========================================================
 
     private WishlistResponseDTO mapToDTO(
             Wishlist wishlist) {

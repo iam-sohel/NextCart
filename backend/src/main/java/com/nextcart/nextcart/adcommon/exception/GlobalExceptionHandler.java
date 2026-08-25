@@ -4,6 +4,7 @@ import com.nextcart.nextcart.adcommon.dto.ApiResponse;
 import com.nextcart.nextcart.brand_module.exceptions.BrandAlreadyExistsException;
 import com.nextcart.nextcart.brand_module.exceptions.BrandNotFoundException;
 import com.nextcart.nextcart.category_module.exceptions.CategoryAlreadyExistsException;
+import com.nextcart.nextcart.category_module.exceptions.CategoryInactiveException;
 import com.nextcart.nextcart.category_module.exceptions.CategoryNotFoundException;
 import com.nextcart.nextcart.inventory_module.exceptions.InventoryAlreadyExistsException;
 import com.nextcart.nextcart.inventory_module.exceptions.InventoryNotFoundException;
@@ -11,6 +12,7 @@ import com.nextcart.nextcart.product_module.exceptions.*;
 import com.nextcart.nextcart.subcategory_module.exceptions.SubCategoryAlreadyExistsException;
 import com.nextcart.nextcart.subcategory_module.exceptions.SubCategoryNotFoundException;
 import com.nextcart.nextcart.user_module.exceptions.UserAlreadyExistsException;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -22,35 +24,37 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // =========================
+    // =========================================================
     // USER
-    // =========================
+    // =========================================================
 
     @ExceptionHandler(UserAlreadyExistsException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>>
     handleUserAlreadyExists(UserAlreadyExistsException ex) {
 
         return buildError(
-                HttpStatus.BAD_REQUEST,
+                HttpStatus.CONFLICT,
                 ex.getMessage(),
                 "USER_ALREADY_EXISTS"
         );
     }
 
-    // =========================
+
+    // =========================================================
     // CATEGORY
-    // =========================
+    // =========================================================
 
     @ExceptionHandler(CategoryAlreadyExistsException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>>
     handleCategoryAlreadyExists(CategoryAlreadyExistsException ex) {
 
         return buildError(
-                HttpStatus.BAD_REQUEST,
+                HttpStatus.CONFLICT,
                 ex.getMessage(),
                 "CATEGORY_ALREADY_EXISTS"
         );
     }
+
 
     @ExceptionHandler(CategoryNotFoundException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>>
@@ -63,76 +67,82 @@ public class GlobalExceptionHandler {
         );
     }
 
-    // =========================
+
+    @ExceptionHandler(CategoryInactiveException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleCategoryInactive(CategoryInactiveException ex) {
+
+        return buildError(
+                HttpStatus.BAD_REQUEST,
+                ex.getMessage(),
+                "CATEGORY_INACTIVE"
+        );
+    }
+
+
+    // =========================================================
     // SUBCATEGORY
-    // =========================
+    // =========================================================
 
     @ExceptionHandler(SubCategoryAlreadyExistsException.class)
-    public ResponseEntity<ApiResponse> handleSubCategoryAlreadyExists(
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleSubCategoryAlreadyExists(
             SubCategoryAlreadyExistsException ex) {
 
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(
-                        new ApiResponse(
-                                false,
-                                ex.getMessage(),
-                                "SUBCATEGORY_ALREADY_EXISTS"
-                        )
-                );
+        return buildError(
+                HttpStatus.CONFLICT,
+                ex.getMessage(),
+                "SUBCATEGORY_ALREADY_EXISTS"
+        );
     }
+
 
     @ExceptionHandler(SubCategoryNotFoundException.class)
-    public ResponseEntity<ApiResponse> handleSubCategoryNotFound(
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleSubCategoryNotFound(
             SubCategoryNotFoundException ex) {
 
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(
-                        new ApiResponse(
-                                false,
-                                ex.getMessage(),
-                                "SUBCATEGORY_NOT_FOUND"
-                        )
-                );
+        return buildError(
+                HttpStatus.NOT_FOUND,
+                ex.getMessage(),
+                "SUBCATEGORY_NOT_FOUND"
+        );
     }
-    // =========================
+
+
+    // =========================================================
     // BRAND
-    // =========================
+    // =========================================================
 
     @ExceptionHandler(BrandAlreadyExistsException.class)
-    public ResponseEntity<ApiResponse<Void>> handleBrandAlreadyExists(
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleBrandAlreadyExists(
             BrandAlreadyExistsException ex) {
 
-        return ResponseEntity
-                .status(HttpStatus.CONFLICT)
-                .body(
-                        new ApiResponse<>(
-                                false,
-                                ex.getMessage(),
-                                null
-                        )
-                );
+        return buildError(
+                HttpStatus.CONFLICT,
+                ex.getMessage(),
+                "BRAND_ALREADY_EXISTS"
+        );
     }
+
 
     @ExceptionHandler(BrandNotFoundException.class)
-    public ResponseEntity<ApiResponse<Void>> handleBrandNotFound(
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleBrandNotFound(
             BrandNotFoundException ex) {
 
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(
-                        new ApiResponse<>(
-                                false,
-                                ex.getMessage(),
-                                null
-                        )
-                );
+        return buildError(
+                HttpStatus.NOT_FOUND,
+                ex.getMessage(),
+                "BRAND_NOT_FOUND"
+        );
     }
 
-    // =========================
+
+    // =========================================================
     // PRODUCT
-    // =========================
+    // =========================================================
 
     @ExceptionHandler(ProductAlreadyExistsException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>>
@@ -140,15 +150,17 @@ public class GlobalExceptionHandler {
             ProductAlreadyExistsException ex) {
 
         return buildError(
-                HttpStatus.BAD_REQUEST,
+                HttpStatus.CONFLICT,
                 ex.getMessage(),
                 "PRODUCT_ALREADY_EXISTS"
         );
     }
 
+
     @ExceptionHandler(ProductNotFoundException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>>
-    handleProductNotFound(ProductNotFoundException ex) {
+    handleProductNotFound(
+            ProductNotFoundException ex) {
 
         return buildError(
                 HttpStatus.NOT_FOUND,
@@ -157,9 +169,36 @@ public class GlobalExceptionHandler {
         );
     }
 
-    // =========================
+
+    @ExceptionHandler(ProductValidationException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleProductValidation(
+            ProductValidationException ex) {
+
+        return buildError(
+                HttpStatus.BAD_REQUEST,
+                ex.getMessage(),
+                "PRODUCT_VALIDATION_ERROR"
+        );
+    }
+
+
+    @ExceptionHandler(InvalidPriceException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleInvalidPrice(
+            InvalidPriceException ex) {
+
+        return buildError(
+                HttpStatus.BAD_REQUEST,
+                ex.getMessage(),
+                "INVALID_PRICE"
+        );
+    }
+
+
+    // =========================================================
     // PRODUCT VARIANT
-    // =========================
+    // =========================================================
 
     @ExceptionHandler(ProductVariantAlreadyExistsException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>>
@@ -167,43 +206,59 @@ public class GlobalExceptionHandler {
             ProductVariantAlreadyExistsException ex) {
 
         return buildError(
-                HttpStatus.BAD_REQUEST,
+                HttpStatus.CONFLICT,
                 ex.getMessage(),
                 "PRODUCT_VARIANT_ALREADY_EXISTS"
         );
     }
 
-    // =========================
-    // INVENTORY
-    // =========================
 
-    @ExceptionHandler(InventoryAlreadyExistsException.class)
+    @ExceptionHandler(ProductVariantNotFoundException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>>
-    handleInventoryAlreadyExists(
-            InventoryAlreadyExistsException ex) {
-
-        return buildError(
-                HttpStatus.BAD_REQUEST,
-                ex.getMessage(),
-                "INVENTORY_ALREADY_EXISTS"
-        );
-    }
-
-    @ExceptionHandler(InventoryNotFoundException.class)
-    public ResponseEntity<ApiResponse<Map<String, String>>>
-    handleInventoryNotFound(
-            InventoryNotFoundException ex) {
+    handleProductVariantNotFound(
+            ProductVariantNotFoundException ex) {
 
         return buildError(
                 HttpStatus.NOT_FOUND,
                 ex.getMessage(),
-                "INVENTORY_NOT_FOUND"
+                "PRODUCT_VARIANT_NOT_FOUND"
         );
     }
 
-    // =========================
+
+    // =========================================================
+    // PRODUCT VARIANT PRICE
+    // =========================================================
+
+    @ExceptionHandler(ProductVariantPriceAlreadyExistsException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleProductVariantPriceAlreadyExists(
+            ProductVariantPriceAlreadyExistsException ex) {
+
+        return buildError(
+                HttpStatus.CONFLICT,
+                ex.getMessage(),
+                "PRODUCT_VARIANT_PRICE_ALREADY_EXISTS"
+        );
+    }
+
+
+    @ExceptionHandler(ProductVariantPriceNotFoundException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleProductVariantPriceNotFound(
+            ProductVariantPriceNotFoundException ex) {
+
+        return buildError(
+                HttpStatus.NOT_FOUND,
+                ex.getMessage(),
+                "PRODUCT_VARIANT_PRICE_NOT_FOUND"
+        );
+    }
+
+
+    // =========================================================
     // PRODUCT IMAGE
-    // =========================
+    // =========================================================
 
     @ExceptionHandler(ProductImageNotFoundException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>>
@@ -217,9 +272,23 @@ public class GlobalExceptionHandler {
         );
     }
 
-    // =========================
+
+    // =========================================================
     // PRODUCT SPECIFICATION
-    // =========================
+    // =========================================================
+
+    @ExceptionHandler(ProductSpecificationAlreadyExistsException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleProductSpecificationAlreadyExists(
+            ProductSpecificationAlreadyExistsException ex) {
+
+        return buildError(
+                HttpStatus.CONFLICT,
+                ex.getMessage(),
+                "PRODUCT_SPECIFICATION_ALREADY_EXISTS"
+        );
+    }
+
 
     @ExceptionHandler(ProductSpecificationNotFoundException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>>
@@ -233,9 +302,10 @@ public class GlobalExceptionHandler {
         );
     }
 
-    // =========================
+
+    // =========================================================
     // VARIANT ATTRIBUTE
-    // =========================
+    // =========================================================
 
     @ExceptionHandler(VariantAttributeAlreadyExistsException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>>
@@ -243,11 +313,12 @@ public class GlobalExceptionHandler {
             VariantAttributeAlreadyExistsException ex) {
 
         return buildError(
-                HttpStatus.BAD_REQUEST,
+                HttpStatus.CONFLICT,
                 ex.getMessage(),
                 "VARIANT_ATTRIBUTE_ALREADY_EXISTS"
         );
     }
+
 
     @ExceptionHandler(VariantAttributeNotFoundException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>>
@@ -261,37 +332,40 @@ public class GlobalExceptionHandler {
         );
     }
 
-    // =========================
-    // PRODUCT INFORMATION
-    // =========================
 
-    @ExceptionHandler(ProductInformationAlreadyExistsException.class)
+    // =========================================================
+    // INVENTORY
+    // =========================================================
+
+    @ExceptionHandler(InventoryAlreadyExistsException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>>
-    handleProductInformationAlreadyExists(
-            ProductInformationAlreadyExistsException ex) {
+    handleInventoryAlreadyExists(
+            InventoryAlreadyExistsException ex) {
 
         return buildError(
-                HttpStatus.BAD_REQUEST,
+                HttpStatus.CONFLICT,
                 ex.getMessage(),
-                "PRODUCT_INFORMATION_ALREADY_EXISTS"
+                "INVENTORY_ALREADY_EXISTS"
         );
     }
 
-    @ExceptionHandler(ProductInformationNotFoundException.class)
+
+    @ExceptionHandler(InventoryNotFoundException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>>
-    handleProductInformationNotFound(
-            ProductInformationNotFoundException ex) {
+    handleInventoryNotFound(
+            InventoryNotFoundException ex) {
 
         return buildError(
                 HttpStatus.NOT_FOUND,
                 ex.getMessage(),
-                "PRODUCT_INFORMATION_NOT_FOUND"
+                "INVENTORY_NOT_FOUND"
         );
     }
 
-    // =========================
+
+    // =========================================================
     // VALIDATION
-    // =========================
+    // =========================================================
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>>
@@ -312,9 +386,10 @@ public class GlobalExceptionHandler {
         );
     }
 
-    // =========================
+
+    // =========================================================
     // GENERIC EXCEPTION
-    // =========================
+    // =========================================================
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Map<String, String>>>
@@ -327,9 +402,10 @@ public class GlobalExceptionHandler {
         );
     }
 
-    // =========================
+
+    // =========================================================
     // COMMON ERROR BUILDER
-    // =========================
+    // =========================================================
 
     private ResponseEntity<ApiResponse<Map<String, String>>> buildError(
             HttpStatus status,

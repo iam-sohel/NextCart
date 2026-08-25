@@ -1,19 +1,19 @@
 package com.nextcart.nextcart.product_module.productPrice;
 
-import com.nextcart.nextcart.product_module.productPrice.dto.ProductVariantPriceCreateRequest;
-import com.nextcart.nextcart.product_module.productPrice.dto.ProductVariantPriceResponse;
-import com.nextcart.nextcart.product_module.productPrice.dto.ProductVariantPriceUpdateRequest;
-import com.nextcart.nextcart.product_module.productVariant.ProductVariantEntity;
 import com.nextcart.nextcart.product_module.exceptions.InvalidPriceException;
 import com.nextcart.nextcart.product_module.exceptions.ProductVariantNotFoundException;
 import com.nextcart.nextcart.product_module.exceptions.ProductVariantPriceAlreadyExistsException;
 import com.nextcart.nextcart.product_module.exceptions.ProductVariantPriceNotFoundException;
+import com.nextcart.nextcart.product_module.productPrice.dto.ProductVariantPriceCreateRequest;
+import com.nextcart.nextcart.product_module.productPrice.dto.ProductVariantPriceResponse;
+import com.nextcart.nextcart.product_module.productPrice.dto.ProductVariantPriceUpdateRequest;
+import com.nextcart.nextcart.product_module.productVariant.ProductVariantEntity;
 import com.nextcart.nextcart.product_module.productVariant.ProductVariantRepository;
-
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
 
 @Service
 @RequiredArgsConstructor
@@ -22,9 +22,7 @@ public class ProductVariantPriceServiceImpl
         implements ProductVariantPriceService {
 
     private final ProductVariantPriceRepository priceRepository;
-
     private final ProductVariantRepository productVariantRepository;
-
     private final ProductVariantPriceMapper priceMapper;
 
     // =========================================================
@@ -71,7 +69,7 @@ public class ProductVariantPriceServiceImpl
     }
 
     // =========================================================
-    // GET BY ID
+    // GET PRICE BY ID
     // =========================================================
 
     @Override
@@ -83,7 +81,8 @@ public class ProductVariantPriceServiceImpl
                 priceRepository.findById(id)
                         .orElseThrow(() ->
                                 new ProductVariantPriceNotFoundException(
-                                        "Price not found with id: " + id
+                                        "Price not found with id: "
+                                                + id
                                 )
                         );
 
@@ -91,13 +90,22 @@ public class ProductVariantPriceServiceImpl
     }
 
     // =========================================================
-    // GET BY VARIANT
+    // GET PRICE BY VARIANT ID
     // =========================================================
 
     @Override
     @Transactional(readOnly = true)
     public ProductVariantPriceResponse getPriceByVariantId(
             Long productVariantId) {
+
+        if (!productVariantRepository.existsById(
+                productVariantId)) {
+
+            throw new ProductVariantNotFoundException(
+                    "Product variant not found with id: "
+                            + productVariantId
+            );
+        }
 
         ProductVariantPriceEntity price =
                 priceRepository
@@ -125,7 +133,8 @@ public class ProductVariantPriceServiceImpl
                 priceRepository.findById(id)
                         .orElseThrow(() ->
                                 new ProductVariantPriceNotFoundException(
-                                        "Price not found with id: " + id
+                                        "Price not found with id: "
+                                                + id
                                 )
                         );
 
@@ -156,7 +165,8 @@ public class ProductVariantPriceServiceImpl
                 priceRepository.findById(id)
                         .orElseThrow(() ->
                                 new ProductVariantPriceNotFoundException(
-                                        "Price not found with id: " + id
+                                        "Price not found with id: "
+                                                + id
                                 )
                         );
 
@@ -164,12 +174,33 @@ public class ProductVariantPriceServiceImpl
     }
 
     // =========================================================
-    // PRICE VALIDATION
+    // VALIDATE PRICE
     // =========================================================
 
     private void validatePrice(
-            java.math.BigDecimal mrp,
-            java.math.BigDecimal sellingPrice) {
+            BigDecimal mrp,
+            BigDecimal sellingPrice) {
+
+        if (mrp == null || sellingPrice == null) {
+
+            throw new InvalidPriceException(
+                    "MRP and selling price are required"
+            );
+        }
+
+        if (mrp.compareTo(BigDecimal.ZERO) <= 0) {
+
+            throw new InvalidPriceException(
+                    "MRP must be greater than zero"
+            );
+        }
+
+        if (sellingPrice.compareTo(BigDecimal.ZERO) <= 0) {
+
+            throw new InvalidPriceException(
+                    "Selling price must be greater than zero"
+            );
+        }
 
         if (sellingPrice.compareTo(mrp) > 0) {
 

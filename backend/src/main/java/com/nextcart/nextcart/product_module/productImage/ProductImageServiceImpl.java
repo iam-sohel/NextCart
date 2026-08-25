@@ -1,14 +1,13 @@
 package com.nextcart.nextcart.product_module.productImage;
 
+import com.nextcart.nextcart.product_module.exceptions.ProductImageNotFoundException;
+import com.nextcart.nextcart.product_module.exceptions.ProductNotFoundException;
 import com.nextcart.nextcart.product_module.productImage.productImageDTO.ProductImageCreateRequest;
 import com.nextcart.nextcart.product_module.productImage.productImageDTO.ProductImageResponse;
 import com.nextcart.nextcart.product_module.productImage.productImageDTO.ProductImageUpdateRequest;
-import com.nextcart.nextcart.product_module.exceptions.ProductImageNotFoundException;
-import com.nextcart.nextcart.product_module.exceptions.ProductNotFoundException;
+import com.nextcart.nextcart.product_module.product_base.ProductEntity;
 import com.nextcart.nextcart.product_module.product_base.ProductRepository;
-
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,7 +16,8 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class ProductImageServiceImpl implements ProductImageService {
+public class ProductImageServiceImpl
+        implements ProductImageService {
 
     private final ProductImageRepository productImageRepository;
     private final ProductRepository productRepository;
@@ -31,19 +31,20 @@ public class ProductImageServiceImpl implements ProductImageService {
     public ProductImageResponse createImage(
             ProductImageCreateRequest request) {
 
-        ProductImageEntity productImageEntity = productRepository.findById(
-                request.getProductId()
-        ).orElseThrow(() ->
-                new ProductNotFoundException(
-                        "Product not found with id: "
-                                + request.getProductId()
-                )
-        );
+        ProductEntity product =
+                productRepository.findById(
+                        request.getProductId()
+                ).orElseThrow(() ->
+                        new ProductNotFoundException(
+                                "Product not found with id: "
+                                        + request.getProductId()
+                        )
+                );
 
         ProductImageEntity image =
                 productImageMapper.toEntity(request);
 
-        image.setProduct(productE);
+        image.setProductEntity(product);
 
         /*
          * If this image is marked as primary,
@@ -51,9 +52,9 @@ public class ProductImageServiceImpl implements ProductImageService {
          */
         if (Boolean.TRUE.equals(image.getIsPrimary())) {
 
-            List<ProductImage> existingImages =
+            List<ProductImageEntity> existingImages =
                     productImageRepository
-                            .findByProductIdOrderByDisplayOrderAsc(
+                            .findByProductEntity_IdOrderByDisplayOrderAsc(
                                     product.getId()
                             );
 
@@ -63,18 +64,23 @@ public class ProductImageServiceImpl implements ProductImageService {
         }
 
         /*
-         * If this is the first image, make it primary.
+         * If this is the first image,
+         * automatically make it primary.
          */
         if (!productImageRepository
-                .existsByProductIdAndIsPrimaryTrue(product.getId())) {
+                .existsByProductEntity_IdAndIsPrimaryTrue(
+                        product.getId()
+                )) {
 
             image.setIsPrimary(true);
         }
 
-        ProductImage savedImage =
+        ProductImageEntity savedImage =
                 productImageRepository.save(image);
 
-        return productImageMapper.toResponse(savedImage);
+        return productImageMapper.toResponse(
+                savedImage
+        );
     }
 
     // =========================================================
@@ -83,9 +89,10 @@ public class ProductImageServiceImpl implements ProductImageService {
 
     @Override
     @Transactional(readOnly = true)
-    public ProductImageResponse getImageById(Long id) {
+    public ProductImageResponse getImageById(
+            Long id) {
 
-        ProductImage image =
+        ProductImageEntity image =
                 productImageRepository.findById(id)
                         .orElseThrow(() ->
                                 new ProductImageNotFoundException(
@@ -94,7 +101,9 @@ public class ProductImageServiceImpl implements ProductImageService {
                                 )
                         );
 
-        return productImageMapper.toResponse(image);
+        return productImageMapper.toResponse(
+                image
+        );
     }
 
     // =========================================================
@@ -122,13 +131,17 @@ public class ProductImageServiceImpl implements ProductImageService {
             Long productId) {
 
         if (!productRepository.existsById(productId)) {
+
             throw new ProductNotFoundException(
-                    "Product not found with id: " + productId
+                    "Product not found with id: "
+                            + productId
             );
         }
 
         return productImageRepository
-                .findByProductIdOrderByDisplayOrderAsc(productId)
+                .findByProductEntity_IdOrderByDisplayOrderAsc(
+                        productId
+                )
                 .stream()
                 .map(productImageMapper::toResponse)
                 .toList();
@@ -162,28 +175,34 @@ public class ProductImageServiceImpl implements ProductImageService {
 
         /*
          * If this image becomes primary,
-         * remove primary status from other images.
+         * remove primary status from all other
+         * images belonging to the same product.
          */
-        if (Boolean.TRUE.equals(image.getIsPrimary())) {
+        if (Boolean.TRUE.equals(
+                image.getIsPrimary())) {
 
-            List<ProductImage> existingImages =
+            List<ProductImageEntity> existingImages =
                     productImageRepository
-                            .findByProductIdOrderByDisplayOrderAsc(
-                                    image.getProduct().getId()
+                            .findByProductEntity_IdOrderByDisplayOrderAsc(
+                                    image.getProductEntity().getId()
                             );
 
             existingImages.stream()
                     .filter(existing ->
-                            !existing.getId().equals(image.getId()))
+                            !existing.getId()
+                                    .equals(image.getId())
+                    )
                     .forEach(existing ->
                             existing.setIsPrimary(false)
                     );
         }
 
-        ProductImage updatedImage =
+        ProductImageEntity updatedImage =
                 productImageRepository.save(image);
 
-        return productImageMapper.toResponse(updatedImage);
+        return productImageMapper.toResponse(
+                updatedImage
+        );
     }
 
     // =========================================================
@@ -193,7 +212,7 @@ public class ProductImageServiceImpl implements ProductImageService {
     @Override
     public void deleteImage(Long id) {
 
-        ProductImage image =
+        ProductImageEntity image =
                 productImageRepository.findById(id)
                         .orElseThrow(() ->
                                 new ProductImageNotFoundException(
@@ -203,33 +222,37 @@ public class ProductImageServiceImpl implements ProductImageService {
                         );
 
         Long productId =
-                image.getProduct().getId();
+                image.getProductEntity().getId();
 
         boolean wasPrimary =
-                Boolean.TRUE.equals(image.getIsPrimary());
+                Boolean.TRUE.equals(
+                        image.getIsPrimary()
+                );
 
         productImageRepository.delete(image);
 
         /*
-         * If primary image was deleted,
-         * promote another image.
+         * If the primary image was deleted,
+         * promote the first remaining image.
          */
         if (wasPrimary) {
 
-            List<ProductImage> remainingImages =
+            List<ProductImageEntity> remainingImages =
                     productImageRepository
-                            .findByProductIdOrderByDisplayOrderAsc(
+                            .findByProductEntity_IdOrderByDisplayOrderAsc(
                                     productId
                             );
 
             if (!remainingImages.isEmpty()) {
 
-                ProductImage newPrimary =
+                ProductImageEntity newPrimary =
                         remainingImages.get(0);
 
                 newPrimary.setIsPrimary(true);
 
-                productImageRepository.save(newPrimary);
+                productImageRepository.save(
+                        newPrimary
+                );
             }
         }
     }

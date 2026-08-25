@@ -1,57 +1,86 @@
 package com.nextcart.nextcart.cart_module.controller;
 
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
 import com.nextcart.nextcart.cart_module.dto.AddToCartRequestDTO;
 import com.nextcart.nextcart.cart_module.dto.CartResponseDTO;
 import com.nextcart.nextcart.cart_module.dto.UpdateCartItemRequestDTO;
 import com.nextcart.nextcart.cart_module.service.CartService;
-
-import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/cart")
+@RequestMapping("/api/cart")
+@RequiredArgsConstructor
 public class CartController {
 
     private final CartService cartService;
 
-    public CartController(CartService cartService) {
-        this.cartService = cartService;
-    }
+    // =========================================================
+    // GET CART
+    // =========================================================
 
     @GetMapping
     public ResponseEntity<CartResponseDTO> getCart() {
-        return ResponseEntity.ok(cartService.getCart());
+
+        return ResponseEntity.ok(
+                cartService.getCart()
+        );
     }
+
+    // =========================================================
+    // ADD TO CART
+    // =========================================================
 
     @PostMapping("/items")
-    public ResponseEntity<CartResponseDTO> addToCart(@Valid @RequestBody AddToCartRequestDTO request) {
-        return ResponseEntity.ok(cartService.addToCart(request));
+    public ResponseEntity<CartResponseDTO> addToCart(
+            @RequestBody AddToCartRequestDTO request) {
+
+        return ResponseEntity.ok(
+                cartService.addToCart(request)
+        );
     }
 
-    @PutMapping("/items/{productId}")
+    // =========================================================
+    // UPDATE CART ITEM
+    // =========================================================
+
+    @PutMapping("/items/{variantId}")
     public ResponseEntity<CartResponseDTO> updateCartItem(
-            @PathVariable Long productId,
-            @Valid @RequestBody UpdateCartItemRequestDTO request) {
-        return ResponseEntity.ok(cartService.updateCartItem(productId, request));
+            @PathVariable Long variantId,
+            @RequestBody UpdateCartItemRequestDTO request) {
+
+        return ResponseEntity.ok(
+                cartService.updateCartItem(
+                        variantId,
+                        request
+                )
+        );
     }
 
-    @DeleteMapping("/items/{productId}")
-    public ResponseEntity<CartResponseDTO> removeFromCart(@PathVariable Long productId) {
-        return ResponseEntity.ok(cartService.removeFromCart(productId));
+    // =========================================================
+    // REMOVE CART ITEM
+    // =========================================================
+
+    @DeleteMapping("/items/{variantId}")
+    public ResponseEntity<CartResponseDTO> removeFromCart(
+            @PathVariable Long variantId) {
+
+        return ResponseEntity.ok(
+                cartService.removeFromCart(
+                        variantId
+                )
+        );
     }
+
+    // =========================================================
+    // CLEAR CART
+    // =========================================================
 
     @DeleteMapping
     public ResponseEntity<Void> clearCart() {
+
         cartService.clearCart();
+
         return ResponseEntity.noContent().build();
     }
 }

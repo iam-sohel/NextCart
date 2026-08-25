@@ -59,7 +59,11 @@ public class ProductVariantPriceEntity {
     )
     private BigDecimal discountPercentage;
 
-    @Column(name = "currency", nullable = false, length = 3)
+    @Column(
+            name = "currency",
+            nullable = false,
+            length = 3
+    )
     private String currency;
 
     @Column(name = "effective_from")

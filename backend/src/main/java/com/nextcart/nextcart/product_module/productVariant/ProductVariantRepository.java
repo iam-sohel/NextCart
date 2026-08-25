@@ -7,19 +7,37 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.Optional;
 
-public interface ProductVariantRepository extends JpaRepository<ProductVariantEntity, Long> {
+public interface ProductVariantRepository
+        extends JpaRepository<ProductVariantEntity, Long> {
 
     boolean existsBySkuIgnoreCase(String sku);
 
-    boolean existsBySkuIgnoreCaseAndIdNot(String sku, Long id);
+    boolean existsBySkuIgnoreCaseAndIdNot(
+            String sku,
+            Long id
+    );
 
-    Optional<ProductVariantEntity> findBySkuIgnoreCase(String sku);
+    Optional<ProductVariantEntity> findBySkuIgnoreCase(
+            String sku
+    );
 
-    List<ProductVariantEntity> findByProductId(Long productId);
+    List<ProductVariantEntity> findByProductEntity_Id(
+            Long productId
+    );
 
-    Page<ProductVariantEntity> findByProductId(Long productId, Pageable pageable);
+    Page<ProductVariantEntity> findByProductEntity_Id(
+            Long productId,
+            Pageable pageable
+    );
 
-    Page<ProductVariantEntity> findByProductIdAndStatus(Long productId, ProductVariantStatus status, Pageable pageable);
+    Page<ProductVariantEntity> findByProductEntity_IdAndStatus(
+            Long productId,
+            ProductVariantStatus status,
+            Pageable pageable
+    );
 
-    Optional<ProductVariantEntity> findByIdAndStatus(Long id, ProductVariantStatus status);
+    Optional<ProductVariantEntity> findByIdAndStatus(
+            Long id,
+            ProductVariantStatus status
+    );
 }

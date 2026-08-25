@@ -52,7 +52,7 @@ public class ProductSpecificationServiceImpl
                 request.getSpecificationName().trim();
 
         if (productSpecificationRepository
-                .existsByProductIdAndSpecificationNameIgnoreCase(
+                .existsByProductEntity_IdAndSpecificationNameIgnoreCase(
                         productId,
                         specificationName)) {
 
@@ -115,7 +115,9 @@ public class ProductSpecificationServiceImpl
         }
 
         return productSpecificationRepository
-                .findByProductIdOrderBySpecificationNameAsc(productId)
+                .findByProductEntity_IdOrderBySpecificationNameAsc(
+                        productId
+                )
                 .stream()
                 .map(productSpecificationMapper::toResponse)
                 .toList();
@@ -146,7 +148,7 @@ public class ProductSpecificationServiceImpl
                 request.getSpecificationName().trim();
 
         if (productSpecificationRepository
-                .existsByProductIdAndSpecificationNameIgnoreCaseAndIdNot(
+                .existsByProductEntity_IdAndSpecificationNameIgnoreCaseAndIdNot(
                         productId,
                         specificationName,
                         id

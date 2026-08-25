@@ -11,13 +11,22 @@ import com.nextcart.nextcart.wishlist_module.entity.Wishlist;
 @Repository
 public interface WishlistRepository extends JpaRepository<Wishlist, Long> {
 
-    List<Wishlist> findByUserIdOrderByCreatedAtDesc(Long userId);
+    List<Wishlist> findByUser_IdOrderByCreatedAtDesc(Long userId);
 
-    boolean existsByUserIdAndProductId(Long userId, Long productId);
+    boolean existsByUser_IdAndProductVariant_Id(
+            Long userId,
+            Long productVariantId
+    );
 
-    Optional<Wishlist> findByUserIdAndProductId(Long userId, Long productId);
+    Optional<Wishlist> findByUser_IdAndProductVariant_Id(
+            Long userId,
+            Long productVariantId
+    );
 
-    void deleteByUserIdAndProductId(Long userId, Long productId);
+    void deleteByUser_IdAndProductVariant_Id(
+            Long userId,
+            Long productVariantId
+    );
 
-    void deleteByUserId(Long userId);
+    void deleteByUser_Id(Long userId);
 }

@@ -7,7 +7,7 @@ import java.util.Optional;
 public interface ProductInformationRepository
         extends JpaRepository<ProductInformationEntity, Long> {
 
-    Optional<ProductInformationEntity> findByProductId(Long productId);
+    Optional<ProductInformationEntity> findByProductEntity_Id(Long productId);
 
-    boolean existsByProductId(Long productId);
+    boolean existsByProductEntity_Id(Long productId);
 }
