@@ -1,4 +1,4 @@
-package com.nextcart.nextcart.cart_module.dto;
+package com.nextcart.nextcart.checkout_module;
 
 import lombok.*;
 
@@ -10,11 +10,11 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CartResponseDTO {
+public class CheckoutResponseDTO {
 
-    private Long id;
+    private Long cartId;
 
-    private List<CartItemResponseDTO> items;
+    private List<CheckoutItemResponseDTO> items;
 
     private Integer totalItems;
 
@@ -22,5 +22,9 @@ public class CartResponseDTO {
 
     private BigDecimal totalDiscount;
 
+    private BigDecimal deliveryCharge;
+
     private BigDecimal orderTotal;
+
+    private String currency;
 }

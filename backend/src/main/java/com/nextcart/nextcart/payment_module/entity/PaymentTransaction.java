@@ -1,7 +1,7 @@
 package com.nextcart.nextcart.payment_module.entity;
 
 import com.nextcart.nextcart.adcommon.entity.BaseEntity;
-import com.nextcart.nextcart.order_module.entity.Order;
+import com.nextcart.nextcart.order_module.OrderEntity;
 import com.nextcart.nextcart.user_module.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -23,7 +23,7 @@ public class PaymentTransaction extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
-    private Order order;
+    private OrderEntity order;
 
     @Column(nullable = false, unique = true)
     private String razorpayOrderId;
