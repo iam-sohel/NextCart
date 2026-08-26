@@ -3,8 +3,12 @@ package com.nextcart.nextcart.payment_module.service;
 import com.nextcart.nextcart.order_module.entity.Order;
 import com.nextcart.nextcart.order_module.entity.PaymentStatus;
 import com.nextcart.nextcart.order_module.repository.OrderRepository;
-import com.nextcart.nextcart.payment_module.dto.*;
-import com.nextcart.nextcart.payment_module.entity.*;
+import com.nextcart.nextcart.payment_module.dto.CreatePaymentRequestDTO;
+import com.nextcart.nextcart.payment_module.dto.CreatePaymentResponseDTO;
+import com.nextcart.nextcart.payment_module.dto.PaymentResponseDTO;
+import com.nextcart.nextcart.payment_module.dto.VerifyPaymentRequestDTO;
+import com.nextcart.nextcart.payment_module.entity.PaymentStatusEnum;
+import com.nextcart.nextcart.payment_module.entity.PaymentTransaction;
 import com.nextcart.nextcart.payment_module.repository.PaymentTransactionRepository;
 import com.nextcart.nextcart.user_module.entity.User;
 import com.nextcart.nextcart.user_module.repository.UserRepository;
@@ -22,6 +26,9 @@ import java.math.BigDecimal;
 @RequiredArgsConstructor
 public class PaymentServiceImpl implements PaymentService {
 
+    private static final String INR = "INR";
+    private static final String RAZORPAY = "RAZORPAY";
+
     private final PaymentTransactionRepository paymentRepository;
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
@@ -37,42 +44,134 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional
-    public CreatePaymentResponseDTO createRazorpayOrder(String userEmail, CreatePaymentRequestDTO requestDto) {
+    public CreatePaymentResponseDTO createRazorpayOrder(
+            String userEmail,
+            CreatePaymentRequestDTO requestDto) {
+
         User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() ->
+                        new RuntimeException("User not found")
+                );
 
-        Order order = orderRepository.findByIdAndUser(requestDto.getOrderId(), user)
-                .orElseThrow(() -> new RuntimeException("Order not found or access denied"));
+        Order order = orderRepository.findByIdAndUser(
+                        requestDto.getOrderId(),
+                        user
+                )
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Order not found or access denied"
+                        )
+                );
 
-        // Dynamically update or allow RAZORPAY as payment method
-        if (!"RAZORPAY".equalsIgnoreCase(order.getPaymentMethod())) {
-            order.setPaymentMethod("RAZORPAY");
+        if (order.getTotalAmount() == null) {
+            throw new RuntimeException(
+                    "Order total amount is missing"
+            );
+        }
+
+        if (order.getTotalAmount().signum() <= 0) {
+            throw new RuntimeException(
+                    "Order total amount must be greater than zero"
+            );
+        }
+
+        /*
+         * Payment creation is explicitly Razorpay based.
+         * Keep the order contract unchanged.
+         */
+        if (!RAZORPAY.equalsIgnoreCase(order.getPaymentMethod())) {
+            order.setPaymentMethod(RAZORPAY);
             orderRepository.save(order);
         }
 
-        long amountInPaise = order.getTotalAmount().multiply(new BigDecimal("100")).longValue();
+        /*
+         * If this order is already successfully paid,
+         * never create another Razorpay order.
+         */
+        if (PaymentStatus.COMPLETED.equals(order.getPaymentStatus())) {
+            throw new RuntimeException(
+                    "Order payment is already completed"
+            );
+        }
+
+        /*
+         * Reuse an existing transaction for this order when possible.
+         *
+         * This prevents simple frontend retries from creating
+         * unnecessary Razorpay orders.
+         */
+        var existingTransaction = paymentRepository.findByOrder(order);
+
+        if (existingTransaction.isPresent()) {
+
+            PaymentTransaction transaction =
+                    existingTransaction.get();
+
+            if (transaction.getStatus() == PaymentStatusEnum.SUCCESS) {
+                throw new RuntimeException(
+                        "Payment for this order is already completed"
+                );
+            }
+
+            if (transaction.getStatus() == PaymentStatusEnum.CREATED
+                    && transaction.getRazorpayOrderId() != null) {
+
+                return CreatePaymentResponseDTO.builder()
+                        .orderId(order.getId())
+                        .orderNumber(order.getOrderNumber())
+                        .razorpayOrderId(
+                                transaction.getRazorpayOrderId()
+                        )
+                        .amount(transaction.getAmountInPaise())
+                        .currency(transaction.getCurrency())
+                        .keyId(keyId)
+                        .build();
+            }
+        }
+
+        long amountInPaise = order.getTotalAmount()
+                .multiply(new BigDecimal("100"))
+                .longValueExact();
 
         try {
-            RazorpayClient razorpayClient = new RazorpayClient(keyId, keySecret);
+            RazorpayClient razorpayClient =
+                    new RazorpayClient(keyId, keySecret);
 
             JSONObject orderRequest = new JSONObject();
+
             orderRequest.put("amount", amountInPaise);
-            orderRequest.put("currency", "INR");
-            orderRequest.put("receipt", order.getOrderNumber());
+            orderRequest.put("currency", INR);
+            orderRequest.put(
+                    "receipt",
+                    order.getOrderNumber()
+            );
 
-            com.razorpay.Order razorpayOrder = razorpayClient.orders.create(orderRequest);
+            com.razorpay.Order razorpayOrder =
+                    razorpayClient.orders.create(orderRequest);
 
-            String razorpayOrderId = razorpayOrder.get("id");
+            String razorpayOrderId =
+                    razorpayOrder.get("id");
 
-            PaymentTransaction transaction = PaymentTransaction.builder()
-                    .user(user)
-                    .order(order)
-                    .razorpayOrderId(razorpayOrderId)
-                    .amountInPaise(amountInPaise)
-                    .amountInRupees(order.getTotalAmount())
-                    .currency("INR")
-                    .status(PaymentStatusEnum.CREATED)
-                    .build();
+            if (razorpayOrderId == null
+                    || razorpayOrderId.isBlank()) {
+
+                throw new RuntimeException(
+                        "Razorpay did not return an order ID"
+                );
+            }
+
+            PaymentTransaction transaction =
+                    PaymentTransaction.builder()
+                            .user(user)
+                            .order(order)
+                            .razorpayOrderId(razorpayOrderId)
+                            .amountInPaise(amountInPaise)
+                            .amountInRupees(
+                                    order.getTotalAmount()
+                            )
+                            .currency(INR)
+                            .status(PaymentStatusEnum.CREATED)
+                            .build();
 
             paymentRepository.save(transaction);
 
@@ -81,101 +180,371 @@ public class PaymentServiceImpl implements PaymentService {
                     .orderNumber(order.getOrderNumber())
                     .razorpayOrderId(razorpayOrderId)
                     .amount(amountInPaise)
-                    .currency("INR")
+                    .currency(INR)
                     .keyId(keyId)
                     .build();
 
+        } catch (ArithmeticException e) {
+            throw new RuntimeException(
+                    "Invalid order amount for payment"
+            );
         } catch (Exception e) {
-            throw new RuntimeException("Razorpay order creation failed: " + e.getMessage());
+            throw new RuntimeException(
+                    "Razorpay order creation failed: "
+                            + safeMessage(e)
+            );
         }
     }
 
     @Override
     @Transactional
-    public PaymentResponseDTO verifyPayment(String userEmail, VerifyPaymentRequestDTO requestDto) {
+    public PaymentResponseDTO verifyPayment(
+            String userEmail,
+            VerifyPaymentRequestDTO requestDto) {
+
         User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() ->
+                        new RuntimeException("User not found")
+                );
 
-        Order order = orderRepository.findByIdAndUser(requestDto.getOrderId(), user)
-                .orElseThrow(() -> new RuntimeException("Order not found or access denied"));
+        Order order = orderRepository.findByIdAndUser(
+                        requestDto.getOrderId(),
+                        user
+                )
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Order not found or access denied"
+                        )
+                );
 
-        PaymentTransaction transaction = paymentRepository.findByRazorpayOrderId(requestDto.getRazorpayOrderId())
-                .orElseThrow(() -> new RuntimeException("Transaction not found for Razorpay Order ID"));
+        PaymentTransaction transaction =
+                paymentRepository
+                        .findByRazorpayOrderId(
+                                requestDto.getRazorpayOrderId()
+                        )
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Transaction not found for Razorpay Order ID"
+                                )
+                        );
+
+        /*
+         * CRITICAL SECURITY CHECK:
+         *
+         * The Razorpay order ID supplied by the client must belong
+         * to the exact NextCart order being verified.
+         */
+        if (transaction.getOrder() == null
+                || !order.getId().equals(
+                        transaction.getOrder().getId()
+                )) {
+
+            throw new RuntimeException(
+                    "Payment transaction does not belong to this order"
+            );
+        }
+
+        /*
+         * Also verify the transaction belongs to the authenticated user.
+         */
+        if (transaction.getUser() == null
+                || !user.getId().equals(
+                        transaction.getUser().getId()
+                )) {
+
+            throw new RuntimeException(
+                    "Payment transaction does not belong to this user"
+            );
+        }
+
+        /*
+         * Idempotent success handling.
+         *
+         * A retry after a successful verification should not turn
+         * the transaction into FAILED.
+         */
+        if (transaction.getStatus() == PaymentStatusEnum.SUCCESS) {
+
+            if (requestDto.getRazorpayPaymentId() != null
+                    && transaction.getRazorpayPaymentId() != null
+                    && !transaction.getRazorpayPaymentId().equals(
+                            requestDto.getRazorpayPaymentId()
+                    )) {
+
+                throw new RuntimeException(
+                        "Transaction is already completed with a different payment ID"
+                );
+            }
+
+            if (!PaymentStatus.COMPLETED.equals(
+                    order.getPaymentStatus()
+            )) {
+                order.setPaymentStatus(
+                        PaymentStatus.COMPLETED
+                );
+                orderRepository.save(order);
+            }
+
+            return mapToResponseDTO(transaction);
+        }
+
+        /*
+         * Only CREATED transactions may be verified normally.
+         */
+        if (transaction.getStatus() != PaymentStatusEnum.CREATED) {
+            throw new RuntimeException(
+                    "Payment transaction cannot be verified from status: "
+                            + transaction.getStatus()
+            );
+        }
+
+        /*
+         * Amount consistency check.
+         *
+         * The amount verified here comes from our persisted
+         * PaymentTransaction, which was created from the Order.
+         */
+        long expectedAmountInPaise = order.getTotalAmount()
+                .multiply(new BigDecimal("100"))
+                .longValueExact();
+
+        if (transaction.getAmountInPaise() == null
+                || transaction.getAmountInPaise()
+                != expectedAmountInPaise) {
+
+            throw new RuntimeException(
+                    "Payment amount does not match the order amount"
+            );
+        }
 
         try {
             JSONObject attributes = new JSONObject();
-            attributes.put("razorpay_order_id", requestDto.getRazorpayOrderId());
-            attributes.put("razorpay_payment_id", requestDto.getRazorpayPaymentId());
-            attributes.put("razorpay_signature", requestDto.getRazorpaySignature());
 
-            boolean isValidSignature = Utils.verifyPaymentSignature(attributes, keySecret);
+            attributes.put(
+                    "razorpay_order_id",
+                    requestDto.getRazorpayOrderId()
+            );
+
+            attributes.put(
+                    "razorpay_payment_id",
+                    requestDto.getRazorpayPaymentId()
+            );
+
+            attributes.put(
+                    "razorpay_signature",
+                    requestDto.getRazorpaySignature()
+            );
+
+            boolean isValidSignature =
+                    Utils.verifyPaymentSignature(
+                            attributes,
+                            keySecret
+                    );
 
             if (!isValidSignature) {
-                transaction.setStatus(PaymentStatusEnum.FAILED);
-                transaction.setFailureReason("Signature verification failed");
-                paymentRepository.save(transaction);
-                throw new RuntimeException("Payment signature verification failed");
+                markTransactionFailed(
+                        transaction,
+                        "Signature verification failed"
+                );
+
+                throw new RuntimeException(
+                        "Payment signature verification failed"
+                );
             }
 
-            transaction.setRazorpayPaymentId(requestDto.getRazorpayPaymentId());
-            transaction.setRazorpaySignature(requestDto.getRazorpaySignature());
-            transaction.setStatus(PaymentStatusEnum.SUCCESS);
+            transaction.setRazorpayPaymentId(
+                    requestDto.getRazorpayPaymentId()
+            );
+
+            transaction.setRazorpaySignature(
+                    requestDto.getRazorpaySignature()
+            );
+
+            transaction.setFailureReason(null);
+            transaction.setStatus(
+                    PaymentStatusEnum.SUCCESS
+            );
+
             paymentRepository.save(transaction);
 
-            // Update Order Payment Status
-            order.setPaymentStatus(PaymentStatus.COMPLETED);
+            order.setPaymentStatus(
+                    PaymentStatus.COMPLETED
+            );
+
             orderRepository.save(order);
 
             return mapToResponseDTO(transaction);
 
+        } catch (RuntimeException e) {
+
+            /*
+             * Do not convert an already successful transaction
+             * into FAILED because of a later exception.
+             */
+            if (transaction.getStatus() != PaymentStatusEnum.SUCCESS
+                    && transaction.getStatus() != PaymentStatusEnum.FAILED) {
+
+                markTransactionFailed(
+                        transaction,
+                        safeMessage(e)
+                );
+            }
+
+            throw e;
+
         } catch (Exception e) {
-            transaction.setStatus(PaymentStatusEnum.FAILED);
-            transaction.setFailureReason(e.getMessage());
-            paymentRepository.save(transaction);
-            throw new RuntimeException("Payment verification exception: " + e.getMessage());
+
+            if (transaction.getStatus() != PaymentStatusEnum.SUCCESS) {
+                markTransactionFailed(
+                        transaction,
+                        safeMessage(e)
+                );
+            }
+
+            throw new RuntimeException(
+                    "Payment verification exception: "
+                            + safeMessage(e)
+            );
         }
     }
 
     @Override
     @Transactional(readOnly = true)
-    public PaymentResponseDTO getPaymentStatusByOrderId(String userEmail, Long orderId) {
+    public PaymentResponseDTO getPaymentStatusByOrderId(
+            String userEmail,
+            Long orderId) {
+
         User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() ->
+                        new RuntimeException("User not found")
+                );
 
-        Order order = orderRepository.findByIdAndUser(orderId, user)
-                .orElseThrow(() -> new RuntimeException("Order not found or access denied"));
+        Order order = orderRepository.findByIdAndUser(
+                        orderId,
+                        user
+                )
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Order not found or access denied"
+                        )
+                );
 
-        PaymentTransaction transaction = paymentRepository.findByOrder(order)
-                .orElseThrow(() -> new RuntimeException("No payment transaction found for this order"));
+        PaymentTransaction transaction =
+                paymentRepository.findByOrder(order)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "No payment transaction found for this order"
+                                )
+                        );
 
         return mapToResponseDTO(transaction);
     }
 
     @Override
     @Transactional
-    public PaymentResponseDTO reconcilePayment(String userEmail, Long orderId) {
+    public PaymentResponseDTO reconcilePayment(
+            String userEmail,
+            Long orderId) {
+
         User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() ->
+                        new RuntimeException("User not found")
+                );
 
-        Order order = orderRepository.findByIdAndUser(orderId, user)
-                .orElseThrow(() -> new RuntimeException("Order not found or access denied"));
+        Order order = orderRepository.findByIdAndUser(
+                        orderId,
+                        user
+                )
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Order not found or access denied"
+                        )
+                );
 
-        PaymentTransaction transaction = paymentRepository.findByOrder(order)
-                .orElseThrow(() -> new RuntimeException("No transaction found to reconcile"));
+        PaymentTransaction transaction =
+                paymentRepository.findByOrder(order)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "No transaction found to reconcile"
+                                )
+                        );
+
+        /*
+         * A successful payment is terminal for this flow.
+         * Reconciliation should not downgrade it.
+         */
+        if (transaction.getStatus()
+                == PaymentStatusEnum.SUCCESS) {
+
+            if (!PaymentStatus.COMPLETED.equals(
+                    order.getPaymentStatus()
+            )) {
+                order.setPaymentStatus(
+                        PaymentStatus.COMPLETED
+                );
+                orderRepository.save(order);
+            }
+
+            return mapToResponseDTO(transaction);
+        }
 
         try {
-            RazorpayClient razorpayClient = new RazorpayClient(keyId, keySecret);
-            com.razorpay.Order razorpayOrder = razorpayClient.orders.fetch(transaction.getRazorpayOrderId());
+            RazorpayClient razorpayClient =
+                    new RazorpayClient(
+                            keyId,
+                            keySecret
+                    );
 
-            String razorpayStatus = razorpayOrder.get("status");
+            com.razorpay.Order razorpayOrder =
+                    razorpayClient.orders.fetch(
+                            transaction.getRazorpayOrderId()
+                    );
+
+            String razorpayStatus =
+                    razorpayOrder.get("status");
 
             if ("paid".equalsIgnoreCase(razorpayStatus)) {
-                transaction.setStatus(PaymentStatusEnum.SUCCESS);
-                order.setPaymentStatus(PaymentStatus.COMPLETED);
-            } else if ("attempted".equalsIgnoreCase(razorpayStatus)) {
-                transaction.setStatus(PaymentStatusEnum.CREATED);
+
+                transaction.setStatus(
+                        PaymentStatusEnum.SUCCESS
+                );
+
+                transaction.setFailureReason(null);
+
+                order.setPaymentStatus(
+                        PaymentStatus.COMPLETED
+                );
+
+            } else if ("attempted".equalsIgnoreCase(
+                    razorpayStatus
+            )) {
+
+                transaction.setStatus(
+                        PaymentStatusEnum.CREATED
+                );
+
             } else {
-                transaction.setStatus(PaymentStatusEnum.FAILED);
+
+                transaction.setStatus(
+                        PaymentStatusEnum.FAILED
+                );
+
+                transaction.setFailureReason(
+                        "Razorpay order status: "
+                                + razorpayStatus
+                );
+
+                /*
+                 * Only mark the Order failed when it was not already
+                 * completed by another successful payment path.
+                 */
+                if (!PaymentStatus.COMPLETED.equals(
+                        order.getPaymentStatus()
+                )) {
+                    order.setPaymentStatus(
+                            PaymentStatus.FAILED
+                    );
+                }
             }
 
             paymentRepository.save(transaction);
@@ -184,57 +553,160 @@ public class PaymentServiceImpl implements PaymentService {
             return mapToResponseDTO(transaction);
 
         } catch (Exception e) {
-            throw new RuntimeException("Payment reconciliation failed: " + e.getMessage());
+            throw new RuntimeException(
+                    "Payment reconciliation failed: "
+                            + safeMessage(e)
+            );
         }
     }
 
     @Override
     @Transactional
-    public void handleRazorpayWebhook(String payload, String signature) {
+    public void handleRazorpayWebhook(
+            String payload,
+            String signature) {
+
         try {
-            boolean isValidWebhook = Utils.verifyWebhookSignature(payload, signature, webhookSecret);
+            boolean isValidWebhook =
+                    Utils.verifyWebhookSignature(
+                            payload,
+                            signature,
+                            webhookSecret
+                    );
+
             if (!isValidWebhook) {
-                throw new RuntimeException("Invalid webhook signature");
+                throw new RuntimeException(
+                        "Invalid webhook signature"
+                );
             }
 
-            JSONObject jsonObj = new JSONObject(payload);
-            String event = jsonObj.getString("event");
+            JSONObject jsonObj =
+                    new JSONObject(payload);
+
+            String event =
+                    jsonObj.getString("event");
 
             if ("payment.captured".equals(event)) {
-                JSONObject paymentEntity = jsonObj.getJSONObject("payload")
-                        .getJSONObject("payment")
-                        .getJSONObject("entity");
 
-                String razorpayOrderId = paymentEntity.getString("order_id");
-                String razorpayPaymentId = paymentEntity.getString("id");
+                JSONObject paymentEntity =
+                        jsonObj
+                                .getJSONObject("payload")
+                                .getJSONObject("payment")
+                                .getJSONObject("entity");
 
-                paymentRepository.findByRazorpayOrderId(razorpayOrderId).ifPresent(tx -> {
-                    tx.setStatus(PaymentStatusEnum.SUCCESS);
-                    tx.setRazorpayPaymentId(razorpayPaymentId);
-                    paymentRepository.save(tx);
+                String razorpayOrderId =
+                        paymentEntity.getString("order_id");
 
-                    Order order = tx.getOrder();
-                    order.setPaymentStatus(PaymentStatus.COMPLETED);
-                    orderRepository.save(order);
-                });
+                String razorpayPaymentId =
+                        paymentEntity.getString("id");
+
+                paymentRepository
+                        .findByRazorpayOrderId(
+                                razorpayOrderId
+                        )
+                        .ifPresent(transaction -> {
+
+                            /*
+                             * Do not downgrade a successful transaction.
+                             */
+                            if (transaction.getStatus()
+                                    != PaymentStatusEnum.SUCCESS) {
+
+                                transaction.setStatus(
+                                        PaymentStatusEnum.SUCCESS
+                                );
+
+                                transaction.setRazorpayPaymentId(
+                                        razorpayPaymentId
+                                );
+
+                                transaction.setFailureReason(null);
+
+                                paymentRepository.save(
+                                        transaction
+                                );
+                            }
+
+                            Order order =
+                                    transaction.getOrder();
+
+                            if (order != null
+                                    && !PaymentStatus.COMPLETED.equals(
+                                            order.getPaymentStatus()
+                                    )) {
+
+                                order.setPaymentStatus(
+                                        PaymentStatus.COMPLETED
+                                );
+
+                                orderRepository.save(order);
+                            }
+                        });
             }
 
         } catch (Exception e) {
-            throw new RuntimeException("Webhook handling error: " + e.getMessage());
+            throw new RuntimeException(
+                    "Webhook handling error: "
+                            + safeMessage(e)
+            );
         }
     }
 
-    private PaymentResponseDTO mapToResponseDTO(PaymentTransaction transaction) {
+    private void markTransactionFailed(
+            PaymentTransaction transaction,
+            String reason) {
+
+        /*
+         * Never downgrade SUCCESS → FAILED.
+         */
+        if (transaction.getStatus()
+                == PaymentStatusEnum.SUCCESS) {
+            return;
+        }
+
+        transaction.setStatus(
+                PaymentStatusEnum.FAILED
+        );
+
+        transaction.setFailureReason(
+                reason != null && !reason.isBlank()
+                        ? reason
+                        : "Payment processing failed"
+        );
+
+        paymentRepository.save(transaction);
+    }
+
+    private PaymentResponseDTO mapToResponseDTO(
+            PaymentTransaction transaction) {
+
         return PaymentResponseDTO.builder()
                 .transactionId(transaction.getId())
                 .orderId(transaction.getOrder().getId())
-                .orderNumber(transaction.getOrder().getOrderNumber())
-                .razorpayOrderId(transaction.getRazorpayOrderId())
-                .razorpayPaymentId(transaction.getRazorpayPaymentId())
+                .orderNumber(
+                        transaction.getOrder().getOrderNumber()
+                )
+                .razorpayOrderId(
+                        transaction.getRazorpayOrderId()
+                )
+                .razorpayPaymentId(
+                        transaction.getRazorpayPaymentId()
+                )
                 .amount(transaction.getAmountInRupees())
                 .currency(transaction.getCurrency())
                 .status(transaction.getStatus())
                 .createdAt(transaction.getCreatedAt())
                 .build();
+    }
+
+    private String safeMessage(Exception exception) {
+
+        String message = exception.getMessage();
+
+        if (message == null || message.isBlank()) {
+            return exception.getClass().getSimpleName();
+        }
+
+        return message;
     }
 }
