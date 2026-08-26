@@ -46,24 +46,25 @@ import useRequireAuth from "@/hooks/useRequireAuth";
  *   2. "Place Order" hits `POST /api/v1/orders/checkout` with
  *      `{ addressId, paymentMethod }`.
  *   3. If the user typed a fresh inline address, we first POST it to
- *      `/api/v1/addresses` (so we have an `addressId` to send).
+ *      `/api/v1/addresses` so we have an `addressId` to send.
  *   4. The local cart is only cleared AFTER the server returns 201.
- *      The server's `orderNumber` is the source of truth for the
- *      success page; no browser-generated IDs.
- *   5. Guests are redirected to /login — the backend checkout endpoint
- *      requires authentication.
+ *   5. The server's `orderNumber` is the source of truth for the
+ *      success page.
+ *   6. Guests are redirected to /login.
  *
- * Visual layout is byte-identical to the prior version: same fields,
- * same Cards, same Order Summary block, same button labels.
+ * Visual layout is unchanged.
  */
 export default function CheckoutPage() {
   const router = useRouter();
+
   const items = useCartStore((s) => s.items);
   const serverGrandTotal = useCartStore((s) => s.serverGrandTotal);
   const clearCart = useCartStore((s) => s.clearCart);
   const fetchCart = useCartStore((s) => s.fetchCart);
+
   const fetchAddresses = useAddressStore((s) => s.fetchAll);
   const addresses = useAddressStore((s) => s.items);
+
   const token = useAuthStore((s) => s.token);
 
   const defaultAddress = addresses.find((a) => a.isDefault === true);
@@ -74,18 +75,17 @@ export default function CheckoutPage() {
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [pincode, setPincode] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"COD" | "ONLINE">("COD");
+
+  const [paymentMethod, setPaymentMethod] =
+    useState<"COD" | "ONLINE">("COD");
+
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Auth gate: checkout requires a logged-in user. Hydration-safe (waits for
-  // the persisted token to be restored) so a logged-in user is not bounced to
-  // /login on a hard refresh. Guests are redirected with a return path.
+  // Auth gate.
   useRequireAuth("/checkout");
 
-  // Pre-fill the form from the user's default saved address, exactly once
-  // after the addresses load. Only runs when fields are still empty so the
-  // user can keep editing without their input being clobbered.
+  // Pre-fill from the user's default saved address.
   useEffect(() => {
     if (token && defaultAddress) {
       flushSync(() => {
@@ -99,76 +99,57 @@ export default function CheckoutPage() {
     }
   }, [token, defaultAddress]);
 
-  // Kick off the address fetch + cart refresh on mount when authenticated.
+  // Fetch addresses and refresh the server cart.
   useEffect(() => {
     if (!token) return;
+
     void fetchAddresses();
     void fetchCart();
   }, [token, fetchAddresses, fetchCart]);
 
-  // Brief: backend is the absolute source of truth for the total.
+  // Backend is the source of truth.
   const total = serverGrandTotal;
-  const subtotal = serverGrandTotal; // free shipping + no discount yet
+  const subtotal = serverGrandTotal;
 
   /**
-   * Decide which `addressId` to send. If the inline fields exactly
-   * match a saved address (especially the default), reuse its id. If
-   * the user typed something new, persist it first and use the
-   * returned id.
+   * Decide which address ID should be sent to checkout.
+   *
+   * This function is now defined inside handlePlaceOrder so it does not
+   * create a changing dependency on every render.
    */
-  const resolveAddressId = async (): Promise<number> => {
-    if (defaultAddress && fieldsMatch(defaultAddress)) {
-      return defaultAddress.id;
-    }
-    const createRes = await apiCreateAddress({
-      fullName,
-      phoneNumber: phone,
-      streetAddress: addressLine,
-      landmark: "",
-      city,
-      state,
-      postalCode: pincode,
-      country: "India",
-      isDefault: addresses.length === 0,
-    });
-    if (!createRes.ok) {
-      throw new Error(createRes.message);
-    }
-    return createRes.data.id;
-  };
-
-  function fieldsMatch(a: NonNullable<typeof defaultAddress>): boolean {
-    return (
-      a.fullName === fullName &&
-      a.phoneNumber === phone &&
-      a.streetAddress === addressLine &&
-      a.city === city &&
-      a.state === state &&
-      a.postalCode === pincode
-    );
-  }
-
   const handlePlaceOrder = useCallback(async () => {
     if (submitting) return;
 
-    if (!fullName || !phone || !addressLine || !city || !state || !pincode) {
+    if (
+      !fullName ||
+      !phone ||
+      !addressLine ||
+      !city ||
+      !state ||
+      !pincode
+    ) {
       setError("Please fill in all address fields.");
       return;
     }
 
     const phoneError = validateAddressPhone(phone);
+
     if (phoneError) {
       setError(phoneError);
       return;
     }
+
     const pincodeError = validatePostalCode(pincode);
+
     if (pincodeError) {
       setError(pincodeError);
       return;
     }
 
     if (paymentMethod !== "COD") {
-      setError("Online payment is not available yet. Please select Cash on Delivery.");
+      setError(
+        "Online payment is not available yet. Please select Cash on Delivery.",
+      );
       return;
     }
 
@@ -176,25 +157,77 @@ export default function CheckoutPage() {
     setSubmitting(true);
 
     try {
-      // Step 1: resolve the addressId.
-      const addressId = await resolveAddressId();
+      /*
+       * Step 1: Resolve address ID.
+       *
+       * Kept inside the callback intentionally so ESLint does not report
+       * resolveAddressId as a changing dependency.
+       */
+      let addressId: number;
 
-      // Step 2: hit the server-authoritative checkout endpoint.
+      const matchesDefaultAddress =
+        defaultAddress &&
+        defaultAddress.fullName === fullName &&
+        defaultAddress.phoneNumber === phone &&
+        defaultAddress.streetAddress === addressLine &&
+        defaultAddress.city === city &&
+        defaultAddress.state === state &&
+        defaultAddress.postalCode === pincode;
+
+      if (matchesDefaultAddress) {
+        addressId = defaultAddress.id;
+      } else {
+        const createRes = await apiCreateAddress({
+          fullName,
+          phoneNumber: phone,
+          streetAddress: addressLine,
+          landmark: "",
+          city,
+          state,
+          postalCode: pincode,
+          country: "India",
+          isDefault: addresses.length === 0,
+        });
+
+        if (!createRes.ok) {
+          throw new Error(createRes.message);
+        }
+
+        addressId = createRes.data.id;
+      }
+
+      /*
+       * Step 2: Server-authoritative checkout.
+       */
       const result = await apiCheckout(addressId, "COD");
+
       if (!result.ok) {
         setError(result.message);
         return;
       }
 
-      // Step 3: only clear the local cart AFTER the server returns
-      // success. Re-fetch so the server-cart is empty too.
+      /*
+       * Step 3: Clear cart only after successful checkout.
+       */
       await clearCart();
+
+      /*
+       * Refresh the server cart so the frontend remains synchronized.
+       */
       void fetchCart();
 
-      // Step 4: navigate with the server's orderNumber — no mock IDs.
-      router.push(`/order-success?orderId=${encodeURIComponent(result.data.orderNumber)}`);
+      /*
+       * Step 4: Use the server-generated order number.
+       */
+      router.push(
+        `/order-success?orderId=${encodeURIComponent(
+          result.data.orderNumber,
+        )}`,
+      );
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Checkout failed.";
+      const message =
+        err instanceof Error ? err.message : "Checkout failed.";
+
       setError(message);
     } finally {
       setSubmitting(false);
@@ -208,27 +241,60 @@ export default function CheckoutPage() {
     state,
     pincode,
     paymentMethod,
+    defaultAddress,
+    addresses.length,
     clearCart,
     fetchCart,
-    resolveAddressId,
     router,
   ]);
 
+  /*
+   * Empty cart state.
+   */
   if (items.length === 0) {
     return (
       <>
         <Header />
-        <Container maxWidth="md" sx={{ py: 10, textAlign: "center" }}>
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
+
+        <Container
+          maxWidth="md"
+          sx={{
+            py: 10,
+            textAlign: "center",
+          }}
+        >
+          <Typography
+            variant="h4"
+            sx={{ fontWeight: 700 }}
+          >
             Your Cart is Empty
           </Typography>
-          <Typography sx={{ mt: 2, color: "text.secondary" }}>
+
+          <Typography
+            sx={{
+              mt: 2,
+              color: "text.secondary",
+            }}
+          >
             Add items to your cart before checking out.
           </Typography>
-          <Button component={Link} href="/" variant="contained" size="large" sx={{ mt: 4 }}>
+
+          <Button
+            component={Link}
+            href="/"
+            fullWidth
+            variant="contained"
+            size="large"
+            sx={{
+              mt: 4,
+              py: 1.5,
+              borderRadius: 2,
+            }}
+          >
             Continue Shopping
           </Button>
         </Container>
+
         <Footer />
       </>
     );
@@ -238,23 +304,46 @@ export default function CheckoutPage() {
     <>
       <Header />
 
-      <Container maxWidth="xl" sx={{ py: 5 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, mb: 4 }}>
+      <Container
+        maxWidth="xl"
+        sx={{ py: 5 }}
+      >
+        <Typography
+          variant="h4"
+          sx={{
+            fontWeight: 700,
+            mb: 4,
+          }}
+        >
           Checkout
         </Typography>
 
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: { xs: "1fr", md: "2fr 1fr" },
+            gridTemplateColumns: {
+              xs: "1fr",
+              md: "2fr 1fr",
+            },
             gap: 4,
           }}
         >
           {/* Left: Address + Payment */}
           <Box>
-            <Card sx={{ borderRadius: 3, mb: 3 }}>
+            <Card
+              sx={{
+                borderRadius: 3,
+                mb: 3,
+              }}
+            >
               <CardContent>
-                <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: 700,
+                    mb: 2,
+                  }}
+                >
                   Delivery Address
                 </Typography>
 
@@ -264,47 +353,64 @@ export default function CheckoutPage() {
                       fullWidth
                       label="Full Name"
                       value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
+                      onChange={(e) =>
+                        setFullName(e.target.value)
+                      }
                     />
                   </Grid>
+
                   <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       fullWidth
                       label="Phone Number"
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      onChange={(e) =>
+                        setPhone(e.target.value)
+                      }
                     />
                   </Grid>
+
                   <Grid size={{ xs: 12 }}>
                     <TextField
                       fullWidth
                       label="Address"
                       value={addressLine}
-                      onChange={(e) => setAddressLine(e.target.value)}
+                      onChange={(e) =>
+                        setAddressLine(e.target.value)
+                      }
                     />
                   </Grid>
+
                   <Grid size={{ xs: 12, sm: 4 }}>
                     <TextField
                       fullWidth
                       label="City"
                       value={city}
-                      onChange={(e) => setCity(e.target.value)}
+                      onChange={(e) =>
+                        setCity(e.target.value)
+                      }
                     />
                   </Grid>
+
                   <Grid size={{ xs: 12, sm: 4 }}>
                     <TextField
                       fullWidth
                       label="State"
                       value={state}
-                      onChange={(e) => setState(e.target.value)}
+                      onChange={(e) =>
+                        setState(e.target.value)
+                      }
                     />
                   </Grid>
+
                   <Grid size={{ xs: 12, sm: 4 }}>
                     <TextField
                       fullWidth
                       label="Pincode"
                       value={pincode}
-                      onChange={(e) => setPincode(e.target.value)}
+                      onChange={(e) =>
+                        setPincode(e.target.value)
+                      }
                     />
                   </Grid>
                 </Grid>
@@ -313,14 +419,22 @@ export default function CheckoutPage() {
 
             <Card sx={{ borderRadius: 3 }}>
               <CardContent>
-                <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: 700,
+                    mb: 2,
+                  }}
+                >
                   Payment Method
                 </Typography>
 
                 <RadioGroup
                   value={paymentMethod}
                   onChange={(e) =>
-                    setPaymentMethod(e.target.value as "COD" | "ONLINE")
+                    setPaymentMethod(
+                      e.target.value as "COD" | "ONLINE",
+                    )
                   }
                 >
                   <FormControlLabel
@@ -328,6 +442,7 @@ export default function CheckoutPage() {
                     control={<Radio />}
                     label="Cash on Delivery"
                   />
+
                   <FormControlLabel
                     value="ONLINE"
                     control={<Radio />}
@@ -349,7 +464,10 @@ export default function CheckoutPage() {
             }}
           >
             <CardContent>
-              <Typography variant="h5" sx={{ fontWeight: 700 }}>
+              <Typography
+                variant="h5"
+                sx={{ fontWeight: 700 }}
+              >
                 Order Summary
               </Typography>
 
@@ -358,24 +476,43 @@ export default function CheckoutPage() {
               {items.map((item) => (
                 <Box
                   key={item.id}
-                  sx={{ display: "flex", gap: 2, mb: 2, alignItems: "center" }}
+                  sx={{
+                    display: "flex",
+                    gap: 2,
+                    mb: 2,
+                    alignItems: "center",
+                  }}
                 >
                   <Image
                     src={item.image}
                     alt={item.title}
                     width={50}
                     height={50}
-                    style={{ objectFit: "contain" }}
+                    style={{
+                      objectFit: "contain",
+                    }}
                   />
+
                   <Box sx={{ flex: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{ fontWeight: 600 }}
+                    >
                       {item.title}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">
+
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                    >
                       Qty: {item.quantity}
                     </Typography>
                   </Box>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+
+                  <Typography
+                    variant="body2"
+                    sx={{ fontWeight: 600 }}
+                  >
                     ₹{(item.price * item.quantity).toLocaleString()}
                   </Typography>
                 </Box>
@@ -383,31 +520,62 @@ export default function CheckoutPage() {
 
               <Divider sx={{ my: 2 }} />
 
-              <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  mb: 2,
+                }}
+              >
                 <Typography>Subtotal</Typography>
+
                 <Typography sx={{ fontWeight: 600 }}>
                   ₹{subtotal.toLocaleString()}
                 </Typography>
               </Box>
 
-              <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  mb: 2,
+                }}
+              >
                 <Typography>Shipping</Typography>
-                <Typography color="success.main">FREE</Typography>
+
+                <Typography color="success.main">
+                  FREE
+                </Typography>
               </Box>
 
               <Divider sx={{ my: 3 }} />
 
-              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                }}
+              >
+                <Typography
+                  variant="h6"
+                  sx={{ fontWeight: 700 }}
+                >
                   Total
                 </Typography>
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+
+                <Typography
+                  variant="h6"
+                  sx={{ fontWeight: 700 }}
+                >
                   ₹{total.toLocaleString()}
                 </Typography>
               </Box>
 
               {error && (
-                <Alert severity="error" sx={{ mt: 3 }}>
+                <Alert
+                  severity="error"
+                  sx={{ mt: 3 }}
+                >
                   {error}
                 </Alert>
               )}
@@ -416,16 +584,23 @@ export default function CheckoutPage() {
                 fullWidth
                 variant="contained"
                 size="large"
-                sx={{ mt: 4, py: 1.5, borderRadius: 2 }}
+                sx={{
+                  mt: 4,
+                  py: 1.5,
+                  borderRadius: 2,
+                }}
                 onClick={handlePlaceOrder}
                 disabled={submitting}
               >
-                {submitting ? "Placing Order…" : "Place Order"}
+                {submitting
+                  ? "Placing Order…"
+                  : "Place Order"}
               </Button>
             </CardContent>
           </Card>
         </Box>
       </Container>
+
       <Footer />
     </>
   );

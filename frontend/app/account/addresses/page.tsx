@@ -88,33 +88,32 @@ export default function AccountAddressesPage() {
     }
   }, [token, fetchAll]);
 
-  // Seed/reset the form when changing modes
-  useEffect(() => {
-    if (mode.kind === "edit") {
-      const a = mode.address;
-
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setForm({
-        fullName: a.fullName ?? "",
-        phoneNumber: a.phoneNumber ?? "",
-        streetAddress: a.streetAddress ?? "",
-        landmark: a.landmark ?? "",
-        city: a.city ?? "",
-        state: a.state ?? "",
-        postalCode: a.postalCode ?? "",
-        country: a.country ?? "India",
-        isDefault: a.isDefault ?? false,
-      });
-    } else if (mode.kind === "create") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setForm({
-        ...EMPTY_FORM,
-      });
-    }
-
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+  const startCreating = () => {
+    setForm({ ...EMPTY_FORM });
     setFormError(null);
-  }, [mode]);
+    setMode({ kind: "create" });
+  };
+
+  const startEditing = (address: AddressResponseDTO) => {
+    setForm({
+      fullName: address.fullName ?? "",
+      phoneNumber: address.phoneNumber ?? "",
+      streetAddress: address.streetAddress ?? "",
+      landmark: address.landmark ?? "",
+      city: address.city ?? "",
+      state: address.state ?? "",
+      postalCode: address.postalCode ?? "",
+      country: address.country ?? "India",
+      isDefault: address.isDefault ?? false,
+    });
+    setFormError(null);
+    setMode({ kind: "edit", address });
+  };
+
+  const returnToList = () => {
+    setFormError(null);
+    setMode({ kind: "list" });
+  };
 
   const validateForm = (): string | null => {
     if (!form.fullName.trim()) {
@@ -218,7 +217,7 @@ export default function AccountAddressesPage() {
           {mode.kind === "list" && (
             <Button
               variant="contained"
-              onClick={() => setMode({ kind: "create" })}
+              onClick={startCreating}
             >
               Add New Address
             </Button>
@@ -251,7 +250,7 @@ export default function AccountAddressesPage() {
                   <Button
                     variant="contained"
                     sx={{ mt: 3 }}
-                    onClick={() => setMode({ kind: "create" })}
+                    onClick={startCreating}
                   >
                     Add Your First Address
                   </Button>
@@ -341,12 +340,7 @@ export default function AccountAddressesPage() {
 
                           <IconButton
                             aria-label="Edit address"
-                            onClick={() =>
-                              setMode({
-                                kind: "edit",
-                                address: a,
-                              })
-                            }
+                            onClick={() => startEditing(a)}
                           >
                             <EditIcon />
                           </IconButton>
@@ -547,7 +541,7 @@ export default function AccountAddressesPage() {
                     : "Save Address"}
                 </Button>
 
-                <Button onClick={() => setMode({ kind: "list" })}>
+                <Button onClick={returnToList}>
                   Cancel
                 </Button>
               </Box>

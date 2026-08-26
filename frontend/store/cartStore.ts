@@ -51,28 +51,51 @@ import {
    ───────────────────────────────────────────────────────────────────── */
 
 export interface CartItem {
-  /** Cart-item ROW id from the server (unique per line; stable). */
+  /** Cart-item ROW id from the server. */
   id: number | string;
-  /** Backend product id (needed to re-add / as a fallback). */
+
+  /** Backend product id. */
   productId: number;
+
   slug: string;
   title: string;
   image: string;
+
+  /** Backend-authoritative unit price. */
   price: number;
+
   quantity: number;
-  /** Backend variant id — resolved from the retained meta map. */
+
+  /** Backend-authoritative line total. */
+  itemTotal: number;
+
+  /** Backend variant id, retained until backend returns it directly. */
   variantId?: string | number;
+
   variantLabel?: string;
 }
 
+/**
+ * Payload used by frontend callers when adding an item to the cart.
+ *
+ * The backend requires:
+ *   productId
+ *   variantId
+ *   quantity
+ */
 export interface CartAddPayload {
-  id: number | string;
+  /** Backend product id. */
+  productId: number | string;
+
   slug?: string;
   title: string;
   image: string;
   price: number;
   quantity: number;
+
+  /** Backend variant id. */
   variantId?: string | number;
+
   variantLabel?: string;
 }
 
@@ -85,6 +108,7 @@ interface CartStore {
 
   /** Backend-computed grand total. UI must read THIS, not local math. */
   serverGrandTotal: number;
+
   /** Backend-computed total units. */
   serverTotalItems: number;
 
@@ -116,17 +140,20 @@ interface CartStore {
 
   clearError: () => void;
 
-  /* Shims kept so the existing Cart page keeps compiling. They delegate
-     to the async actions. `options.variantId` (if provided) is used to
-     seed the meta map when the line's variant isn't otherwise known. */
+  /*
+   * Shims kept so the existing Cart page keeps compiling.
+   * They delegate to the async actions.
+   */
   increaseQuantity: (
     rowId: number | string,
     options?: { variantId?: string | number },
   ) => void;
+
   decreaseQuantity: (
     rowId: number | string,
     options?: { variantId?: string | number },
   ) => void;
+
   totalCount: () => number;
 }
 
@@ -144,11 +171,16 @@ interface LineMeta {
   image?: string;
 }
 
-const META_STORAGE_KEY = "nextcart-cart-meta";
+const META_STORAGE_KEY = "nextcart-cart-line-meta";
+const DEFAULT_PRODUCT_IMAGE = "/images/product-placeholder.png";
 
 function toFiniteNumber(v: unknown): number | undefined {
-  if (v === null || v === undefined || v === "") return undefined;
+  if (v === null || v === undefined || v === "") {
+    return undefined;
+  }
+
   const n = Number(v);
+
   return Number.isFinite(n) ? n : undefined;
 }
 
@@ -157,17 +189,26 @@ function toFiniteNumber(v: unknown): number | undefined {
    ───────────────────────────────────────────────────────────────────── */
 
 const useCartStore = create<CartStore>((set, get) => {
-  // rowId(string) → LineMeta. Lazily loaded from localStorage on first
-  // client-side use so the store factory stays SSR-safe.
+  // rowId(string) → LineMeta.
+  // Lazily loaded from localStorage on first client-side use so the
+  // store factory stays SSR-safe.
   let metaByRowId = new Map<string, LineMeta>();
   let metaLoaded = false;
 
   function loadMeta(): Map<string, LineMeta> {
-    if (typeof window === "undefined") return new Map();
+    if (typeof window === "undefined") {
+      return new Map();
+    }
+
     try {
       const raw = window.localStorage.getItem(META_STORAGE_KEY);
-      if (!raw) return new Map();
+
+      if (!raw) {
+        return new Map();
+      }
+
       const parsed = JSON.parse(raw) as Record<string, LineMeta>;
+
       return new Map(Object.entries(parsed));
     } catch {
       return new Map();
@@ -175,15 +216,26 @@ const useCartStore = create<CartStore>((set, get) => {
   }
 
   function saveMeta() {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") {
+      return;
+    }
+
     try {
       const obj: Record<string, LineMeta> = {};
-      metaByRowId.forEach((v, k) => {
-        obj[k] = v;
+
+      metaByRowId.forEach((value, key) => {
+        obj[key] = value;
       });
-      window.localStorage.setItem(META_STORAGE_KEY, JSON.stringify(obj));
+
+      window.localStorage.setItem(
+        META_STORAGE_KEY,
+        JSON.stringify(obj),
+      );
     } catch {
-      /* storage full / disabled — non-fatal, in-memory map still works */
+      /*
+       * Storage full / disabled — non-fatal.
+       * The in-memory map still works.
+       */
     }
   }
 
@@ -192,19 +244,33 @@ const useCartStore = create<CartStore>((set, get) => {
       metaByRowId = loadMeta();
       metaLoaded = true;
     }
+
     return metaByRowId;
   }
 
-  function mapWire(wire: CartResponseWire["items"][number]): CartItem {
+  function mapWire(
+    wire: CartResponseWire["items"][number],
+  ): CartItem {
     const meta = ensureMeta().get(String(wire.id));
+
     return {
       id: wire.id,
       productId: wire.productId,
+
       slug: meta?.slug ?? "",
       title: wire.productName || meta?.title || "",
-      image: wire.productImage ?? meta?.image ?? "",
+
+      image:
+        wire.productImage ??
+        meta?.image ??
+        DEFAULT_PRODUCT_IMAGE,
+
       price: wire.price,
       quantity: wire.quantity,
+
+      // Backend is authoritative for line totals.
+      itemTotal: wire.itemTotal,
+
       variantId: meta?.variantId,
       variantLabel: meta?.variantLabel,
     };
@@ -213,16 +279,23 @@ const useCartStore = create<CartStore>((set, get) => {
   function apply(response: CartResponseWire) {
     const items = response.items.map(mapWire);
 
-    // Housekeeping: drop meta for rows no longer in the cart.
-    const liveRowIds = new Set(response.items.map((w) => String(w.id)));
+    // Housekeeping: drop metadata for rows no longer in the cart.
+    const liveRowIds = new Set(
+      response.items.map((wire) => String(wire.id)),
+    );
+
     let pruned = false;
-    ensureMeta().forEach((_v, k) => {
-      if (!liveRowIds.has(k)) {
-        metaByRowId.delete(k);
+
+    ensureMeta().forEach((_value, key) => {
+      if (!liveRowIds.has(key)) {
+        metaByRowId.delete(key);
         pruned = true;
       }
     });
-    if (pruned) saveMeta();
+
+    if (pruned) {
+      saveMeta();
+    }
 
     set({
       items,
@@ -231,12 +304,24 @@ const useCartStore = create<CartStore>((set, get) => {
       loading: false,
       error: null,
     });
-    return { items, grandTotal: response.grandTotal, totalItems: response.totalItems };
+
+    return {
+      items,
+      grandTotal: response.grandTotal,
+      totalItems: response.totalItems,
+    };
   }
 
   function failWith(message: string) {
-    set({ loading: false, error: message });
-    return { ok: false as const, message };
+    set({
+      loading: false,
+      error: message,
+    });
+
+    return {
+      ok: false as const,
+      message,
+    };
   }
 
   return {
@@ -247,49 +332,94 @@ const useCartStore = create<CartStore>((set, get) => {
     error: null,
 
     async fetchCart() {
-      set({ loading: true, error: null });
+      set({
+        loading: true,
+        error: null,
+      });
+
       const res = await apiGetCart();
+
       if (!res.ok) {
-        set({ loading: false, error: res.message });
-        return { ok: false, message: res.message };
+        set({
+          loading: false,
+          error: res.message,
+        });
+
+        return {
+          ok: false,
+          message: res.message,
+        };
       }
+
       const mapped = apply(res.data);
-      return { ok: true, data: mapped.items };
+
+      return {
+        ok: true,
+        data: mapped.items,
+      };
     },
 
     async addToCart(item) {
-      set({ error: null });
+      set({
+        error: null,
+      });
 
-      const productId = toFiniteNumber(item.id);
+      const productId = toFiniteNumber(item.productId);
+
       if (productId === undefined) {
         return failWith("Invalid product id.");
       }
 
       const variantId = toFiniteNumber(item.variantId);
+
       if (variantId === undefined) {
-        // The backend requires a variantId; don't fire a doomed request.
         return failWith(
           "Please select a variant before adding this item to your cart.",
         );
       }
 
-      const quantity = Math.max(1, Math.floor(item.quantity || 1));
+      const quantity = Math.max(
+        1,
+        Math.floor(item.quantity || 1),
+      );
 
-      // Snapshot existing rows so we can attribute a newly created row to
-      // the variant we just added (the response doesn't echo variantId).
-      const beforeRowIds = new Set(get().items.map((i) => String(i.id)));
+      /*
+       * Snapshot existing rows so we can attribute a newly created row
+       * to the variant we just added.
+       *
+       * The backend response does not echo variantId.
+       */
+      const beforeRowIds = new Set(
+        get().items.map((cartItem) => String(cartItem.id)),
+      );
 
-      set({ loading: true });
-      const res = await apiAddItem(productId, variantId, quantity);
+      set({
+        loading: true,
+      });
+
+      const res = await apiAddItem(
+        productId,
+        variantId,
+        quantity,
+      );
+
       if (!res.ok) {
         return failWith(res.message);
       }
 
       ensureMeta();
-      // New rows for this product created by the add → attach variant/meta.
+
+      /*
+       * New rows for this product created by the add.
+       * Attach the variant/meta information locally because the backend
+       * CartItemResponseDTO does not return variantId, slug or image.
+       */
       const newRowsForProduct = res.data.items.filter(
-        (w) => !beforeRowIds.has(String(w.id)) && w.productId === productId,
+        (wire) =>
+          !beforeRowIds.has(String(wire.id)) &&
+          wire.productId === productId,
       );
+
       const metaRecord: LineMeta = {
         productId,
         variantId,
@@ -298,84 +428,181 @@ const useCartStore = create<CartStore>((set, get) => {
         title: item.title,
         image: item.image,
       };
+
       if (newRowsForProduct.length === 1) {
-        // Common case: exactly one new line → unambiguous.
-        metaByRowId.set(String(newRowsForProduct[0].id), metaRecord);
+        /*
+         * Common case: exactly one new line → unambiguous.
+         */
+        metaByRowId.set(
+          String(newRowsForProduct[0].id),
+          metaRecord,
+        );
       } else if (newRowsForProduct.length === 0) {
-        // Existing variant → quantity bumped on a known row. Refresh its
-        // meta (in case slug/image/label improved) for any row of this
-        // product that we already track with the same variantId.
-        res.data.items.forEach((w) => {
-          if (w.productId !== productId) return;
-          const existing = metaByRowId.get(String(w.id));
-          if (existing && existing.variantId === variantId) {
-            metaByRowId.set(String(w.id), { ...existing, ...metaRecord });
+        /*
+         * Existing variant → quantity bumped on a known row.
+         *
+         * Refresh its metadata for any row of this product that we
+         * already track with the same variantId.
+         */
+        res.data.items.forEach((wire) => {
+          if (wire.productId !== productId) {
+            return;
+          }
+
+          const existing = metaByRowId.get(String(wire.id));
+
+          if (
+            existing &&
+            existing.variantId === variantId
+          ) {
+            metaByRowId.set(
+              String(wire.id),
+              {
+                ...existing,
+                ...metaRecord,
+              },
+            );
           }
         });
       }
+
       saveMeta();
 
+      /*
+       * Server response remains authoritative.
+       * Never construct or optimistically invent cart totals/items.
+       */
       const mapped = apply(res.data);
-      return { ok: true, data: mapped.items };
+
+      return {
+        ok: true,
+        data: mapped.items,
+      };
     },
 
     async updateQuantity(rowId, quantity) {
-      set({ error: null });
-      const line = get().items.find((i) => String(i.id) === String(rowId));
+      set({
+        error: null,
+      });
+
+      const line = get().items.find(
+        (item) => String(item.id) === String(rowId),
+      );
+
       const variantId = toFiniteNumber(line?.variantId);
+
       if (variantId === undefined) {
         return failWith(
           "We can't identify this item's variant, so its quantity can't be changed here. Please remove it and re-add it from the product page.",
         );
       }
-      const safeQty = Math.max(1, Math.floor(quantity || 1));
-      set({ loading: true });
-      const res = await apiUpdateItem(variantId, safeQty);
+
+      const safeQty = Math.max(
+        1,
+        Math.floor(quantity || 1),
+      );
+
+      set({
+        loading: true,
+      });
+
+      const res = await apiUpdateItem(
+        variantId,
+        safeQty,
+      );
+
       if (!res.ok) {
         return failWith(res.message);
       }
+
       const mapped = apply(res.data);
-      return { ok: true, data: mapped.items };
+
+      return {
+        ok: true,
+        data: mapped.items,
+      };
     },
 
     async removeFromCart(rowId) {
-      set({ error: null });
-      const line = get().items.find((i) => String(i.id) === String(rowId));
+      set({
+        error: null,
+      });
+
+      const line = get().items.find(
+        (item) => String(item.id) === String(rowId),
+      );
+
       const variantId = toFiniteNumber(line?.variantId);
+
       if (variantId === undefined) {
         return failWith(
           "We can't identify this item's variant, so it can't be removed here. Please clear the cart or re-add it from the product page.",
         );
       }
-      set({ loading: true });
+
+      set({
+        loading: true,
+      });
+
       const res = await apiRemoveItem(variantId);
+
       if (!res.ok) {
         return failWith(res.message);
       }
+
       const mapped = apply(res.data);
-      return { ok: true, data: mapped.items };
+
+      return {
+        ok: true,
+        data: mapped.items,
+      };
     },
 
     async clearCart() {
-      set({ error: null });
+      set({
+        loading: true,
+        error: null,
+      });
+
+      /*
+       * Backend returns 204 No Content.
+       * cartService handles the empty response and returns success.
+       */
       const res = await apiClearCart();
+
       if (!res.ok) {
-        set({ error: res.message });
-        return { ok: false, message: res.message };
+        set({
+          loading: false,
+          error: res.message,
+        });
+
+        return {
+          ok: false,
+          message: res.message,
+        };
       }
+
       ensureMeta().clear();
       saveMeta();
+
       set({
         items: [],
         serverGrandTotal: 0,
         serverTotalItems: 0,
+        loading: false,
+        error: null,
       });
-      return { ok: true, data: true };
+
+      return {
+        ok: true,
+        data: true,
+      };
     },
 
     reset() {
       ensureMeta().clear();
       saveMeta();
+
       set({
         items: [],
         serverGrandTotal: 0,
@@ -386,44 +613,93 @@ const useCartStore = create<CartStore>((set, get) => {
     },
 
     clearError() {
-      set({ error: null });
+      set({
+        error: null,
+      });
     },
 
-    // ── Shims (used by the cart page) ─────────────────────────────────
+    // ── Shims used by the existing Cart page ─────────────────────────
+
     increaseQuantity(rowId, options) {
       seedVariantFromOptions(rowId, options);
-      const line = get().items.find((i) => String(i.id) === String(rowId));
+
+      const line = get().items.find(
+        (item) => String(item.id) === String(rowId),
+      );
+
       const next = (line?.quantity ?? 0) + 1;
+
       void get().updateQuantity(rowId, next);
     },
+
     decreaseQuantity(rowId, options) {
       seedVariantFromOptions(rowId, options);
-      const line = get().items.find((i) => String(i.id) === String(rowId));
-      const next = Math.max(1, (line?.quantity ?? 0) - 1);
+
+      const line = get().items.find(
+        (item) => String(item.id) === String(rowId),
+      );
+
+      const next = Math.max(
+        1,
+        (line?.quantity ?? 0) - 1,
+      );
+
       void get().updateQuantity(rowId, next);
     },
+
     totalCount() {
-      return get().serverTotalItems || get().items.reduce((s, i) => s + i.quantity, 0);
+      return (
+        get().serverTotalItems ||
+        get().items.reduce(
+          (sum, item) => sum + item.quantity,
+          0,
+        )
+      );
     },
   };
 
-  // If the caller (cart page) still knows a line's variantId, use it to
-  // seed the meta map for lines we couldn't otherwise resolve.
+  /*
+   * If the caller (cart page) still knows a line's variantId,
+   * use it to seed the metadata map for lines we couldn't otherwise
+   * resolve.
+   */
   function seedVariantFromOptions(
     rowId: number | string,
     options?: { variantId?: string | number },
   ) {
-    const optVariant = toFiniteNumber(options?.variantId);
-    if (optVariant === undefined) return;
+    const optVariant = toFiniteNumber(
+      options?.variantId,
+    );
+
+    if (optVariant === undefined) {
+      return;
+    }
+
     const key = String(rowId);
     const meta = ensureMeta().get(key) ?? {};
-    if (meta.variantId === optVariant) return;
-    metaByRowId.set(key, { ...meta, variantId: optVariant });
+
+    if (meta.variantId === optVariant) {
+      return;
+    }
+
+    metaByRowId.set(key, {
+      ...meta,
+      variantId: optVariant,
+    });
+
     saveMeta();
-    // Reflect the seeded variant on the in-memory line immediately.
+
+    /*
+     * Reflect the seeded variant on the in-memory line immediately.
+     */
     set({
-      items: get().items.map((i) =>
-        String(i.id) === key ? { ...i, variantId: optVariant } : i,
+      items: get().items.map((item) =>
+        String(item.id) === key
+          ? {
+              ...item,
+              variantId: optVariant,
+            }
+          : item,
       ),
     });
   }

@@ -68,8 +68,9 @@ export function AddToCartButton({
     }
 
     setSubmitting(true);
+
     const result = await addToCart({
-      id: product.id,
+      productId: product.id,
       slug: product.slug,
       title: product.title,
       image: product.image,
@@ -78,6 +79,7 @@ export function AddToCartButton({
       variantId,
       variantLabel,
     });
+
     setSubmitting(false);
 
     if (result.ok) {
@@ -154,8 +156,9 @@ export function BuyNowButton({
     }
 
     setSubmitting(true);
+
     const result = await addToCart({
-      id: product.id,
+      productId: product.id,
       slug: product.slug,
       title: product.title,
       image: product.image,
@@ -164,6 +167,7 @@ export function BuyNowButton({
       variantId,
       variantLabel,
     });
+
     setSubmitting(false);
 
     // Never advance to checkout unless the item actually made it into the
@@ -264,6 +268,7 @@ export default function ProductActions({
           feedback={feedback}
           onAfterAdd={handleAdded}
         />
+
         <BuyNowButton
           product={product}
           variantId={variantId}

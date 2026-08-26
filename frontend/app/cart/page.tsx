@@ -14,6 +14,7 @@ import {
   IconButton,
   Paper,
   Box,
+  Alert,
 } from "@mui/material";
 
 import AddIcon from "@mui/icons-material/Add";
@@ -33,21 +34,51 @@ export default function CartPage() {
   const removeFromCart = useCartStore((s) => s.removeFromCart);
   const fetchCart = useCartStore((s) => s.fetchCart);
   const serverGrandTotal = useCartStore((s) => s.serverGrandTotal);
+  const error = useCartStore((s) => s.error);
+  const clearError = useCartStore((s) => s.clearError);
+  const loading = useCartStore((s) => s.loading);
   const token = useAuthStore((s) => s.token);
 
-  // Hydrate from the server when the page mounts. For guests the local
-  // in-memory cart keeps working; for logged-in users the server cart
-  // becomes the source of truth. The interceptor handles 401s.
+  // Hydrate from the server when the page mounts.
+  // The server cart is the source of truth for authenticated users.
   useEffect(() => {
-    if (token) void fetchCart();
+    if (token) {
+      void fetchCart();
+    }
   }, [token, fetchCart]);
 
-  // Brief: backend is the absolute source of truth for cart and order
-  // totals. We display the server-provided grandTotal rather than
-  // recomputing on the client.
+  // Backend is authoritative for cart totals.
   const total = serverGrandTotal;
-  const subtotal = serverGrandTotal; // free shipping + no discount yet
+  const subtotal = serverGrandTotal;
 
+  /*
+   * Loading state
+   */
+  if (loading && items.length === 0) {
+    return (
+      <>
+        <Header />
+
+        <Container
+          maxWidth="md"
+          sx={{
+            py: 10,
+            textAlign: "center",
+          }}
+        >
+          <Typography variant="h5" sx={{ fontWeight: 600 }}>
+            Loading your cart...
+          </Typography>
+        </Container>
+
+        <Footer />
+      </>
+    );
+  }
+
+  /*
+   * Empty cart state
+   */
   if (items.length === 0) {
     return (
       <>
@@ -60,28 +91,45 @@ export default function CartPage() {
             textAlign: "center",
           }}
         >
+          {error && (
+            <Alert
+              severity="error"
+              onClose={clearError}
+              sx={{
+                mb: 4,
+                textAlign: "left",
+              }}
+            >
+              {error}
+            </Alert>
+          )}
+
           <Typography variant="h4" sx={{ fontWeight: 700 }}>
             Your Cart is Empty
           </Typography>
 
-          <Typography sx={{ mt: 2, color: "text.secondary" }}>
+          <Typography
+            sx={{
+              mt: 2,
+              color: "text.secondary",
+            }}
+          >
             Looks like you haven&apos;t added any products yet.
           </Typography>
 
           <Button
-  component={Link}
-  href="/checkout"
-  fullWidth
-  variant="contained"
-  size="large"
-  sx={{
-    mt: 4,
-    py: 1.5,
-    borderRadius: 2,
-  }}
->
-  Proceed to Checkout
-</Button>
+            component={Link}
+            href="/"
+            variant="contained"
+            sx={{
+              mt: 4,
+              px: 4,
+              py: 1.5,
+              borderRadius: 2,
+            }}
+          >
+            Continue Shopping
+          </Button>
         </Container>
 
         <Footer />
@@ -89,6 +137,9 @@ export default function CartPage() {
     );
   }
 
+  /*
+   * Cart with items
+   */
   return (
     <>
       <Header />
@@ -96,10 +147,25 @@ export default function CartPage() {
       <Container maxWidth="xl" sx={{ py: 5 }}>
         <Typography
           variant="h4"
-          sx={{ fontWeight: 700, mb: 4 }}
+          sx={{
+            fontWeight: 700,
+            mb: 4,
+          }}
         >
           Shopping Cart ({items.length})
         </Typography>
+
+        {error && (
+          <Alert
+            severity="error"
+            onClose={clearError}
+            sx={{
+              mb: 3,
+            }}
+          >
+            {error}
+          </Alert>
+        )}
 
         <Box
           sx={{
@@ -112,7 +178,6 @@ export default function CartPage() {
           }}
         >
           {/* Left Side */}
-
           <Box>
             {items.map((item) => (
               <Card
@@ -184,8 +249,7 @@ export default function CartPage() {
                         color="text.secondary"
                         sx={{ mt: 1 }}
                       >
-                        Total: ₹
-                        {(item.price * item.quantity).toLocaleString()}
+                        Total: ₹{item.itemTotal.toLocaleString()}
                       </Typography>
 
                       <Box
@@ -197,6 +261,7 @@ export default function CartPage() {
                         }}
                       >
                         <IconButton
+                          disabled={loading}
                           sx={{
                             border: "1px solid #ddd",
                           }}
@@ -224,6 +289,7 @@ export default function CartPage() {
                         </Paper>
 
                         <IconButton
+                          disabled={loading}
                           sx={{
                             border: "1px solid #ddd",
                           }}
@@ -238,6 +304,7 @@ export default function CartPage() {
 
                         <IconButton
                           color="error"
+                          disabled={loading}
                           onClick={() =>
                             removeFromCart(item.id)
                           }
@@ -253,7 +320,6 @@ export default function CartPage() {
           </Box>
 
           {/* Order Summary */}
-
           <Card
             sx={{
               height: "fit-content",

@@ -43,7 +43,7 @@ export default function WishlistPage() {
 
   const moveToCart = (item: typeof items[number]) => {
     addToCart({
-      id: item.productId,
+      productId: item.productId,
       slug: item.slug,
       title: item.title,
       image: item.image,

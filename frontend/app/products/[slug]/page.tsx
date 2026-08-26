@@ -35,9 +35,11 @@ import type { Product } from "@/types/product";
  * ProductReviews, ProductBreadcrumb, RelatedProducts) are
  * untouched — they receive the same Product shape as before.
  */
-export default async function ProductDetailsPage(
-  props: PageProps<"/products/[slug]">,
-) {
+type PageProps = {
+  params: Promise<{ slug: string }>;
+};
+
+export default async function ProductDetailsPage(props: PageProps) {
   const { slug } = await props.params;
 
   const lookup = await getProductBySlug(slug, { useMockFallback: true });
