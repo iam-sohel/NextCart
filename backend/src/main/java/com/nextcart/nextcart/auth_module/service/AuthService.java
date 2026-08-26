@@ -114,11 +114,21 @@ public class AuthService {
         String accessToken = jwtUtil.generateToken(user.getEmail());
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
-        return new LoginResponse(
-                accessToken,
-                refreshToken.getToken(),
-                "Login successful"
+        LoginResponse.UserResponse userResponse =
+        new LoginResponse.UserResponse(
+                user.getId(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getEmail(),
+                user.getPhone()
         );
+
+return new LoginResponse(
+        accessToken,
+        refreshToken.getToken(),
+        "Login successful",
+        userResponse
+);
     }
 
     @Transactional

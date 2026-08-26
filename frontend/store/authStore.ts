@@ -13,37 +13,14 @@
  *     sees an authenticated request rejected (the access token has expired),
  *     it calls the registered refresher (`lib/tokenRefresh.ts`), which trades
  *     this refresh token for a fresh access token + a new refresh token and
- *     writes both back here via `applyRefreshedTokens`. Only ONE refresh token
- *     is valid per user at a time (the backend rotates + deletes on refresh),
- *     so it must always be the latest value.
- *   - Persistence: the backend is a STATELESS bearer-JWT API (confirmed from
- *     the Spring Security config) — it issues no HttpOnly cookie. The access
- *     token lives 24h; the refresh token lives 7 days. To make the session
- *     survive a page reload (required for cart/wishlist/checkout/addresses,
- *     which all need the token) AND to allow a silent access-token refresh
- *     after the 24h access token lapses, we persist `{ token, refreshToken,
- *     user }` with Zustand's `persist` middleware backed by localStorage. This
- *     is the conventional bearer-token SPA pattern; it does NOT invent a new
- *     auth protocol. The known trade-off is XSS exposure of the tokens —
- *     accepted here given (a) the backend offers no cookie alternative and
- *     (b) the tokens are the only session mechanism the backend provides.
- *     `partialize` guarantees only token+refreshToken+user are stored (never
- *     transient loading/error flags).
+ *     writes both back here via `applyRefreshedTokens`.
+ *   - Persistence: the backend is a STATELESS bearer-JWT API. The access
+ *     token and refresh token are persisted with the user profile so the
+ *     session survives a page reload.
  *   - `hasHydrated` flips to true only after rehydration runs on the client.
- *     Route guards and the navbar wait for it so a logged-in user is never
- *     briefly redirected/flashed as a guest on the first client render, and
- *     so SSR (always guest) matches the first client paint (no hydration
- *     mismatch). We use `skipHydration` and trigger rehydration explicitly
- *     from `AuthClientBootstrap` on mount.
  *   - `loading` is per-action so the UI can disable just the submit button.
  *   - `error` carries the latest backend / network message; `clearError()`
  *     lets the UI reset between attempts.
- *
- * Actions vs imperative calls:
- *   The store does NOT bundle the HTTP call. Pages call the store actions
- *   which delegate to `services/authService` and then update state. Keeping
- *   the API call in `services/` means the same call can be re-used from a
- *   server component, a custom hook, or a React Native screen.
  */
 
 "use client";
@@ -82,12 +59,12 @@ interface AuthState {
 
   /**
    * Replace the access + refresh tokens after a successful silent refresh.
-   * Called by `lib/tokenRefresh.ts`. Intentionally leaves `user` untouched —
-   * a refresh renews credentials, it does not change who is logged in — so
-   * every existing consumer (navbar keys off `user`, guards key off `token`)
-   * keeps working across a refresh with no flicker or logout.
+   * The logged-in user profile remains unchanged.
    */
-  applyRefreshedTokens: (accessToken: string, refreshToken: string) => void;
+  applyRefreshedTokens: (
+    accessToken: string,
+    refreshToken: string,
+  ) => void;
 
   clearError: () => void;
 
@@ -106,13 +83,19 @@ const useAuthStore = create<AuthState>()(
       hasHydrated: false,
 
       // `lib/authInterceptor.ts` reads the live token via
-      // `useAuthStore.getState().token` on every authenticated request, so a
-      // fresh login is reflected on the next call without re-subscribing.
+      // `useAuthStore.getState().token` on every authenticated request.
 
       async login(email, password) {
-        set({ loading: true, isAuthenticating: true, error: null });
+        set({
+          loading: true,
+          isAuthenticating: true,
+          error: null,
+        });
 
-        const result = await authService.login({ email, password });
+        const result = await authService.login({
+          email,
+          password,
+        });
 
         if (!result.ok) {
           set({
@@ -120,17 +103,33 @@ const useAuthStore = create<AuthState>()(
             isAuthenticating: false,
             error: result.message,
           });
-          return { ok: false, message: result.message };
+
+          return {
+            ok: false,
+            message: result.message,
+          };
         }
 
+        /*
+         * The backend login endpoint now returns the authenticated user's
+         * profile together with the access and refresh tokens.
+         *
+         * This is important because the frontend previously created:
+         *
+         *   { firstName: "", lastName: "", email }
+         *
+         * which caused the logged-in user's name to be blank.
+         *
+         * We now use the authoritative user object returned by the backend.
+         */
         set({
           token: result.data.token,
           refreshToken: result.data.refreshToken,
-          // The login endpoint does not return user details and the backend
-          // has no real /me endpoint, so we populate what we know (the email
-          // the user just authenticated with). Names stay blank until/if the
-          // backend exposes them — we do not fabricate them.
-          user: { firstName: "", lastName: "", email },
+          user: result.data.user ?? {
+            firstName: "",
+            lastName: "",
+            email,
+          },
           loading: false,
           isAuthenticating: false,
           error: null,
@@ -140,9 +139,18 @@ const useAuthStore = create<AuthState>()(
       },
 
       async register(fullName, email, phone, password) {
-        set({ loading: true, isAuthenticating: true, error: null });
+        set({
+          loading: true,
+          isAuthenticating: true,
+          error: null,
+        });
 
-        const result = await authService.register({ fullName, email, phone, password });
+        const result = await authService.register({
+          fullName,
+          email,
+          phone,
+          password,
+        });
 
         if (!result.ok) {
           set({
@@ -150,12 +158,21 @@ const useAuthStore = create<AuthState>()(
             isAuthenticating: false,
             error: result.message,
           });
-          return { ok: false, message: result.message };
+
+          return {
+            ok: false,
+            message: result.message,
+          };
         }
 
-        // Register does NOT return a token — the user is sent to /login to
-        // sign in. We store the returned profile so a subsequent login can
-        // show their name if the backend ever returns it.
+        /*
+         * Registration does not return authentication tokens.
+         * The user is sent to /login to authenticate.
+         *
+         * We retain the returned profile in the store, but login will
+         * replace it with the authoritative profile returned by the
+         * login endpoint.
+         */
         set({
           user: result.data.user,
           loading: false,
@@ -167,44 +184,74 @@ const useAuthStore = create<AuthState>()(
       },
 
       logout() {
-        // The backend logout now deletes the refresh token server-side, but
-        // the 24h access JWT stays valid until expiry, so the authoritative
-        // client-side logout is dropping BOTH tokens here. We still notify the
-        // backend best-effort (fire-and-forget) to invalidate the refresh
-        // token, without blocking the UI.
+        /*
+         * Backend logout deletes the refresh token server-side.
+         *
+         * The access JWT is stateless and remains valid until expiration,
+         * so client-side removal of both tokens is still authoritative
+         * for ending the local session.
+         */
         void authService.logout();
-        set({ user: null, token: null, refreshToken: null, error: null });
+
+        set({
+          user: null,
+          token: null,
+          refreshToken: null,
+          error: null,
+        });
       },
 
       applyRefreshedTokens(accessToken, refreshToken) {
-        // Swap in the rotated credentials from a silent refresh. `user` is
-        // preserved so the session continues seamlessly.
-        set({ token: accessToken, refreshToken });
+        /*
+         * Swap in the rotated credentials from a silent refresh.
+         *
+         * The user profile is deliberately preserved because refreshing
+         * credentials does not change the authenticated user.
+         */
+        set({
+          token: accessToken,
+          refreshToken,
+        });
       },
 
       clearError() {
-        set({ error: null });
+        set({
+          error: null,
+        });
       },
 
       setHasHydrated(value) {
-        set({ hasHydrated: value });
+        set({
+          hasHydrated: value,
+        });
       },
     }),
     {
       name: "nextcart-auth",
-      // Guarded via createJSONStorage: on the server `localStorage` is
-      // undefined and the factory throws, which the middleware catches and
-      // treats as "no storage" — so SSR never crashes.
+
       storage: createJSONStorage(() => localStorage),
-      // Never persist transient UI state — only the durable session.
+
+      /*
+       * Persist only durable authentication/session information.
+       *
+       * Do not persist transient UI state such as:
+       *   loading
+       *   error
+       *   isAuthenticating
+       *   hasHydrated
+       */
       partialize: (state) => ({
         token: state.token,
         refreshToken: state.refreshToken,
         user: state.user,
       }),
-      // Rehydrate explicitly on the client (from AuthClientBootstrap) so the
-      // first client render matches SSR before the token is applied.
+
+      /*
+       * Rehydration is triggered explicitly on the client through
+       * AuthClientBootstrap.
+       */
       skipHydration: true,
+
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },

@@ -74,10 +74,19 @@ interface BackendRegisterResponse {
   message?: string;
 }
 
+interface BackendLoginUser {
+  id?: number;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+}
+
 interface BackendLoginResponse {
   token?: string;
   refreshToken?: string;
   message?: string;
+  user?: BackendLoginUser;
 }
 
 /**
@@ -134,7 +143,14 @@ export const authService = {
   async login(
     credentials: LoginCredentials,
     signal?: AbortSignal,
-  ): Promise<ApiResult<{ token: string; refreshToken: string; message: string }>> {
+  ): Promise<
+  ApiResult<{
+    token: string;
+    refreshToken: string;
+    message: string;
+    user?: AuthUser;
+  }>
+>{
     const res = await apiRequest<BackendLoginResponse>("/api/v1/auth/login", {
       method: "POST",
       body: {
@@ -156,9 +172,29 @@ export const authService = {
     }
 
     const token = res.data?.token ?? "";
-    const refreshToken = res.data?.refreshToken ?? "";
-    const message = res.data?.message ?? "Login successful";
-    return { ok: true, status: res.status, data: { token, refreshToken, message } };
+const refreshToken = res.data?.refreshToken ?? "";
+const message = res.data?.message ?? "Login successful";
+
+const user: AuthUser | undefined = res.data?.user
+  ? {
+      id: res.data.user.id,
+      firstName: res.data.user.firstName ?? "",
+      lastName: res.data.user.lastName ?? "",
+      email: res.data.user.email ?? "",
+      phone: res.data.user.phone ?? "",
+    }
+  : undefined;
+
+return {
+  ok: true,
+  status: res.status,
+  data: {
+    token,
+    refreshToken,
+    message,
+    user,
+  },
+};
   },
 
   /**
