@@ -4,16 +4,28 @@ import lombok.*;
 
 import java.math.BigDecimal;
 
-@Data
 @Getter
 @Setter
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class OrderItemResponseDTO {
+
     private Long id;
-    private Long productId;
+
+    private Long productVariantId;
+
     private String productName;
+
+    private String sku;
+
     private Integer quantity;
-    private BigDecimal price;
+
+    private BigDecimal unitMrp;
+
+    private BigDecimal unitSellingPrice;
+
+    private BigDecimal discountAmount;
+
+    private BigDecimal lineTotal;
 }
