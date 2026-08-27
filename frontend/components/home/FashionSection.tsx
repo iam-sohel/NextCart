@@ -3,13 +3,21 @@
 import { Box, Container } from "@mui/material";
 import SectionTitle from "./sectiontitle";
 import ProductCarousel from "../products/ProductCarousel";
-import fashion from "@/data/fashion";
+import type { Product } from "@/types/product";
 
-export default function FashionSection() {
-  const fashionProducts = fashion.map((product) => ({
-    ...product,
-    slug: product.title.toLowerCase().replace(/\s+/g, "-"),
-  }));
+interface Props {
+  products: Product[];
+}
+
+/**
+ * Fashion strip — receives a pre-filtered subset of the backend
+ * catalogue in fashion categories. The original visual is preserved
+ * exactly.
+ */
+export default function FashionSection({ products }: Props) {
+  if (products.length === 0) {
+    return null;
+  }
 
   return (
     <Container maxWidth="xl" sx={{ mt: 3 }}>
@@ -22,7 +30,7 @@ export default function FashionSection() {
       >
         <SectionTitle title="👕 Fashion Picks" />
 
-        <ProductCarousel products={fashionProducts} />
+        <ProductCarousel products={products} />
       </Box>
     </Container>
   );

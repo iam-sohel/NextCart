@@ -21,7 +21,9 @@ import FavoriteIcon from "@mui/icons-material/Favorite";
 
 import useWishlistStore from "@/store/wishlistStore";
 import useAuthStore from "@/store/authStore";
-import { UNIVERSAL_FALLBACK } from "@/utils/productImages";
+
+const UNIVERSAL_FALLBACK =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Crect width='400' height='400' fill='%23F3F1EC'/%3E%3Cpath d='M120 280l55-65 40 45 30-35 55 55H120z' fill='%23c8c3b8'/%3E%3Ccircle cx='255' cy='145' r='25' fill='%23c8c3b8'/%3E%3C/svg%3E";
 
 interface ProductCardProps {
   id: number | string;

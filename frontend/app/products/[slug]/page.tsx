@@ -25,10 +25,10 @@ import type { Product } from "@/types/product";
  *   1. Resolve the slug against the live Spring Boot catalogue.
  *      If the backend is reachable we then load the matching
  *      `ProductDetailsResponse` (images, variants, specs, info).
- *   2. If the backend is unavailable, we fall back to the in-house
- *      mock catalogue so the page still renders (development-friendly).
- *   3. If neither source knows the slug, `notFound()` triggers the
- *      segment-level 404 page.
+ *   2. If the backend does not know the slug, `notFound()` triggers
+ *      the segment-level 404 page.
+ *   3. There is NO mock fallback. If the backend is unreachable we
+ *      surface the page-level error boundary.
  *
  * The Product* UI components (ProductGallery, ProductInfo,
  * ProductActions, ProductVariants, ProductSpecifications,
@@ -42,7 +42,7 @@ type PageProps = {
 export default async function ProductDetailsPage(props: PageProps) {
   const { slug } = await props.params;
 
-  const lookup = await getProductBySlug(slug, { useMockFallback: true });
+  const lookup = await getProductBySlug(slug);
 
   if (!lookup.ok) {
     notFound();
@@ -54,7 +54,7 @@ export default async function ProductDetailsPage(props: PageProps) {
   // excluding the current product. The backend does not yet expose a
   // dedicated /related endpoint so we use the same-category subset of
   // the catalogue.
-  const catalogue = await listProducts({ useMockFallback: true });
+  const catalogue = await listProducts();
 
   const relatedSource =
     catalogue.source === "error" ? [] : catalogue.products;

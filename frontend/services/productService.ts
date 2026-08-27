@@ -3,6 +3,8 @@
  *
  * All product API communication lives here.
  * UI components should not know backend endpoint paths.
+ *
+ * The service is backend-only. There is NO mock product fallback.
  */
 
 import { apiRequest, type ApiResult } from "@/lib/api";
@@ -25,6 +27,10 @@ import {
   type BackendProductDto,
 } from "@/utils/normalizeProduct";
 
+/* -------------------------------------------------------------------------- */
+/* Public types                                                               */
+/* -------------------------------------------------------------------------- */
+
 export type {
   Product,
   CardProduct,
@@ -37,238 +43,377 @@ export type {
 /* -------------------------------------------------------------------------- */
 
 const ENDPOINTS = {
+  /* ----------------------------- Catalogue ------------------------------ */
+
   products: "/api/v1/products",
 
   productById: (id: string | number) =>
     `/api/v1/products/${encodeURIComponent(String(id))}`,
 
+  productBySlug: (slug: string) =>
+    `/api/v1/products/slug/${encodeURIComponent(slug)}`,
+
+  /* ---------------------------- Product details ------------------------- */
+
   productDetailsById: (id: string | number) =>
     `/api/v1/products/${encodeURIComponent(String(id))}/details`,
+
+  productDetailsBySlug: (slug: string) =>
+    `/api/v1/products/slug/${encodeURIComponent(slug)}/details`,
+
+  /* ------------------------------- Search -------------------------------- */
 
   searchProducts: (keyword: string) =>
     `/api/v1/products/search?keyword=${encodeURIComponent(keyword)}`,
 
+  /* -------------------------------- Filter ------------------------------- */
+
   filterProducts: (params: string) =>
     `/api/v1/products/filter${params ? `?${params}` : ""}`,
 
+  /* ------------------------------ Category ------------------------------- */
+
   categoryProducts: (categoryId: string | number) =>
     `/api/v1/products/category/${encodeURIComponent(String(categoryId))}`,
+
+  /* ---------------------------- Subcategory ------------------------------ */
 
   subCategoryProducts: (subCategoryId: string | number) =>
     `/api/v1/products/subcategory/${encodeURIComponent(
       String(subCategoryId),
     )}`,
 
+  /* -------------------------------- Brand -------------------------------- */
+
+  brandProducts: (brandId: string | number) =>
+    `/api/v1/products/brand/${encodeURIComponent(String(brandId))}`,
+
+  /* ------------------------------- Images -------------------------------- */
+
   productImagesByProduct: (productId: string | number) =>
     `/api/v1/product-images/product/${encodeURIComponent(String(productId))}`,
 
+  /* ------------------------------ Variants ------------------------------- */
+
   productVariantsByProduct: (productId: string | number) =>
     `/api/v1/product-variants/product/${encodeURIComponent(String(productId))}`,
+
+  /* -------------------------- Specifications ---------------------------- */
 
   productSpecificationsByProduct: (productId: string | number) =>
     `/api/v1/product-specifications/product/${encodeURIComponent(
       String(productId),
     )}`,
 
+  /* ---------------------------- Information ------------------------------ */
+
   productInformationByProduct: (productId: string | number) =>
     `/api/v1/product-information/${encodeURIComponent(String(productId))}`,
+
+  /* ----------------------------- Inventory ------------------------------- */
 
   inventoryByVariant: (variantId: string | number) =>
     `/api/v1/inventory/variant/${encodeURIComponent(String(variantId))}`,
 
-  /*
-   * These endpoints are kept here because existing product-detail UI
-   * components still depend on them.
-   *
-   * They can be connected to their respective backend modules when
-   * those controllers are available.
-   */
+  inventory: (variantId: string | number) =>
+    `/api/v1/inventory/${encodeURIComponent(String(variantId))}`,
+
+  /* ------------------------------- Reviews ------------------------------- */
+
   productReviews: (id: string | number) =>
     `/api/v1/products/${encodeURIComponent(String(id))}/reviews`,
+
+  /* ------------------------------- Related ------------------------------- */
 
   productRelated: (id: string | number) =>
     `/api/v1/products/${encodeURIComponent(String(id))}/related`,
 
-  inventory: (variantId: string | number) =>
-    `/api/v1/inventory/${encodeURIComponent(String(variantId))}`,
+  /* ------------------------------- Delivery ------------------------------ */
 
   deliveryCheck: (pincode: string) =>
     `/api/delivery/check?pincode=${encodeURIComponent(pincode)}`,
 } as const;
 
 /* -------------------------------------------------------------------------- */
-/* Product detail                                                             */
+/* Backend catalogue response                                                */
 /* -------------------------------------------------------------------------- */
 
 /**
- * Backend currently exposes products by ID, not slug.
+ * GET /api/v1/products returns:
  *
- * We therefore:
- *   1. Load the catalogue (`GET /api/v1/products`) and find the product
- *      whose `slug` matches.
- *   2. If the backend is reachable, we then call
- *      `GET /api/v1/products/{id}/details` to load images, variants,
- *      specifications and product information.
- *   3. If the details call fails for any reason we degrade to the
- *      base product (so the page still renders) and we surface the
- *      error on the returned object so the caller can decide what to
- *      do.
- *   4. If the backend catalogue itself is unreachable, we fall back to
- *      the in-house mock data set (controlled via `useMockFallback`).
+ * {
+ *   success: true,
+ *   message: "Products fetched successfully",
+ *   data: {
+ *     content: [...],
+ *     totalElements: 20,
+ *     totalPages: 1,
+ *     ...
+ *   }
+ * }
+ */
+
+interface BackendProductPage {
+  content: BackendProductDto[];
+  totalElements?: number;
+  totalPages?: number;
+  number?: number;
+  size?: number;
+}
+
+interface BackendProductPageResponse {
+  success?: boolean;
+  message?: string;
+  data?: BackendProductPage;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Product by slug                                                           */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Fetch complete product details directly by slug.
+ *
+ * Backend endpoint:
+ *
+ * GET /api/v1/products/slug/{slug}/details
+ *
+ * This is the preferred method for the Product Details Page.
+ *
+ * Previous flow:
+ *
+ *   GET /products
+ *        ↓
+ *   find product by slug
+ *        ↓
+ *   GET /products/{id}/details
+ *
+ * New flow:
+ *
+ *   GET /products/slug/{slug}/details
+ *        ↓
+ *   normalize details
+ *        ↓
+ *   load variant inventory
  */
 export async function getProductBySlug(
   slug: string,
   options: {
     signal?: AbortSignal;
-    useMockFallback?: boolean;
   } = {},
 ): Promise<
   ApiResult<Product> & {
-    source: "backend" | "fallback" | "error";
+    source: "backend" | "error";
     reason?: string;
   }
 > {
-  const { signal, useMockFallback = true } = options;
+  const { signal } = options;
 
-  const list = await listProducts({
-    signal,
-    useMockFallback,
-  });
+  const result =
+    await apiRequest<BackendProductDetailsDto>(
+      ENDPOINTS.productDetailsBySlug(slug),
+      {
+        method: "GET",
+        signal,
+      },
+    );
 
-  if (list.source === "error") {
+  if (!result.ok) {
     return {
       ok: false,
-      status: 500,
-      message: list.message,
+      status: result.status,
+      message: result.message,
+      errorCode: result.errorCode,
       source: "error",
     };
   }
 
-  const base =
-    list.products.find((item) => item.slug === slug) ??
-    (useMockFallback ? getMockProductBySlug(slug) : undefined);
+  try {
+    let product =
+      normalizeBackendProductDetails(
+        result.data,
+      );
 
-  if (!base) {
-    return {
-      ok: false,
-      status: 404,
-      message: `Product "${slug}" not found.`,
-      errorCode: "PRODUCT_NOT_FOUND",
-      source: list.source === "backend" ? "backend" : "fallback",
-    };
-  }
+    /*
+     * ProductDetailsResponse does not currently
+     * contain inventory.
+     *
+     * Load inventory separately for each variant.
+     */
+    if (
+      product.variants &&
+      product.variants.length > 0
+    ) {
+      const inventoryByVariant =
+        await loadVariantInventory(
+          product.variants,
+          signal,
+        );
 
-  // If the product came from the mock catalogue we can short-circuit.
-  if (list.source === "fallback") {
-    return {
-      ok: true,
-      status: 200,
-      data: base,
-      source: "fallback",
-      reason: list.reason,
-    };
-  }
+      product =
+        mergeVariantInventory(
+          product,
+          inventoryByVariant,
+        );
+    }
 
-  // Real backend product — try to upgrade with the details payload so
-  // the page shows images / variants / specs sourced from the API.
-  const id = base.id;
-  const detailsResult = await getProductDetailsById(id, { signal });
-
-  if (detailsResult.ok) {
     return {
       ok: true,
-      status: 200,
-      data: detailsResult.data,
+      status: result.status,
+      data: product,
       source: "backend",
     };
+  } catch {
+    return {
+      ok: false,
+      status: 500,
+      message:
+        "Failed to normalize product details.",
+      errorCode:
+        "PRODUCT_NORMALIZATION_FAILED",
+      source: "error",
+    };
   }
-
-  // Details call failed — return the base product so the page still
-  // renders, and report the details error as `reason` for the caller.
-  return {
-    ok: true,
-    status: 200,
-    data: base,
-    source: "backend",
-    reason: `Details unavailable: ${detailsResult.message}`,
-  };
 }
 
+/* -------------------------------------------------------------------------- */
+/* Product by ID                                                             */
+/* -------------------------------------------------------------------------- */
+
 /**
- * Fetch product directly by backend ID (base `ProductResponse` only).
+ * Fetch product directly by backend ID.
+ *
+ * Backend:
+ *
+ * GET /api/v1/products/{id}
  */
 export async function getProductById(
   id: string | number,
   signal?: AbortSignal,
 ): Promise<ApiResult<Product>> {
-  const result = await apiRequest<BackendProductDto>(
-    ENDPOINTS.productById(id),
-    {
-      method: "GET",
-      signal,
-    },
-  );
+  const result =
+    await apiRequest<BackendProductDto>(
+      ENDPOINTS.productById(id),
+      {
+        method: "GET",
+        signal,
+      },
+    );
 
-  if (!result.ok) return result;
+  if (!result.ok) {
+    return result;
+  }
 
   try {
-    const normalized = normalizeBackendProduct(result.data);
-    return { ok: true, status: result.status, data: normalized };
+    const normalized =
+      normalizeBackendProduct(
+        result.data,
+      );
+
+    return {
+      ok: true,
+      status: result.status,
+      data: normalized,
+    };
   } catch {
     return {
       ok: false,
       status: 500,
-      message: "Failed to normalize product payload.",
+      message:
+        "Failed to normalize product payload.",
+      errorCode:
+        "PRODUCT_NORMALIZATION_FAILED",
     };
   }
 }
 
+/* -------------------------------------------------------------------------- */
+/* Product details by ID                                                     */
+/* -------------------------------------------------------------------------- */
+
 /**
- * Fetch the full `ProductDetailsResponse` for a product and normalize
- * it into the in-house `Product` shape (images, variants, specs,
- * information, warranty, manufacturer).
+ * Fetch complete product details by ID.
  *
- * After the details are normalized, we also fetch per-variant
- * inventory from `GET /api/v1/inventory/variant/{id}` and merge it
- * in. Inventory failures degrade to "out of stock" (the safe default
- * when we cannot prove stock exists) rather than fabricating a value.
+ * Backend:
+ *
+ * GET /api/v1/products/{id}/details
+ *
+ * Loads:
+ * - images
+ * - variants
+ * - specifications
+ * - product information
+ * - warranty
+ * - manufacturer
+ *
+ * Inventory is loaded separately for every variant.
  */
 export async function getProductDetailsById(
   id: string | number,
-  options: { signal?: AbortSignal; loadInventory?: boolean } = {},
+  options: {
+    signal?: AbortSignal;
+    loadInventory?: boolean;
+  } = {},
 ): Promise<ApiResult<Product>> {
-  const { signal, loadInventory = true } = options;
+  const {
+    signal,
+    loadInventory = true,
+  } = options;
 
-  const result = await apiRequest<BackendProductDetailsDto>(
-    ENDPOINTS.productDetailsById(id),
-    {
-      method: "GET",
-      signal,
-    },
-  );
+  const result =
+    await apiRequest<BackendProductDetailsDto>(
+      ENDPOINTS.productDetailsById(id),
+      {
+        method: "GET",
+        signal,
+      },
+    );
 
-  if (!result.ok) return result;
+  if (!result.ok) {
+    return result;
+  }
 
   let product: Product;
+
   try {
-    product = normalizeBackendProductDetails(result.data);
+    product =
+      normalizeBackendProductDetails(
+        result.data,
+      );
   } catch {
     return {
       ok: false,
       status: 500,
-      message: "Failed to normalize product details.",
+      message:
+        "Failed to normalize product details.",
+      errorCode:
+        "PRODUCT_NORMALIZATION_FAILED",
     };
   }
 
-  if (loadInventory && product.variants && product.variants.length > 0) {
-    const inventoryByVariant = await loadVariantInventory(
-      product.variants,
-      signal,
-    );
-    product = mergeVariantInventory(product, inventoryByVariant);
+  if (
+    loadInventory &&
+    product.variants &&
+    product.variants.length > 0
+  ) {
+    const inventoryByVariant =
+      await loadVariantInventory(
+        product.variants,
+        signal,
+      );
+
+    product =
+      mergeVariantInventory(
+        product,
+        inventoryByVariant,
+      );
   }
 
-  return { ok: true, status: result.status, data: product };
+  return {
+    ok: true,
+    status: result.status,
+    data: product,
+  };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -278,6 +423,7 @@ export async function getProductDetailsById(
 interface VariantInventory {
   quantity?: number;
   reservedQuantity?: number;
+  reservedQty?: number;
   availableQuantity?: number;
   stockStatus?: string;
 }
@@ -285,35 +431,59 @@ interface VariantInventory {
 const VARIANT_INVENTORY_CONCURRENCY = 4;
 
 /**
- * Fetch per-variant inventory in small parallel batches. Returns an
- * empty record (not a thrown error) when every request fails so the
- * caller can fall back to the safe "out of stock" default.
+ * Fetch inventory for product variants in small parallel batches.
  */
 async function loadVariantInventory(
-  variants: { id: string | number }[],
+  variants: {
+    id: string | number;
+  }[],
   signal?: AbortSignal,
-): Promise<Record<string | number, VariantInventory>> {
-  const out: Record<string | number, VariantInventory> = {};
-  for (let i = 0; i < variants.length; i += VARIANT_INVENTORY_CONCURRENCY) {
-    const batch = variants.slice(i, i + VARIANT_INVENTORY_CONCURRENCY);
-    const responses = await Promise.all(
-      batch.map((v) =>
-        apiRequest<{
-          quantity?: number;
-          reservedQuantity?: number;
-          availableQuantity?: number;
-          stockStatus?: string;
-        }>(ENDPOINTS.inventoryByVariant(v.id), {
-          method: "GET",
-          signal,
-        }),
-      ),
+): Promise<
+  Record<string | number, VariantInventory>
+> {
+  const out: Record<
+    string | number,
+    VariantInventory
+  > = {};
+
+  for (
+    let i = 0;
+    i < variants.length;
+    i += VARIANT_INVENTORY_CONCURRENCY
+  ) {
+    const batch = variants.slice(
+      i,
+      i + VARIANT_INVENTORY_CONCURRENCY,
     );
-    responses.forEach((res, idx) => {
-      if (!res || !res.ok) return;
-      out[batch[idx].id] = res.data;
-    });
+
+    const responses =
+      await Promise.all(
+        batch.map((variant) =>
+          apiRequest<VariantInventory>(
+            ENDPOINTS.inventoryByVariant(
+              variant.id,
+            ),
+            {
+              method: "GET",
+              signal,
+            },
+          ),
+        ),
+      );
+
+    responses.forEach(
+      (response, index) => {
+        if (!response || !response.ok) {
+          return;
+        }
+
+        out[
+          String(batch[index].id)
+        ] = response.data;
+      },
+    );
   }
+
   return out;
 }
 
@@ -324,108 +494,230 @@ async function loadVariantInventory(
 const ENRICH_CONCURRENCY = 3;
 
 /**
- * Upgrade a list of products (typically the catalogue returned by
- * `listProducts`) by issuing `GET /api/v1/products/{id}/details` for
- * each one in parallel batches. The original product is preserved when
- * the details call fails, so a single 404/500 never blanks the grid.
+ * Upgrade catalogue products with detailed product data.
+ *
+ * A failed details request does not remove
+ * the original product.
  */
 export async function enrichProductListWithDetails(
   products: Product[],
-  options: { signal?: AbortSignal; loadInventory?: boolean } = {},
+  options: {
+    signal?: AbortSignal;
+    loadInventory?: boolean;
+  } = {},
 ): Promise<Product[]> {
-  if (!products || products.length === 0) return products;
-  const { signal, loadInventory = false } = options;
-
-  const out: Product[] = new Array(products.length);
-  for (let i = 0; i < products.length; i += ENRICH_CONCURRENCY) {
-    const batch = products.slice(i, i + ENRICH_CONCURRENCY);
-    const responses = await Promise.all(
-      batch.map((p) =>
-        getProductDetailsById(p.id, { signal, loadInventory }).catch(
-          () => null,
-        ),
-      ),
-    );
-    batch.forEach((original, idx) => {
-      const upgraded = responses[idx];
-      if (upgraded && upgraded.ok) {
-        out[i + idx] = upgraded.data;
-      } else {
-        out[i + idx] = original;
-      }
-    });
+  if (
+    !products ||
+    products.length === 0
+  ) {
+    return products;
   }
+
+  const {
+    signal,
+    loadInventory = false,
+  } = options;
+
+  const out: Product[] =
+    new Array(products.length);
+
+  for (
+    let i = 0;
+    i < products.length;
+    i += ENRICH_CONCURRENCY
+  ) {
+    const batch = products.slice(
+      i,
+      i + ENRICH_CONCURRENCY,
+    );
+
+    const responses =
+      await Promise.all(
+        batch.map((product) =>
+          getProductDetailsById(
+            product.id,
+            {
+              signal,
+              loadInventory,
+            },
+          ).catch(() => null),
+        ),
+      );
+
+    batch.forEach(
+      (original, index) => {
+        const upgraded =
+          responses[index];
+
+        if (
+          upgraded &&
+          upgraded.ok
+        ) {
+          out[i + index] =
+            upgraded.data;
+        } else {
+          out[i + index] =
+            original;
+        }
+      },
+    );
+  }
+
   return out;
 }
 
 /* -------------------------------------------------------------------------- */
-/* Search / catalogue                                                         */
+/* Search                                                                     */
 /* -------------------------------------------------------------------------- */
 
 /**
  * Search products using the real Spring Boot backend.
  *
- * The `/api/v1/products/search` endpoint returns bare `ProductResponse[]`
- * (name / brandName / categoryName — no `title`, `image` or `price`). The
- * search store filters on `product.title` / `.brand` / `.category`, so the
- * raw DTO would throw a TypeError there. Normalize every result through the
- * same adapter the catalogue uses so search consumes canonical `Product`s.
+ * Expected backend response:
+ *
+ * Product[]
  */
 export async function searchProducts(
   keyword: string,
   signal?: AbortSignal,
 ): Promise<ApiResult<Product[]>> {
-  const result = await apiRequest<BackendProductDto[] | unknown>(
-    ENDPOINTS.searchProducts(keyword),
-    {
-      method: "GET",
-      signal,
-    },
-  );
+  const result =
+    await apiRequest<
+      BackendProductDto[] | unknown
+    >(
+      ENDPOINTS.searchProducts(keyword),
+      {
+        method: "GET",
+        signal,
+      },
+    );
 
-  if (!result.ok) return result;
+  if (!result.ok) {
+    return result;
+  }
 
   const raw = result.data;
+
   if (!Array.isArray(raw)) {
     return {
       ok: false,
       status: 500,
-      message: "Search returned an unexpected payload.",
+      message:
+        "Search returned an unexpected payload.",
+      errorCode:
+        "SEARCH_INVALID_PAYLOAD",
     };
   }
 
   const products = raw
     .map((dto) => {
       try {
-        return normalizeBackendProduct(dto as BackendProductDto);
+        return normalizeBackendProduct(
+          dto as BackendProductDto,
+        );
       } catch {
         return null;
       }
     })
-    .filter((product): product is Product => product !== null);
+    .filter(
+      (
+        product,
+      ): product is Product =>
+        product !== null,
+    );
 
-  return { ok: true, status: result.status, data: products };
+  return {
+    ok: true,
+    status: result.status,
+    data: products,
+  };
 }
 
+/* -------------------------------------------------------------------------- */
+/* Catalogue                                                                  */
+/* -------------------------------------------------------------------------- */
+
 /**
- * Fetch all products from the real backend.
+ * Fetch products directly from the backend.
+ *
+ * Backend response:
+ *
+ * ApiResponse
+ *   -> data
+ *      -> content
+ *
+ * Therefore:
+ *
+ * result.data.data.content
+ *
+ * contains the actual product array.
  */
 export async function listBackendProducts(
   signal?: AbortSignal,
 ): Promise<ApiResult<Product[]>> {
-  return apiRequest<Product[]>(
-    ENDPOINTS.products,
-    {
-      method: "GET",
-      signal,
-    },
-  );
+  const result =
+    await apiRequest<BackendProductPageResponse>(
+      ENDPOINTS.products,
+      {
+        method: "GET",
+        signal,
+      },
+    );
+
+  if (!result.ok) {
+    return result;
+  }
+
+  const page =
+    result.data?.data;
+
+  if (
+    !page ||
+    !Array.isArray(page.content)
+  ) {
+    return {
+      ok: false,
+      status: 500,
+      message:
+        "Backend returned an unexpected product catalogue payload.",
+      errorCode:
+        "PRODUCT_CATALOGUE_INVALID_PAYLOAD",
+    };
+  }
+
+  const products =
+    page.content
+      .map((dto) => {
+        try {
+          return normalizeBackendProduct(
+            dto,
+          );
+        } catch {
+          return null;
+        }
+      })
+      .filter(
+        (
+          product,
+        ): product is Product =>
+          product !== null,
+      );
+
+  return {
+    ok: true,
+    status: result.status,
+    data: products,
+  };
 }
+
+/* -------------------------------------------------------------------------- */
+/* Filter                                                                     */
+/* -------------------------------------------------------------------------- */
 
 /**
  * Filter products through the backend.
  *
- * Supported backend parameters:
+ * Supported parameters:
  * - categoryId
  * - subCategoryId
  * - keyword
@@ -438,23 +730,32 @@ export async function filterBackendProducts(
   },
   signal?: AbortSignal,
 ): Promise<ApiResult<Product[]>> {
-  const searchParams = new URLSearchParams();
+  const searchParams =
+    new URLSearchParams();
 
-  if (params.categoryId !== undefined) {
+  if (
+    params.categoryId !==
+    undefined
+  ) {
     searchParams.set(
       "categoryId",
       String(params.categoryId),
     );
   }
 
-  if (params.subCategoryId !== undefined) {
+  if (
+    params.subCategoryId !==
+    undefined
+  ) {
     searchParams.set(
       "subCategoryId",
       String(params.subCategoryId),
     );
   }
 
-  if (params.keyword?.trim()) {
+  if (
+    params.keyword?.trim()
+  ) {
     searchParams.set(
       "keyword",
       params.keyword.trim(),
@@ -462,7 +763,9 @@ export async function filterBackendProducts(
   }
 
   return apiRequest<Product[]>(
-    ENDPOINTS.filterProducts(searchParams.toString()),
+    ENDPOINTS.filterProducts(
+      searchParams.toString(),
+    ),
     {
       method: "GET",
       signal,
@@ -474,12 +777,20 @@ export async function filterBackendProducts(
 /* Category APIs                                                              */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Get products by category.
+ *
+ * Backend:
+ * GET /api/v1/products/category/{categoryId}
+ */
 export async function getProductsByCategory(
   categoryId: string | number,
   signal?: AbortSignal,
 ): Promise<ApiResult<Product[]>> {
   return apiRequest<Product[]>(
-    ENDPOINTS.categoryProducts(categoryId),
+    ENDPOINTS.categoryProducts(
+      categoryId,
+    ),
     {
       method: "GET",
       signal,
@@ -487,12 +798,41 @@ export async function getProductsByCategory(
   );
 }
 
+/**
+ * Get products by subcategory.
+ *
+ * Backend:
+ * GET /api/v1/products/subcategory/{subCategoryId}
+ */
 export async function getProductsBySubCategory(
   subCategoryId: string | number,
   signal?: AbortSignal,
 ): Promise<ApiResult<Product[]>> {
   return apiRequest<Product[]>(
-    ENDPOINTS.subCategoryProducts(subCategoryId),
+    ENDPOINTS.subCategoryProducts(
+      subCategoryId,
+    ),
+    {
+      method: "GET",
+      signal,
+    },
+  );
+}
+
+/**
+ * Get products by brand.
+ *
+ * Backend:
+ * GET /api/v1/products/brand/{brandId}
+ */
+export async function getProductsByBrand(
+  brandId: string | number,
+  signal?: AbortSignal,
+): Promise<ApiResult<Product[]>> {
+  return apiRequest<Product[]>(
+    ENDPOINTS.brandProducts(
+      brandId,
+    ),
     {
       method: "GET",
       signal,
@@ -517,7 +857,9 @@ export async function getProductReviews(
     summary: ReviewSummary;
     reviews: Review[];
   }>(
-    ENDPOINTS.productReviews(productId),
+    ENDPOINTS.productReviews(
+      productId,
+    ),
     {
       method: "GET",
       signal,
@@ -534,7 +876,9 @@ export async function getRelatedProducts(
   signal?: AbortSignal,
 ): Promise<ApiResult<Product[]>> {
   return apiRequest<Product[]>(
-    ENDPOINTS.productRelated(productId),
+    ENDPOINTS.productRelated(
+      productId,
+    ),
     {
       method: "GET",
       signal,
@@ -556,8 +900,14 @@ export async function getInventory(
     reservedQty: number;
   }>
 > {
-  return apiRequest(
-    ENDPOINTS.inventory(variantId),
+  return apiRequest<{
+    available: number;
+    quantity: number;
+    reservedQty: number;
+  }>(
+    ENDPOINTS.inventory(
+      variantId,
+    ),
     {
       method: "GET",
       signal,
@@ -573,42 +923,22 @@ export async function checkPincodeServiceability(
   pincode: string,
   productId: string | number,
   signal?: AbortSignal,
-): Promise<ApiResult<PincodeCheckResult>> {
+): Promise<
+  ApiResult<PincodeCheckResult>
+> {
   return apiRequest<PincodeCheckResult>(
-    ENDPOINTS.deliveryCheck(pincode),
+    ENDPOINTS.deliveryCheck(
+      pincode,
+    ),
     {
       method: "GET",
       headers: {
-        "X-Product-Id": String(productId),
+        "X-Product-Id":
+          String(productId),
       },
       signal,
     },
   );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Mock data                                                                  */
-/* -------------------------------------------------------------------------- */
-
-import mockProducts from "@/data/products";
-
-import { normalizeProduct } from "@/utils/normalizeProduct";
-
-const MOCK_PRODUCT_MAP: Map<string, Product> = new Map(
-  mockProducts.map((product) => [
-    product.slug,
-    normalizeProduct(product as Product),
-  ]),
-);
-
-export function getMockProductBySlug(
-  slug: string,
-): Product | undefined {
-  return MOCK_PRODUCT_MAP.get(slug);
-}
-
-export function listMockProducts(): Product[] {
-  return Array.from(MOCK_PRODUCT_MAP.values());
 }
 
 /* -------------------------------------------------------------------------- */
@@ -621,11 +951,6 @@ export type ListProductsResult =
       products: Product[];
     }
   | {
-      source: "fallback";
-      products: Product[];
-      reason: string;
-    }
-  | {
       source: "error";
       message: string;
       errorCode?: string;
@@ -633,90 +958,84 @@ export type ListProductsResult =
 
 interface ListProductsOptions {
   signal?: AbortSignal;
-
-  /**
-   * Default true for development compatibility.
-   *
-   * Search explicitly disables this so production/search does not silently
-   * display mock data when the backend fails.
-   */
-  useMockFallback?: boolean;
 }
 
 /**
  * Fetch the complete catalogue from Spring Boot.
+ *
+ * Backend response:
+ *
+ * {
+ *   success: true,
+ *   message: "Products fetched successfully",
+ *   data: {
+ *     content: [...]
+ *   }
+ *
+ * }
+ *
+ * There is NO mock fallback.
  */
 export async function listProducts(
   options: ListProductsOptions = {},
 ): Promise<ListProductsResult> {
-  const {
-    signal,
-    useMockFallback = true,
-  } = options;
+  const { signal } = options;
 
-  const result = await apiRequest<
-    BackendProductDto[] | unknown
-  >(
-    ENDPOINTS.products,
-    {
-      method: "GET",
-      signal,
-    },
-  );
+  const result =
+    await apiRequest<BackendProductPageResponse>(
+      ENDPOINTS.products,
+      {
+        method: "GET",
+        signal,
+      },
+    );
 
-  if (result.ok) {
-    const raw = result.data;
+  if (!result.ok) {
+    return {
+      source: "error",
+      message: result.message,
+      errorCode:
+        result.errorCode,
+    };
+  }
 
-    if (Array.isArray(raw)) {
-      const products = raw
-        .map((dto) => {
-          try {
-            return normalizeBackendProduct(
-              dto as BackendProductDto,
-            );
-          } catch {
-            return null;
-          }
-        })
-        .filter(
-          (product): product is Product =>
-            product !== null,
-        );
+  const page =
+    result.data?.data;
 
-      return {
-        source: "backend",
-        products,
-      };
-    }
-
-    if (useMockFallback) {
-      return {
-        source: "fallback",
-        products: listMockProducts(),
-        reason:
-          "Backend returned an unexpected payload.",
-      };
-    }
-
+  if (
+    !page ||
+    !Array.isArray(page.content)
+  ) {
     return {
       source: "error",
       message:
-        "Backend returned an unexpected payload.",
+        "Backend returned an unexpected product catalogue payload.",
+      errorCode:
+        "PRODUCT_CATALOGUE_INVALID_PAYLOAD",
     };
   }
 
-  if (useMockFallback) {
-    return {
-      source: "fallback",
-      products: listMockProducts(),
-      reason: result.message,
-    };
-  }
+  const products =
+    page.content
+      .map((dto) => {
+        try {
+          return normalizeBackendProduct(
+            dto,
+          );
+        } catch {
+          return null;
+        }
+      })
+      .filter(
+        (
+          product,
+        ): product is Product =>
+          product !== null,
+      );
 
   return {
-    source: "error",
-    message: result.message,
-    errorCode: result.errorCode,
+    source: "backend",
+    products,
   };
 }
 

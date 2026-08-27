@@ -2,12 +2,21 @@
 
 import { Container, Typography, Box } from "@mui/material";
 import ProductCarousel from "@/components/products/ProductCarousel";
-import products from "@/data/products";
+import type { Product } from "@/types/product";
 
-export default function FlashSale() {
-  const flashProducts = products.filter(
-    (product) => (product.discount ?? 0) >= 10,
-  );
+interface Props {
+  products: Product[];
+}
+
+/**
+ * Flash Sale strip — receives a pre-filtered subset of the backend
+ * catalogue. Visual is preserved exactly from the previous
+ * mock-data-driven implementation.
+ */
+export default function FlashSale({ products }: Props) {
+  if (products.length === 0) {
+    return null;
+  }
 
   return (
     <Container maxWidth="xl" sx={{ py: 5 }}>
@@ -34,7 +43,7 @@ export default function FlashSale() {
         </Typography>
       </Box>
 
-      <ProductCarousel products={flashProducts} />
+      <ProductCarousel products={products} />
     </Container>
   );
 }

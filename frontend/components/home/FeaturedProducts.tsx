@@ -3,13 +3,22 @@
 import { Container, Typography, Grid } from "@mui/material";
 
 import ProductCard from "@/components/products/ProductCard";
-import { listMockProducts } from "@/services/productService";
 import { getProductImage } from "@/utils/productImages";
+import type { Product } from "@/types/product";
 
-export default function FeaturedProducts() {
-  const featuredProducts = listMockProducts().filter(
-    (product) => product.featured
-  );
+interface Props {
+  products: Product[];
+}
+
+/**
+ * Featured Products strip. Receives a pre-filtered subset of the
+ * backend catalogue (`featured === true`) from the home page. The
+ * section preserves the original card grid visual exactly.
+ */
+export default function FeaturedProducts({ products }: Props) {
+  if (products.length === 0) {
+    return null;
+  }
 
   return (
     <Container maxWidth="xl" sx={{ py: 5 }}>
@@ -24,7 +33,7 @@ export default function FeaturedProducts() {
       </Typography>
 
       <Grid container spacing={3}>
-        {featuredProducts.map((product) => (
+        {products.map((product) => (
           <Grid
             key={product.id}
             size={{ xs: 12, sm: 6, md: 3 }}

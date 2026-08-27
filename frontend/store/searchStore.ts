@@ -53,7 +53,6 @@ interface SearchStore extends SearchFilters {
 
   dataSource:
     | "backend"
-    | "fallback"
     | null;
 
   search: (query: string) => Promise<void>;
@@ -319,9 +318,7 @@ const useSearchStore =
            * Empty search = full catalogue.
            */
           const response =
-            await listProducts({
-              useMockFallback: false,
-            });
+            await listProducts();
 
           if (
             response.source ===
