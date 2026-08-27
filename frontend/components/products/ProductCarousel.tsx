@@ -20,16 +20,19 @@ interface Props {
 export default function ProductCarousel({ products }: Props) {
   return (
     <Box
-      sx={{
-        display: "flex",
-        gap: 3,
-        overflowX: "auto",
-        pb: 2,
-        "&::-webkit-scrollbar": {
-          display: "none",
-        },
-      }}
-    >
+  sx={{
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
+    display: "flex",
+    gap: 3,
+    overflowX: "auto",
+    pb: 2,
+    "&::-webkit-scrollbar": {
+      display: "none",
+    },
+  }}
+>l
       {products.map((product) => (
         <Box
           key={product.id}

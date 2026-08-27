@@ -251,7 +251,7 @@ export async function getProductDetailsById(
 
   let product: Product;
   try {
-    product = normalizeBackendProductDetails(result.data, result.data?.product);
+    product = normalizeBackendProductDetails(result.data);
   } catch {
     return {
       ok: false,
