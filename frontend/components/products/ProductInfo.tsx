@@ -99,8 +99,8 @@ export default function ProductInfo({
       </Typography>
 
       <ProductRatingRow
-        rating={product.rating}
-        reviewCount={product.reviews}
+        rating={product.rating ?? 0}
+        reviewCount={product.reviewsCount ?? 0}
       />
 
       <Box sx={{ mt: 3 }}>

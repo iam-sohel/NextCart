@@ -270,7 +270,6 @@ const brands = [
                         originalPrice={product.originalPrice}
                         offer={searchPageOffer(product)}
                         rating={product.rating}
-                        reviews={product.reviews}
                         brand={product.brand}
                       />
                     </Grid>

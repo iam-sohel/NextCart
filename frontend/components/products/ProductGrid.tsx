@@ -68,7 +68,6 @@ export default async function ProductGrid() {
               originalPrice={product.originalPrice}
               offer={offer}
               rating={product.rating}
-              reviews={product.reviews}
               brand={product.brand}
               bestseller={product.bestseller}
               newArrival={product.newArrival}

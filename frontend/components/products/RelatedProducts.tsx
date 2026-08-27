@@ -93,7 +93,6 @@ export default function RelatedProducts({ related }: RelatedProductsProps) {
                 product.discount ? `${product.discount}% OFF` : "Best Price"
               }
               rating={product.rating}
-              reviews={product.reviews}
               brand={product.brand}
               bestseller={product.bestseller}
               newArrival={product.newArrival}

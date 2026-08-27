@@ -180,7 +180,7 @@ function sortProducts(
 
     case "rating":
       sorted.sort(
-        (a, b) => b.rating - a.rating,
+        (a, b) => (b.rating ?? 0) - (a.rating ?? 0),
       );
       break;
 

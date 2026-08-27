@@ -253,7 +253,21 @@ export async function getProductBySlug(
       product =
         mergeVariantInventory(
           product,
-          inventoryByVariant,
+          Object.entries(
+            inventoryByVariant,
+          ).map(
+            ([variantId, inventory]) => ({
+              variantId,
+              quantity: inventory.quantity,
+              reservedStock:
+                inventory.reservedQuantity ??
+                inventory.reservedQty,
+              availableStock:
+                inventory.availableQuantity,
+              stockStatus:
+                inventory.stockStatus,
+            }),
+          ),
         );
     }
 
@@ -405,7 +419,21 @@ export async function getProductDetailsById(
     product =
       mergeVariantInventory(
         product,
-        inventoryByVariant,
+        Object.entries(
+          inventoryByVariant,
+        ).map(
+          ([variantId, inventory]) => ({
+            variantId,
+            quantity: inventory.quantity,
+            reservedStock:
+              inventory.reservedQuantity ??
+              inventory.reservedQty,
+            availableStock:
+              inventory.availableQuantity,
+            stockStatus:
+              inventory.stockStatus,
+          }),
+        ),
       );
   }
 

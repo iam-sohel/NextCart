@@ -155,8 +155,10 @@ export interface Product {
   /** Discount percentage. Optional — derive from price/originalPrice when absent. */
   discount?: number;
 
-  rating: number;
-  reviews: number;
+  name: string;
+reviewsCount: number;
+  /** Rolling average rating for card and product displays. */
+  rating?: number;
   /** Detailed reviews when the backend includes them. */
   reviewsSummary?: ReviewSummary;
   reviewsList?: Review[];
@@ -224,7 +226,7 @@ export function toCardProduct(product: Product): CardProduct {
     originalPrice: product.originalPrice,
     offer: product.discount ? `${product.discount}% OFF` : "Best Price",
     rating: product.rating,
-    reviews: product.reviews,
+    reviews: product.reviewsCount,
     brand: product.brand,
     bestseller: product.bestseller,
     newArrival: product.newArrival,

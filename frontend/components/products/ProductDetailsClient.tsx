@@ -132,8 +132,8 @@ export default function ProductDetailsClient({
           reviews={product.reviewsList ?? []}
           summary={
             product.reviewsSummary ?? {
-              average: product.rating,
-              count: product.reviews,
+              average: product.rating ?? 0,
+              count: product.reviewsCount,
             }
           }
         />

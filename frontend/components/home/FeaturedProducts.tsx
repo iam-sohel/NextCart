@@ -49,7 +49,6 @@ export default function FeaturedProducts({ products }: Props) {
                 product.discount ? `${product.discount}% OFF` : "Best Price"
               }
               rating={product.rating}
-              reviews={product.reviews}
               brand={product.brand}
               bestseller={product.bestseller}
               newArrival={product.newArrival}
