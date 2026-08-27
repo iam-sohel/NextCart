@@ -1,8 +1,11 @@
 package com.nextcart.nextcart.product_module.productVariant.dto;
 
-import com.nextcart.nextcart.inventory_module.dto.InventoryResponse;
+import com.nextcart.nextcart.product_module.productPrice.dto.ProductVariantPriceResponse;
 import com.nextcart.nextcart.product_module.productVariant.ProductVariantStatus;
+import com.nextcart.nextcart.product_module.variantAttribute.dto.VariantAttributeResponse;
 import lombok.*;
+
+import java.util.List;
 
 @Getter
 @Setter
@@ -19,5 +22,11 @@ public class ProductVariantResponse {
 
     private ProductVariantStatus status;
 
-    private InventoryResponse inventory;
+    private List<VariantAttributeResponse> attributes;
+
+    private ProductVariantPriceResponse price;
+
+    private String stockStatus;
+
+    private Boolean available;
 }

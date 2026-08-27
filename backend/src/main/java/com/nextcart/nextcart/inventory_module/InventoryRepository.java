@@ -6,18 +6,16 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
-public interface InventoryRepository
-        extends JpaRepository<InventoryEntity, Long> {
+public interface InventoryRepository extends JpaRepository<InventoryEntity, Long> {
 
-    Optional<InventoryEntity> findByProductVariantId(
-            Long productVariantId
-    );
+    Optional<InventoryEntity> findByProductVariantId(Long productVariantId);
 
-    boolean existsByProductVariantId(
-            Long productVariantId
-    );
+    List<InventoryEntity> findByProductVariantIdIn(List<Long> productVariantIds);
+
+    boolean existsByProductVariantId(Long productVariantId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
@@ -25,9 +23,7 @@ public interface InventoryRepository
             FROM InventoryEntity i
             WHERE i.productVariant.id = :productVariantId
             """)
-    Optional<InventoryEntity> findByProductVariantIdForUpdate(
-            @Param("productVariantId") Long productVariantId
-    );
+    Optional<InventoryEntity> findByProductVariantIdForUpdate(@Param("productVariantId") Long productVariantId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
@@ -35,7 +31,5 @@ public interface InventoryRepository
             FROM InventoryEntity i
             WHERE i.id = :id
             """)
-    Optional<InventoryEntity> findByIdForUpdate(
-            @Param("id") Long id
-    );
+    Optional<InventoryEntity> findByIdForUpdate(@Param("id") Long id);
 }

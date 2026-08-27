@@ -2,6 +2,7 @@ package com.nextcart.nextcart.product_module.product_base;
 
 import com.nextcart.nextcart.adcommon.dto.ApiResponse;
 import com.nextcart.nextcart.product_module.product_base.dto.ProductCreateRequest;
+import com.nextcart.nextcart.product_module.product_base.dto.ProductDetailsResponse;
 import com.nextcart.nextcart.product_module.product_base.dto.ProductResponse;
 import com.nextcart.nextcart.product_module.product_base.dto.ProductUpdateRequest;
 import jakarta.validation.Valid;
@@ -278,6 +279,38 @@ public class ProductController {
                 new ApiResponse<>(
                         true,
                         "Product restored successfully",
+                        response
+                )
+        );
+    }
+
+
+    @GetMapping("/{id}/details")
+    public ResponseEntity<ApiResponse<ProductDetailsResponse>> getProductDetailsById(
+            @PathVariable Long id) {
+
+        ProductDetailsResponse response =
+                productService.getProductDetailsById(id);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "Product details fetched successfully",
+                        response
+                )
+        );
+    }
+    @GetMapping("/slug/{slug}/details")
+    public ResponseEntity<ApiResponse<ProductDetailsResponse>> getProductDetailsBySlug(
+            @PathVariable String slug) {
+
+        ProductDetailsResponse response =
+                productService.getProductDetailsBySlug(slug);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "Product details fetched successfully",
                         response
                 )
         );

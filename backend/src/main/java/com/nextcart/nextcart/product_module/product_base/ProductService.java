@@ -9,91 +9,27 @@ import org.springframework.data.domain.Pageable;
 
 public interface ProductService {
 
-    // =========================================================
-    // CREATE
-    // =========================================================
-
     ProductResponse createProduct(ProductCreateRequest request);
-
-
-    // =========================================================
-    // GET BY ID
-    // =========================================================
 
     ProductResponse getProductById(Long id);
 
-
-    // =========================================================
-    // GET BY SLUG
-    // =========================================================
-
     ProductResponse getProductBySlug(String slug);
-
-
-    // =========================================================
-    // GET COMPLETE PRODUCT DETAILS
-    // =========================================================
 
     ProductDetailsResponse getProductDetailsById(Long id);
 
-
-    // =========================================================
-    // GET ALL
-    // =========================================================
+    ProductDetailsResponse getProductDetailsBySlug(String slug);
 
     Page<ProductResponse> getAllProducts(Pageable pageable);
 
+    Page<ProductResponse> getProductsByCategory(Long categoryId, Pageable pageable);
 
-    // =========================================================
-    // GET BY CATEGORY
-    // =========================================================
+    Page<ProductResponse> getProductsBySubCategory(Long subCategoryId, Pageable pageable);
 
-    Page<ProductResponse> getProductsByCategory(
-            Long categoryId,
-            Pageable pageable
-    );
+    Page<ProductResponse> getProductsByBrand(Long brandId, Pageable pageable);
 
-
-    // =========================================================
-    // GET BY SUBCATEGORY
-    // =========================================================
-
-    Page<ProductResponse> getProductsBySubCategory(
-            Long subCategoryId,
-            Pageable pageable
-    );
-
-
-    // =========================================================
-    // GET BY BRAND
-    // =========================================================
-
-    Page<ProductResponse> getProductsByBrand(
-            Long brandId,
-            Pageable pageable
-    );
-
-
-    // =========================================================
-    // UPDATE
-    // =========================================================
-
-    ProductResponse updateProduct(
-            Long id,
-            ProductUpdateRequest request
-    );
-
-
-    // =========================================================
-    // DEACTIVATE
-    // =========================================================
+    ProductResponse updateProduct(Long id, ProductUpdateRequest request);
 
     void deactivateProduct(Long id);
-
-
-    // =========================================================
-    // RESTORE
-    // =========================================================
 
     ProductResponse restoreProduct(Long id);
 }
