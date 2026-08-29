@@ -260,7 +260,7 @@ const brands = [
               <>
                 <Grid container spacing={2} sx={{ mb: 4 }}>
                   {paginatedResults.map((product) => (
-                    <Grid size={{ xs: 12, sm: 6, md: 4 }} key={product.id}>
+                    <Grid size={{ xs: 6, sm: 6, md: 4 }} key={product.id}>
                       <ProductCard
                         id={product.id}
                         slug={product.slug}

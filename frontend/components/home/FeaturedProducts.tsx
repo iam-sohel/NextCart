@@ -36,7 +36,7 @@ export default function FeaturedProducts({ products }: Props) {
         {products.map((product) => (
           <Grid
             key={product.id}
-            size={{ xs: 12, sm: 6, md: 3 }}
+            size={{ xs: 6, sm: 6, md: 3 }}
           >
             <ProductCard
               id={product.id}

@@ -133,4 +133,28 @@ export async function checkout(
   return { ok: true, status: res.status, data: normaliseOrder(data) };
 }
 
+/**
+ * GET /api/v1/orders
+ *
+ * Returns the authenticated user's order history.
+ */
+export async function getOrders(
+  signal?: AbortSignal,
+): Promise<ApiResult<OrderResponseWire[]>> {
+  const res = await apiRequest<Envelope<OrderResponseWire[]> | OrderResponseWire[]>(
+    ENDPOINTS.list,
+    { method: "GET", signal },
+  );
+  if (!res.ok) return res;
+  const data = unwrap<OrderResponseWire[] | null>(res.data, null);
+  if (!Array.isArray(data)) {
+    return {
+      ok: false,
+      status: res.status,
+      message: "Empty or invalid orders response.",
+    };
+  }
+  return { ok: true, status: res.status, data: data.map(normaliseOrder) };
+}
+
 export type { ApiResult };

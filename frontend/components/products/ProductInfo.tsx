@@ -137,23 +137,21 @@ export default function ProductInfo({
       </Box>
 
       <Stack
-        direction="row"
+        direction={{ xs: "column", sm: "row" }}
         spacing={1.5}
-        sx={{ alignItems: "center", mt: 3 }}
+        sx={{ alignItems: "stretch", mt: 3 }}
       >
-        <Box sx={{ flex: 1 }}>
-          <ProductActions
-            product={product}
-            variantId={selectedVariant?.id}
-            variantLabel={selectedVariantLabel(selectedVariant)}
-            quantity={quantity}
-            priceOverride={selectedVariant?.price}
-            canPurchase={
-              canPurchase && (!variantExists || Boolean(selectedVariant))
-            }
-            addDisabledReason={addDisabledReason}
-          />
-        </Box>
+        <ProductActions
+          product={product}
+          variantId={selectedVariant?.id}
+          variantLabel={selectedVariantLabel(selectedVariant)}
+          quantity={quantity}
+          priceOverride={selectedVariant?.price}
+          canPurchase={
+            canPurchase && (!variantExists || Boolean(selectedVariant))
+          }
+          addDisabledReason={addDisabledReason}
+        />
 
         <WishlistButton productId={product.id} />
       </Stack>
