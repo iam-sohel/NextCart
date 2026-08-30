@@ -10,7 +10,7 @@ import ElectronicsSection from "@/components/home/ElectronicsSection";
 import FashionSection from "@/components/home/FashionSection";
 import Newsletter from "@/components/home/Newsletter";
 
-import { listProducts } from "@/services/productService";
+import { listProducts, enrichProductListWithDetails } from "@/services/productService";
 import type { Product } from "@/types/product";
 
 /**
@@ -37,8 +37,14 @@ import type { Product } from "@/types/product";
 export default async function HomePage() {
   const result = await listProducts();
 
-  const allProducts: Product[] =
+  let allProducts: Product[] =
     result.source === "backend" ? result.products : [];
+
+  if (allProducts.length > 0) {
+    allProducts = await enrichProductListWithDetails(allProducts, {
+      loadInventory: false,
+    });
+  }
 
   const hasProducts = allProducts.length > 0;
 

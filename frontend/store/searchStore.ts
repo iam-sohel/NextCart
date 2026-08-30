@@ -3,6 +3,7 @@ import { create } from "zustand";
 import {
   listProducts,
   searchProducts,
+  enrichProductListWithDetails,
 } from "@/services/productService";
 
 import type { Product } from "@/types/product";
@@ -349,11 +350,20 @@ const useSearchStore =
          * All subsequent UI filters operate against catalog,
          * never against results.
          */
+
+        // Enrich products with detail data (images, prices, ratings, etc.)
+        const enrichedProducts = await enrichProductListWithDetails(
+          products,
+          {
+            loadInventory: false,
+          },
+        );
+
         const nextState = get();
 
         const calculated =
           calculateResults(
-            products,
+            enrichedProducts,
             {
               ...nextState,
               query,
@@ -369,7 +379,7 @@ const useSearchStore =
             "backend",
 
           catalog:
-            products,
+            enrichedProducts,
 
           results:
             calculated.results,

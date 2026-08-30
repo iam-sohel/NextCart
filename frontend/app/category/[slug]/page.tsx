@@ -7,7 +7,7 @@ import ClientProductGrid from "@/components/products/ClientProductGrid";
 import { Box, Container, Typography, Alert } from "@mui/material";
 
 import categories from "@/data/categories";
-import { listProducts } from "@/services/productService";
+import { listProducts, enrichProductListWithDetails } from "@/services/productService";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -44,6 +44,13 @@ export default async function CategoryPage(props: PageProps) {
       p.category?.toLowerCase() === category.title.toLowerCase()
   );
 
+  const enrichedProducts = await enrichProductListWithDetails(
+    categoryProducts,
+    {
+      loadInventory: false,
+    },
+  );
+
   return (
     <>
       <Header />
@@ -58,8 +65,8 @@ export default async function CategoryPage(props: PageProps) {
           </Typography>
         </Box>
 
-        {categoryProducts.length > 0 ? (
-          <ClientProductGrid products={categoryProducts} />
+        {enrichedProducts.length > 0 ? (
+          <ClientProductGrid products={enrichedProducts} />
         ) : (
           <Box
             sx={{
