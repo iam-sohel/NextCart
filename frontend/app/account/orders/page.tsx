@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 import {
@@ -227,10 +228,12 @@ export default function AccountOrdersPage() {
                         }}
                       >
                         {item.productImage && (
-                          <img
+                          <Image
                             src={item.productImage}
                             alt={item.productName}
-                            style={{ width: 40, height: 40, objectFit: "contain" }}
+                            width={40}
+                            height={40}
+                            style={{ objectFit: "contain" }}
                           />
                         )}
                         <Box>
