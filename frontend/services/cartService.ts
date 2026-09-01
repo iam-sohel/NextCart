@@ -87,12 +87,10 @@ function normaliseCart(raw: CartResponseWire): CartResponseWire {
 const ENDPOINTS = {
   cart: "/api/v1/cart",
   addItem: "/api/v1/cart/items",
-  // NOTE: the backend path variable is named `{productId}` but is read as
-  // the VARIANT id (findByCartIdAndProductVariantId). We pass the variantId.
-  updateItem: (variantId: number) =>
-    `/api/v1/cart/items/${encodeURIComponent(String(variantId))}`,
-  removeItem: (variantId: number) =>
-    `/api/v1/cart/items/${encodeURIComponent(String(variantId))}`,
+  updateItem: (cartItemId: number) =>
+    `/api/v1/cart/items/${encodeURIComponent(String(cartItemId))}`,
+  removeItem: (cartItemId: number) =>
+    `/api/v1/cart/items/${encodeURIComponent(String(cartItemId))}`,
 } as const;
 
 /* ─────────────────────────────────────────────────────────────────────
@@ -128,27 +126,27 @@ export async function addItemToCart(
   return { ok: true, status: res.status, data: normaliseCart(res.data) };
 }
 
-/** PUT /api/v1/cart/items/{variantId} — set quantity. */
+/** PUT /api/v1/cart/items/{cartItemId} — set quantity. */
 export async function updateCartItem(
-  variantId: number,
+  cartItemId: number,
   quantity: number,
   signal?: AbortSignal,
 ): Promise<ApiResult<CartResponseWire>> {
   const res = await apiRequest<CartResponseWire>(
-    ENDPOINTS.updateItem(variantId),
+    ENDPOINTS.updateItem(cartItemId),
     { method: "PUT", body: { quantity }, signal },
   );
   if (!res.ok) return res;
   return { ok: true, status: res.status, data: normaliseCart(res.data) };
 }
 
-/** DELETE /api/v1/cart/items/{variantId} */
+/** DELETE /api/v1/cart/items/{cartItemId} */
 export async function removeCartItem(
-  variantId: number,
+  cartItemId: number,
   signal?: AbortSignal,
 ): Promise<ApiResult<CartResponseWire>> {
   const res = await apiRequest<CartResponseWire>(
-    ENDPOINTS.removeItem(variantId),
+    ENDPOINTS.removeItem(cartItemId),
     { method: "DELETE", signal },
   );
   if (!res.ok) return res;

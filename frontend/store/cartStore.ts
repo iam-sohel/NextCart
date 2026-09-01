@@ -485,18 +485,8 @@ const useCartStore = create<CartStore>((set, get) => {
         error: null,
       });
 
-      const line = get().items.find(
-        (item) => String(item.id) === String(rowId),
-      );
-
-      const variantId = toFiniteNumber(line?.variantId);
-
-      if (variantId === undefined) {
-        return failWith(
-          "We can't identify this item's variant, so its quantity can't be changed here. Please remove it and re-add it from the product page.",
-        );
-      }
-
+      // rowId is the cart-item row id ( = cartItem.id ), use it directly
+      // no need to look up variantId from localStorage meta.
       const safeQty = Math.max(
         1,
         Math.floor(quantity || 1),
@@ -507,7 +497,7 @@ const useCartStore = create<CartStore>((set, get) => {
       });
 
       const res = await apiUpdateItem(
-        variantId,
+        Number(rowId),
         safeQty,
       );
 
@@ -528,23 +518,12 @@ const useCartStore = create<CartStore>((set, get) => {
         error: null,
       });
 
-      const line = get().items.find(
-        (item) => String(item.id) === String(rowId),
-      );
-
-      const variantId = toFiniteNumber(line?.variantId);
-
-      if (variantId === undefined) {
-        return failWith(
-          "We can't identify this item's variant, so it can't be removed here. Please clear the cart or re-add it from the product page.",
-        );
-      }
-
+      // rowId is the cart-item row id ( = cartItem.id ), use it directly
       set({
         loading: true,
       });
 
-      const res = await apiRemoveItem(variantId);
+      const res = await apiRemoveItem(Number(rowId));
 
       if (!res.ok) {
         return failWith(res.message);

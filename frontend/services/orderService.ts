@@ -96,10 +96,10 @@ function normaliseOrder(o: OrderResponseWire): OrderResponseWire {
    ───────────────────────────────────────────────────────────────────── */
 
 const ENDPOINTS = {
-  checkout: "/api/v1/orders/checkout",
-  list: "/api/v1/orders",
-  byId: (id: number) => `/api/v1/orders/${id}`,
-  cancel: (id: number) => `/api/v1/orders/${id}/cancel`,
+  checkout: "/api/v1/checkout",
+  list: "/api/orders",
+  byId: (id: number) => `/api/orders/${id}`,
+  cancel: (id: number) => `/api/orders/${id}/cancel`,
 } as const;
 
 /* ─────────────────────────────────────────────────────────────────────
