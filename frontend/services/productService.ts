@@ -167,6 +167,12 @@ interface BackendProductPageResponse {
   data?: BackendProductPage;
 }
 
+interface BackendProductDetailsResponse {
+  success?: boolean;
+  message?: string;
+  data?: BackendProductDetailsDto;
+}
+
 /* -------------------------------------------------------------------------- */
 /* Product by slug                                                           */
 /* -------------------------------------------------------------------------- */
@@ -209,30 +215,40 @@ export async function getProductBySlug(
 > {
   const { signal } = options;
 
-  const result =
-    await apiRequest<BackendProductDetailsDto>(
-      ENDPOINTS.productDetailsBySlug(slug),
-      {
-        method: "GET",
-        signal,
-      },
-    );
-
-  if (!result.ok) {
-    return {
-      ok: false,
-      status: result.status,
-      message: result.message,
-      errorCode: result.errorCode,
-      source: "error",
-    };
-  }
-
   try {
-    let product =
-      normalizeBackendProductDetails(
-        result.data,
+    const result =
+      await apiRequest<BackendProductDetailsResponse>(
+        ENDPOINTS.productDetailsBySlug(slug),
+        {
+          method: "GET",
+          signal,
+        },
       );
+
+    if (!result.ok) {
+      return {
+        ok: false,
+        status: result.status,
+        message: result.message,
+        errorCode: result.errorCode,
+        source: "error",
+      };
+    }
+
+    const details = result.data?.data;
+
+    if (!details) {
+      return {
+        ok: false,
+        status: 500,
+        message: "Product details payload is missing.",
+        errorCode: "PRODUCT_DETAILS_INVALID_PAYLOAD",
+        source: "error",
+      };
+    }
+
+    let product: Product =
+      normalizeBackendProductDetails(details);
 
     /*
      * ProductDetailsResponse does not currently
@@ -250,12 +266,18 @@ export async function getProductBySlug(
           signal,
         );
 
+      const variantInventoryEntries =
+        Object.entries(
+          inventoryByVariant,
+        ) as Array<[
+          string,
+          VariantInventory,
+        ]>;
+
       product =
         mergeVariantInventory(
           product,
-          Object.entries(
-            inventoryByVariant,
-          ).map(
+          variantInventoryEntries.map(
             ([variantId, inventory]) => ({
               variantId,
               quantity: inventory.quantity,
@@ -306,8 +328,8 @@ export async function getProductById(
   signal?: AbortSignal,
 ): Promise<ApiResult<Product>> {
   const result =
-    await apiRequest<BackendProductDto>(
-      ENDPOINTS.productById(id),
+    await apiRequest<BackendProductDetailsResponse>(
+      ENDPOINTS.productDetailsById(id),
       {
         method: "GET",
         signal,
@@ -318,27 +340,35 @@ export async function getProductById(
     return result;
   }
 
-  try {
-    const normalized =
-      normalizeBackendProduct(
-        result.data,
-      );
+  let product: Product;
 
-    return {
-      ok: true,
-      status: result.status,
-      data: normalized,
-    };
+  try {
+    const details = result.data?.data;
+
+    if (!details) {
+      return {
+        ok: false,
+        status: 500,
+        message: "Product details payload is missing.",
+        errorCode: "PRODUCT_DETAILS_INVALID_PAYLOAD",
+      };
+    }
+
+    product = normalizeBackendProductDetails(details);
   } catch {
     return {
       ok: false,
       status: 500,
-      message:
-        "Failed to normalize product payload.",
-      errorCode:
-        "PRODUCT_NORMALIZATION_FAILED",
+      message: "Failed to normalize product details.",
+      errorCode: "PRODUCT_NORMALIZATION_FAILED",
     };
   }
+
+  return {
+    ok: true,
+    status: result.status,
+    data: product,
+  };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -696,40 +726,26 @@ export async function listBackendProducts(
     return result;
   }
 
-  const page =
-    result.data?.data;
+  const page = result.data?.data;
 
-  if (
-    !page ||
-    !Array.isArray(page.content)
-  ) {
+  if (!page || !Array.isArray(page.content)) {
     return {
       ok: false,
       status: 500,
-      message:
-        "Backend returned an unexpected product catalogue payload.",
-      errorCode:
-        "PRODUCT_CATALOGUE_INVALID_PAYLOAD",
+      message: "Backend returned an unexpected product catalogue payload.",
+      errorCode: "PRODUCT_CATALOGUE_INVALID_PAYLOAD",
     };
   }
 
-  const products =
-    page.content
-      .map((dto) => {
-        try {
-          return normalizeBackendProduct(
-            dto,
-          );
-        } catch {
-          return null;
-        }
-      })
-      .filter(
-        (
-          product,
-        ): product is Product =>
-          product !== null,
-      );
+  const products = page.content
+    .map((dto) => {
+      try {
+        return normalizeBackendProduct(dto);
+      } catch {
+        return null;
+      }
+    })
+    .filter((product): product is Product => product !== null);
 
   return {
     ok: true,

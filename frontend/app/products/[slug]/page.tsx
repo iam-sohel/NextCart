@@ -8,9 +8,8 @@ import {
   getProductBySlug,
   listProducts,
   getProductDetailsById,
+  enrichProductListWithDetails,
 } from "@/services/productService";
-import { normalizeProduct } from "@/utils/normalizeProduct";
-import type { Product } from "@/types/product";
 
 /**
  * NEXTCART — Product details page (Server Component)
@@ -53,13 +52,13 @@ export default async function ProductDetailsPage(props: PageProps) {
   // Related products: up to 4 products in the same category,
   // excluding the current product. The backend does not yet expose a
   // dedicated /related endpoint so we use the same-category subset of
-  // the catalogue.
+  // the catalogue, then enrich them with detail data.
   const catalogue = await listProducts();
 
   const relatedSource =
     catalogue.source === "error" ? [] : catalogue.products;
 
-  const related = relatedSource
+  const relatedCandidates = relatedSource
     .filter(
       (p) =>
         p.category &&
@@ -68,8 +67,11 @@ export default async function ProductDetailsPage(props: PageProps) {
         String(p.id) !== String(product.id),
     )
     .sort((a, b) => Number(b.rating) - Number(a.rating))
-    .slice(0, 4)
-    .map((p) => normalizeProduct(p as Product));
+    .slice(0, 4);
+
+  const related = await enrichProductListWithDetails(relatedCandidates, {
+    loadInventory: false,
+  });
 
   return (
     <>

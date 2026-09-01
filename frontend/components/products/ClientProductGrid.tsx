@@ -3,6 +3,7 @@
 import { Grid } from "@mui/material";
 
 import ProductCard from "./ProductCard";
+import { getProductImage } from "@/utils/productImages";
 import type { Product } from "@/types/product";
 
 interface ClientProductGridProps {
@@ -13,7 +14,7 @@ export default function ClientProductGrid({ products }: ClientProductGridProps) 
   return (
     <Grid container spacing={3}>
       {products.map((product) => {
-        const image = product.image;
+        const image = getProductImage(product);
         const offer =
           product.discount && product.discount > 0
             ? `${product.discount}% OFF`

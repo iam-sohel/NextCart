@@ -36,6 +36,8 @@ const remotePatterns: RemotePattern[] = [
   // image paths that the frontend absolutizes to API_BASE_URL.
   { protocol: "http", hostname: "localhost", port: "8080", pathname: "/**" },
   { protocol: "http", hostname: "127.0.0.1", port: "8080", pathname: "/**" },
+  // External image CDN used by backend (e.g., Unsplash)
+  { protocol: "https", hostname: "images.unsplash.com", pathname: "/**" },
 ];
 
 for (const hostname of remoteHostnames) {

@@ -81,8 +81,8 @@ export default function ProductCard({
   price,
   originalPrice,
   offer,
-  rating = 4.5,
-  reviews = 0,
+  rating,
+  reviews,
   brand = "NextCart",
   bestseller = false,
   newArrival = false,
@@ -331,38 +331,40 @@ export default function ProductCard({
           </Typography>
         </Link>
 
-        {/* Rating */}
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 0.5,
-            my: 1,
-          }}
-        >
-          <StarIcon
+        {/* Rating - only show when rating is available */}
+        {rating !== undefined && rating > 0 && (
+          <Box
             sx={{
-              fontSize: 16,
-              color: "secondary.main",
-            }}
-          />
-
-          <Typography
-            variant="body2"
-            sx={{
-              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              gap: 0.5,
+              my: 1,
             }}
           >
-            {Number.isFinite(rating) ? rating.toFixed(1) : "0.0"}
-          </Typography>
+            <StarIcon
+              sx={{
+                fontSize: 16,
+                color: "secondary.main",
+              }}
+            />
 
-          <Typography
-            variant="caption"
-            color="text.secondary"
-          >
-            ({formatReviews(reviews)})
-          </Typography>
-        </Box>
+            <Typography
+              variant="body2"
+              sx={{
+                fontWeight: 700,
+              }}
+            >
+              {rating.toFixed(1)}
+            </Typography>
+
+            <Typography
+              variant="caption"
+              color="text.secondary"
+            >
+              ({formatReviews(reviews ?? 0)})
+            </Typography>
+          </Box>
+        )}
 
         {/* Price */}
         <Box

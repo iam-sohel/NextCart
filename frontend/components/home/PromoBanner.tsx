@@ -1,4 +1,4 @@
-"use client";
+ "use client";
 
 import { Container, Grid, Paper, Typography } from "@mui/material";
 

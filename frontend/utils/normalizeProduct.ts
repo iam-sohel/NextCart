@@ -115,18 +115,26 @@ export interface BackendProductVariantDto {
 
   sku?: string;
 
+  status?: string | null;
+
+  available?: boolean;
+
+  stockStatus?: string;
+
   price?: {
+    id?: number | string;
+    productVariantId?: number | string;
     mrp?: number;
     sellingPrice?: number;
     currency?: string;
   } | null;
 
   attributes?: Array<{
+    id?: number | string;
+    variantId?: number | string;
     attributeName?: string;
     attributeValue?: string;
   }>;
-
-  status?: string | null;
 }
 
 export interface BackendProductImageDto {
@@ -345,6 +353,11 @@ export function normalizeProductVariant(
     0,
   );
 
+  const mrp = toNumber(
+    variant.price?.mrp,
+    0,
+  );
+
   const attributes =
     normalizeVariantAttributes(
       variant.attributes,
@@ -357,10 +370,16 @@ export function normalizeProductVariant(
 
     price: sellingPrice,
 
+    originalPrice: mrp > 0 ? mrp : undefined,
+
     attributes,
 
     inventory:
       normalizeInventory(inventory),
+
+    stockStatus: variant.stockStatus,
+
+    available: variant.available,
   };
 }
 
@@ -379,12 +398,11 @@ function getProductPricing(
       ? toNumber(product.price)
       : firstVariant?.price ?? 0;
 
+  // Use product-level originalPrice if available, otherwise derive from first variant's MRP
   const originalPrice =
     product.originalPrice !== undefined
-      ? toNumber(
-          product.originalPrice,
-        )
-      : price;
+      ? toNumber(product.originalPrice)
+      : firstVariant?.originalPrice ?? price;
 
   const discount =
     product.discount !== undefined
@@ -495,10 +513,15 @@ export function normalizeBackendProductDetails(
       product.images,
     );
 
+  // Sort by isPrimary desc, then by sortOrder asc, then pick first
   const primaryImage =
-    images.find(
-      (image) => image.isPrimary,
-    ) ?? images[0];
+    [...images]
+      .sort((a, b) => {
+        if (a.isPrimary !== b.isPrimary) {
+          return a.isPrimary ? -1 : 1;
+        }
+        return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+      })[0] ?? images[0];
 
   const name =
     product.name ?? "";
@@ -547,15 +570,9 @@ export function normalizeBackendProductDetails(
     variants:
       normalizedVariants,
 
-    rating: toNumber(
-      product.rating,
-      0,
-    ),
+    rating: product.rating !== undefined ? toNumber(product.rating) : undefined,
 
-    reviewsCount: toNumber(
-      product.reviewsCount,
-      0,
-    ),
+    reviewsCount: product.reviewsCount !== undefined ? toNumber(product.reviewsCount) : 0,
 
     image:
       primaryImage?.url ?? "",

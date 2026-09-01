@@ -39,6 +39,16 @@ export default async function ProductGrid() {
   const enriched = await enrichProductListWithDetails(products, {
     loadInventory: false,
   });
+  console.log(
+  "[ProductGrid] enriched products:",
+  enriched.map((product) => ({
+    id: product.id,
+    slug: product.slug,
+    title: product.title,
+    price: product.price,
+    image: product.image,
+  })),
+);
 
   return (
     <Grid container spacing={3}>

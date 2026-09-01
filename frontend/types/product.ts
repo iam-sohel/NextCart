@@ -71,6 +71,8 @@ export interface ProductVariant {
   attributes?: Record<string, string | number | null>;
   /** Variant-level price override in rupees. Falls back to the product price. */
   price?: number;
+  /** Variant-level original price (MRP) in rupees. */
+  originalPrice?: number;
   /** Inventory for this variant. Optional — when omitted we use the parent's. */
   inventory?: {
     quantity?: number;
@@ -83,6 +85,10 @@ export interface ProductVariant {
    * `deriveInventory()`.
    */
   stockStatus?: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | string;
+  /**
+   * Whether this variant is available for purchase.
+   */
+  available?: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────────
