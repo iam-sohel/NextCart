@@ -63,7 +63,7 @@ public class WishlistController {
 
     private Long getLoggedInUserId(Authentication authentication) {
         String email = authentication.getName();
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new RuntimeException("Logged in user not found"));
         return user.getId();
     }

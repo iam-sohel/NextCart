@@ -1,13 +1,24 @@
-package com.nextcart.nextcart.user_module.repository;
+        package com.nextcart.nextcart.user_module.repository;
+
+import com.nextcart.nextcart.user_module.entity.Role;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-
-import com.nextcart.nextcart.user_module.entity.Role;
-
+@Repository
 public interface RoleRepository extends JpaRepository<Role, Long> {
 
-    Optional<Role> findByName(String name);
+    // =========================================================
+    // ROLE LOOKUP
+    // =========================================================
 
+    Optional<Role> findByNameIgnoreCase(String name);
+
+
+    // =========================================================
+    // ROLE VALIDATION
+    // =========================================================
+
+    boolean existsByNameIgnoreCase(String name);
 }

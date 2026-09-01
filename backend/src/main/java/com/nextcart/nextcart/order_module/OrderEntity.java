@@ -1,6 +1,5 @@
 package com.nextcart.nextcart.order_module;
 
-import com.nextcart.nextcart.order_module.OrderStatus;
 import com.nextcart.nextcart.user_module.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -31,6 +30,10 @@ import java.util.List;
                 @Index(
                         name = "idx_orders_created_at",
                         columnList = "created_at"
+                ),
+                @Index(
+                        name = "idx_orders_payment_expires_at",
+                        columnList = "payment_expires_at"
                 )
         }
 )
@@ -45,6 +48,11 @@ public class OrderEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+
+    // =========================================================
+    // ORDER NUMBER
+    // =========================================================
+
     @Column(
             name = "order_number",
             nullable = false,
@@ -53,6 +61,11 @@ public class OrderEntity {
     )
     private String orderNumber;
 
+
+    // =========================================================
+    // USER
+    // =========================================================
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
             name = "user_id",
@@ -60,12 +73,45 @@ public class OrderEntity {
     )
     private User user;
 
+
+    // =========================================================
+    // ORDER STATUS
+    // =========================================================
+
     @Enumerated(EnumType.STRING)
     @Column(
             nullable = false,
             length = 30
     )
     private OrderStatus status;
+
+
+    // =========================================================
+    // PAYMENT EXPIRY
+    // =========================================================
+    //
+    // When the order is created:
+    //
+    // paymentExpiresAt = now + 15 minutes
+    //
+    // If payment is not completed before this time:
+    //
+    // PENDING
+    //    ↓
+    // CANCELLED
+    //    ↓
+    // release reserved inventory
+    //
+    // IMPORTANT:
+    // This timestamp is persisted in DB.
+    // Do NOT depend on frontend timer.
+    // =========================================================
+
+    @Column(
+            name = "payment_expires_at"
+    )
+    private LocalDateTime paymentExpiresAt;
+
 
     // =========================================================
     // SHIPPING ADDRESS SNAPSHOT
@@ -117,6 +163,7 @@ public class OrderEntity {
             nullable = false
     )
     private String shippingCountry;
+
 
     // =========================================================
     // PRICE SNAPSHOT
@@ -173,6 +220,7 @@ public class OrderEntity {
     @Builder.Default
     private String currency = "INR";
 
+
     // =========================================================
     // ORDER ITEMS
     // =========================================================
@@ -185,6 +233,7 @@ public class OrderEntity {
     )
     @Builder.Default
     private List<OrderItemEntity> items = new ArrayList<>();
+
 
     // =========================================================
     // TIMESTAMPS
@@ -202,6 +251,7 @@ public class OrderEntity {
             nullable = false
     )
     private LocalDateTime updatedAt;
+
 
     // =========================================================
     // ENTITY LIFECYCLE
@@ -222,6 +272,7 @@ public class OrderEntity {
         updatedAt = LocalDateTime.now();
     }
 
+
     // =========================================================
     // ORDER ITEM HELPERS
     // =========================================================
@@ -229,9 +280,7 @@ public class OrderEntity {
     public void addItem(OrderItemEntity item) {
 
         if (item == null) {
-            throw new IllegalArgumentException(
-                    "Order item cannot be null"
-            );
+            return;
         }
 
         items.add(item);

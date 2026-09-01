@@ -11,11 +11,52 @@ import java.util.Optional;
 
 public interface InventoryRepository extends JpaRepository<InventoryEntity, Long> {
 
-    Optional<InventoryEntity> findByProductVariantId(Long productVariantId);
+    // =========================================================
+    // FIND INVENTORY BY PRODUCT VARIANT
+    // =========================================================
 
-    List<InventoryEntity> findByProductVariantIdIn(List<Long> productVariantIds);
+    Optional<InventoryEntity> findByProductVariantId(
+            Long productVariantId
+    );
 
-    boolean existsByProductVariantId(Long productVariantId);
+
+    // =========================================================
+    // BATCH LOAD INVENTORY
+    // =========================================================
+    //
+    // Used for product details / product listing.
+    // Avoids N+1 queries when loading inventory for
+    // multiple variants.
+    // =========================================================
+
+    List<InventoryEntity> findByProductVariantIdIn(
+            List<Long> productVariantIds
+    );
+
+
+    // =========================================================
+    // CHECK INVENTORY EXISTS
+    // =========================================================
+
+    boolean existsByProductVariantId(
+            Long productVariantId
+    );
+
+
+    // =========================================================
+    // PESSIMISTIC LOCK - PRODUCT VARIANT
+    // =========================================================
+    //
+    // CRITICAL for stock reservation.
+    //
+    // Transaction:
+    //
+    // SELECT inventory
+    // FOR UPDATE
+    //
+    // This prevents two customers from reserving the
+    // same stock simultaneously.
+    // =========================================================
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
@@ -23,7 +64,17 @@ public interface InventoryRepository extends JpaRepository<InventoryEntity, Long
             FROM InventoryEntity i
             WHERE i.productVariant.id = :productVariantId
             """)
-    Optional<InventoryEntity> findByProductVariantIdForUpdate(@Param("productVariantId") Long productVariantId);
+    Optional<InventoryEntity> findByProductVariantIdForUpdate(
+            @Param("productVariantId") Long productVariantId
+    );
+
+
+    // =========================================================
+    // PESSIMISTIC LOCK - INVENTORY ID
+    // =========================================================
+    //
+    // Used when inventory record itself is already known.
+    // =========================================================
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
@@ -31,5 +82,7 @@ public interface InventoryRepository extends JpaRepository<InventoryEntity, Long
             FROM InventoryEntity i
             WHERE i.id = :id
             """)
-    Optional<InventoryEntity> findByIdForUpdate(@Param("id") Long id);
+    Optional<InventoryEntity> findByIdForUpdate(
+            @Param("id") Long id
+    );
 }

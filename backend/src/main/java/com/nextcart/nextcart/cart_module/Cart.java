@@ -9,7 +9,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "carts", uniqueConstraints = {@UniqueConstraint(name = "uk_cart_user", columnNames = "user_id")})
+@Table(
+        name = "carts",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_cart_user",
+                        columnNames = "user_id"
+                )
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -22,17 +30,33 @@ public class Cart {
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    @JoinColumn(
+            name = "user_id",
+            nullable = false,
+            unique = true
+    )
     private User user;
 
-    @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToMany(
+            mappedBy = "cart",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
+    )
     @Builder.Default
     private List<CartItem> items = new ArrayList<>();
 
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(
+            name = "created_at",
+            nullable = false,
+            updatable = false
+    )
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at", nullable = false)
+    @Column(
+            name = "updated_at",
+            nullable = false
+    )
     private LocalDateTime updatedAt;
 
     public Cart(User user) {
@@ -40,24 +64,20 @@ public class Cart {
         this.items = new ArrayList<>();
     }
 
-    @PrePersist
-    protected void onCreate() {
-        LocalDateTime now = LocalDateTime.now();
-        createdAt = now;
-        updatedAt = now;
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
-
     public void addItem(CartItem item) {
+        if (item == null) {
+            return;
+        }
+
         items.add(item);
         item.setCart(this);
     }
 
     public void removeItem(CartItem item) {
+        if (item == null) {
+            return;
+        }
+
         items.remove(item);
         item.setCart(null);
     }
@@ -68,5 +88,21 @@ public class Cart {
         }
 
         items.clear();
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        LocalDateTime now = LocalDateTime.now();
+
+        if (createdAt == null) {
+            createdAt = now;
+        }
+
+        updatedAt = now;
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 }
