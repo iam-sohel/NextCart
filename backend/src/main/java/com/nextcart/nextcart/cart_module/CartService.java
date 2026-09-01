@@ -8,11 +8,21 @@ public interface CartService {
 
     CartResponseDTO getCart(String userEmail);
 
-    CartResponseDTO addItem(String userEmail, CartItemAddRequestDTO request);
+    CartResponseDTO addItem(
+            String userEmail,
+            CartItemAddRequestDTO request
+    );
 
-    CartResponseDTO updateItem(String userEmail, Long itemId, CartItemUpdateRequestDTO request);
+    CartResponseDTO updateItem(
+            String userEmail,
+            Long itemId,
+            CartItemUpdateRequestDTO request
+    );
 
-    void removeItem(String userEmail, Long itemId);
+    void removeItem(
+            String userEmail,
+            Long itemId
+    );
 
     void clearCart(String userEmail);
 }

@@ -6,32 +6,36 @@ import com.nextcart.nextcart.inventory_module.dto.InventoryUpdateRequest;
 import com.nextcart.nextcart.inventory_module.exceptions.InsufficientStockException;
 import com.nextcart.nextcart.inventory_module.exceptions.InventoryAlreadyExistsException;
 import com.nextcart.nextcart.inventory_module.exceptions.InventoryNotFoundException;
+import com.nextcart.nextcart.inventory_module.exceptions.InventoryValidationException;
 import com.nextcart.nextcart.product_module.productVariant.ProductVariantEntity;
 import com.nextcart.nextcart.product_module.productVariant.ProductVariantRepository;
-import jakarta.persistence.EntityNotFoundException;
+import com.nextcart.nextcart.product_module.productVariant.ProductVariantStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+@Transactional
 public class InventoryServiceImpl implements InventoryService {
 
     private final InventoryRepository inventoryRepository;
+
+    private final InventoryMapper inventoryMapper;
+
     private final ProductVariantRepository productVariantRepository;
+
 
     // =========================================================
     // CREATE INVENTORY
     // =========================================================
 
     @Override
-    @Transactional
     public InventoryResponse createInventory(
             InventoryCreateRequest request) {
 
         if (request == null) {
-            throw new IllegalArgumentException(
+            throw new InventoryValidationException(
                     "Inventory request is required"
             );
         }
@@ -39,23 +43,31 @@ public class InventoryServiceImpl implements InventoryService {
         Long productVariantId =
                 request.getProductVariantId();
 
-        if (productVariantId == null) {
-            throw new IllegalArgumentException(
-                    "Product variant ID is required"
-            );
-        }
+        Integer availableStock =
+                request.getAvailableStock();
 
-        if (request.getAvailableStock() == null) {
-            throw new IllegalArgumentException(
-                    "Available stock is required"
-            );
-        }
+        validateId(
+                productVariantId,
+                "Product variant id"
+        );
 
-        if (request.getAvailableStock() < 0) {
-            throw new IllegalArgumentException(
-                    "Available stock cannot be negative"
-            );
-        }
+        validateNonNegativeQuantity(
+                availableStock,
+                "Available stock"
+        );
+
+        ProductVariantEntity productVariant =
+                productVariantRepository
+                        .findByIdAndStatus(
+                                productVariantId,
+                                ProductVariantStatus.ACTIVE
+                        )
+                        .orElseThrow(
+                                () -> new InventoryValidationException(
+                                        "Active product variant not found with id: "
+                                                + productVariantId
+                                )
+                        );
 
         if (inventoryRepository.existsByProductVariantId(
                 productVariantId)) {
@@ -66,448 +78,553 @@ public class InventoryServiceImpl implements InventoryService {
             );
         }
 
-        ProductVariantEntity productVariant =
-                productVariantRepository.findById(
-                        productVariantId
-                ).orElseThrow(() ->
-                        new EntityNotFoundException(
-                                "Product variant not found: "
-                                        + productVariantId
-                        )
-                );
-
         InventoryEntity inventory =
                 InventoryEntity.builder()
                         .productVariant(productVariant)
-                        .availableStock(
-                                request.getAvailableStock()
-                        )
+                        .availableStock(availableStock)
                         .reservedStock(0)
                         .build();
 
-        InventoryEntity saved =
+        InventoryEntity savedInventory =
                 inventoryRepository.save(inventory);
 
-        return mapToResponse(saved);
+        return inventoryMapper.toResponse(savedInventory);
     }
+
 
     // =========================================================
     // GET INVENTORY BY ID
     // =========================================================
 
     @Override
-    public InventoryResponse getInventoryById(Long id) {
+    @Transactional(readOnly = true)
+    public InventoryResponse getInventoryById(
+            Long id) {
 
-        validateId(id);
+        validateId(id, "Inventory id");
 
         InventoryEntity inventory =
                 inventoryRepository.findById(id)
-                        .orElseThrow(() ->
-                                new InventoryNotFoundException(
-                                        "Inventory not found: " + id
+                        .orElseThrow(
+                                () -> new InventoryNotFoundException(
+                                        "Inventory not found with id: "
+                                                + id
                                 )
                         );
 
-        return mapToResponse(inventory);
+        return inventoryMapper.toResponse(inventory);
     }
+
 
     // =========================================================
     // GET INVENTORY BY PRODUCT VARIANT
     // =========================================================
 
     @Override
+    @Transactional(readOnly = true)
     public InventoryResponse getInventoryByProductVariantId(
             Long productVariantId) {
 
-        validateProductVariantId(productVariantId);
+        validateId(
+                productVariantId,
+                "Product variant id"
+        );
 
         InventoryEntity inventory =
                 inventoryRepository
-                        .findByProductVariantId(productVariantId)
-                        .orElseThrow(() ->
-                                new InventoryNotFoundException(
+                        .findByProductVariantId(
+                                productVariantId
+                        )
+                        .orElseThrow(
+                                () -> new InventoryNotFoundException(
                                         "Inventory not found for product variant: "
                                                 + productVariantId
                                 )
                         );
 
-        return mapToResponse(inventory);
+        return inventoryMapper.toResponse(inventory);
     }
 
+
     // =========================================================
-    // UPDATE AVAILABLE STOCK
+    // UPDATE INVENTORY
+    // =========================================================
+    //
+    // This is an ADMIN stock adjustment.
+    //
+    // We lock the inventory row before changing it.
+    //
+    // availableStock cannot be lower than reservedStock.
+    //
+    // Example:
+    //
+    // available = 8
+    // reserved  = 3
+    //
+    // Admin tries:
+    // available = 2
+    //
+    // Result:
+    // REJECT
+    //
+    // Because 3 units are already reserved.
     // =========================================================
 
     @Override
-    @Transactional
     public InventoryResponse updateInventory(
             Long id,
             InventoryUpdateRequest request) {
 
-        validateId(id);
+        validateId(id, "Inventory id");
 
         if (request == null) {
-            throw new IllegalArgumentException(
+            throw new InventoryValidationException(
                     "Inventory update request is required"
             );
         }
 
-        if (request.getAvailableStock() == null) {
-            throw new IllegalArgumentException(
-                    "Available stock is required"
-            );
-        }
+        Integer requestedAvailableStock =
+                request.getAvailableStock();
 
-        if (request.getAvailableStock() < 0) {
-            throw new IllegalArgumentException(
-                    "Available stock cannot be negative"
-            );
-        }
+        validateNonNegativeQuantity(
+                requestedAvailableStock,
+                "Available stock"
+        );
 
         InventoryEntity inventory =
                 inventoryRepository
                         .findByIdForUpdate(id)
-                        .orElseThrow(() ->
-                                new InventoryNotFoundException(
-                                        "Inventory not found: " + id
+                        .orElseThrow(
+                                () -> new InventoryNotFoundException(
+                                        "Inventory not found with id: "
+                                                + id
                                 )
                         );
 
-        /*
-         * reservedStock is intentionally not modified here.
-         *
-         * Reserved stock is controlled only by:
-         *
-         * reserveStock()
-         * releaseStock()
-         * deductStock()
-         */
+        int reservedStock =
+                getSafeStock(
+                        inventory.getReservedStock()
+                );
+
+        if (requestedAvailableStock < reservedStock) {
+
+            throw new InventoryValidationException(
+                    "Available stock cannot be less than reserved stock. "
+                            + "Reserved stock: "
+                            + reservedStock
+                            + ", requested available stock: "
+                            + requestedAvailableStock
+            );
+        }
+
         inventory.setAvailableStock(
-                request.getAvailableStock()
+                requestedAvailableStock
         );
 
-        InventoryEntity updated =
+        InventoryEntity updatedInventory =
                 inventoryRepository.save(inventory);
 
-        return mapToResponse(updated);
+        return inventoryMapper.toResponse(
+                updatedInventory
+        );
     }
+
 
     // =========================================================
     // DELETE INVENTORY
     // =========================================================
 
     @Override
-    @Transactional
     public void deleteInventory(Long id) {
 
-        validateId(id);
+        validateId(id, "Inventory id");
 
         InventoryEntity inventory =
                 inventoryRepository
                         .findByIdForUpdate(id)
-                        .orElseThrow(() ->
-                                new InventoryNotFoundException(
-                                        "Inventory not found: " + id
+                        .orElseThrow(
+                                () -> new InventoryNotFoundException(
+                                        "Inventory not found with id: "
+                                                + id
                                 )
                         );
 
-        if (inventory.getReservedStock() > 0) {
-            throw new IllegalStateException(
-                    "Cannot delete inventory while stock is reserved"
+        int reservedStock =
+                getSafeStock(
+                        inventory.getReservedStock()
+                );
+
+        if (reservedStock > 0) {
+
+            throw new InventoryValidationException(
+                    "Cannot delete inventory while stock is reserved. "
+                            + "Reserved stock: "
+                            + reservedStock
             );
         }
 
         inventoryRepository.delete(inventory);
     }
 
+
     // =========================================================
     // ADD STOCK
     // =========================================================
+    //
+    // Used when warehouse/admin adds new stock.
+    //
+    // Example:
+    //
+    // available = 10
+    //
+    // addStock(5)
+    //
+    // available = 15
+    // =========================================================
 
     @Override
-    @Transactional
     public void addStock(
             Long productVariantId,
             Integer quantity) {
 
-        validateStockOperation(
+        validateId(
                 productVariantId,
-                quantity
+                "Product variant id"
+        );
+
+        validatePositiveQuantity(
+                quantity,
+                "Stock quantity"
         );
 
         InventoryEntity inventory =
-                getLockedInventory(productVariantId);
+                inventoryRepository
+                        .findByProductVariantIdForUpdate(
+                                productVariantId
+                        )
+                        .orElseThrow(
+                                () -> new InventoryNotFoundException(
+                                        "Inventory not found for product variant: "
+                                                + productVariantId
+                                )
+                        );
 
-        long newAvailable =
-                (long) inventory.getAvailableStock()
-                        + quantity;
-
-        if (newAvailable > Integer.MAX_VALUE) {
-            throw new IllegalStateException(
-                    "Available stock exceeds maximum allowed value"
-            );
-        }
+        int availableStock =
+                getSafeStock(
+                        inventory.getAvailableStock()
+                );
 
         inventory.setAvailableStock(
-                (int) newAvailable
+                safeAdd(
+                        availableStock,
+                        quantity
+                )
         );
 
         inventoryRepository.save(inventory);
     }
+
 
     // =========================================================
     // RESERVE STOCK
     // =========================================================
+    //
+    // Called during PLACE ORDER.
+    //
+    // availableStock -= quantity
+    // reservedStock  += quantity
+    //
+    // PESSIMISTIC WRITE LOCK prevents overselling.
+    // =========================================================
 
     @Override
-    @Transactional
     public void reserveStock(
             Long productVariantId,
             Integer quantity) {
 
-        validateStockOperation(
+        validateId(
                 productVariantId,
-                quantity
+                "Product variant id"
+        );
+
+        validatePositiveQuantity(
+                quantity,
+                "Reservation quantity"
         );
 
         InventoryEntity inventory =
-                getLockedInventory(productVariantId);
+                inventoryRepository
+                        .findByProductVariantIdForUpdate(
+                                productVariantId
+                        )
+                        .orElseThrow(
+                                () -> new InventoryNotFoundException(
+                                        "Inventory not found for product variant: "
+                                                + productVariantId
+                                )
+                        );
 
-        if (inventory.getAvailableStock() < quantity) {
+        int availableStock =
+                getSafeStock(
+                        inventory.getAvailableStock()
+                );
+
+        if (availableStock < quantity) {
 
             throw new InsufficientStockException(
                     "Insufficient stock for product variant: "
                             + productVariantId
+                            + ". Available stock: "
+                            + availableStock
+                            + ", requested quantity: "
+                            + quantity
             );
         }
 
-        long newReserved =
-                (long) inventory.getReservedStock()
-                        + quantity;
+        int reservedStock =
+                getSafeStock(
+                        inventory.getReservedStock()
+                );
 
-        if (newReserved > Integer.MAX_VALUE) {
-            throw new IllegalStateException(
-                    "Reserved stock exceeds maximum allowed value"
-            );
-        }
-
-        /*
-         * Move stock:
-         *
-         * available -> reserved
-         */
         inventory.setAvailableStock(
-                inventory.getAvailableStock() - quantity
+                availableStock - quantity
         );
 
         inventory.setReservedStock(
-                (int) newReserved
+                safeAdd(
+                        reservedStock,
+                        quantity
+                )
         );
 
         inventoryRepository.save(inventory);
     }
+
 
     // =========================================================
     // RELEASE RESERVED STOCK
     // =========================================================
+    //
+    // Used when:
+    //
+    // 1. Payment timeout after 15 minutes
+    // 2. Payment failure
+    // 3. Order cancellation
+    //
+    // availableStock += quantity
+    // reservedStock  -= quantity
+    // =========================================================
 
     @Override
-    @Transactional
     public void releaseStock(
             Long productVariantId,
             Integer quantity) {
 
-        validateStockOperation(
+        validateId(
                 productVariantId,
-                quantity
+                "Product variant id"
+        );
+
+        validatePositiveQuantity(
+                quantity,
+                "Release quantity"
         );
 
         InventoryEntity inventory =
-                getLockedInventory(productVariantId);
+                inventoryRepository
+                        .findByProductVariantIdForUpdate(
+                                productVariantId
+                        )
+                        .orElseThrow(
+                                () -> new InventoryNotFoundException(
+                                        "Inventory not found for product variant: "
+                                                + productVariantId
+                                )
+                        );
 
-        if (inventory.getReservedStock() < quantity) {
+        int availableStock =
+                getSafeStock(
+                        inventory.getAvailableStock()
+                );
 
-            throw new IllegalStateException(
-                    "Cannot release more stock than reserved for product variant: "
-                            + productVariantId
+        int reservedStock =
+                getSafeStock(
+                        inventory.getReservedStock()
+                );
+
+        if (reservedStock < quantity) {
+
+            throw new InventoryValidationException(
+                    "Cannot release more stock than reserved. "
+                            + "Reserved stock: "
+                            + reservedStock
+                            + ", requested quantity: "
+                            + quantity
             );
         }
 
-        /*
-         * Move stock:
-         *
-         * reserved -> available
-         */
         inventory.setReservedStock(
-                inventory.getReservedStock() - quantity
+                reservedStock - quantity
         );
 
-        long newAvailable =
-                (long) inventory.getAvailableStock()
-                        + quantity;
-
-        if (newAvailable > Integer.MAX_VALUE) {
-            throw new IllegalStateException(
-                    "Available stock exceeds maximum allowed value"
-            );
-        }
-
         inventory.setAvailableStock(
-                (int) newAvailable
+                safeAdd(
+                        availableStock,
+                        quantity
+                )
         );
 
         inventoryRepository.save(inventory);
     }
+
 
     // =========================================================
     // DEDUCT RESERVED STOCK
     // =========================================================
+    //
+    // Called when the reserved stock becomes actual sold stock.
+    //
+    // IMPORTANT:
+    //
+    // DO NOT decrease availableStock here.
+    //
+    // Reservation already decreased availableStock.
+    //
+    // Only:
+    //
+    // reservedStock -= quantity
+    // =========================================================
 
     @Override
-    @Transactional
     public void deductStock(
             Long productVariantId,
             Integer quantity) {
 
-        validateStockOperation(
+        validateId(
                 productVariantId,
-                quantity
+                "Product variant id"
+        );
+
+        validatePositiveQuantity(
+                quantity,
+                "Deduction quantity"
         );
 
         InventoryEntity inventory =
-                getLockedInventory(productVariantId);
+                inventoryRepository
+                        .findByProductVariantIdForUpdate(
+                                productVariantId
+                        )
+                        .orElseThrow(
+                                () -> new InventoryNotFoundException(
+                                        "Inventory not found for product variant: "
+                                                + productVariantId
+                                )
+                        );
 
-        if (inventory.getReservedStock() < quantity) {
+        int reservedStock =
+                getSafeStock(
+                        inventory.getReservedStock()
+                );
 
-            throw new IllegalStateException(
-                    "Cannot deduct more stock than reserved for product variant: "
-                            + productVariantId
+        if (reservedStock < quantity) {
+
+            throw new InventoryValidationException(
+                    "Cannot deduct more stock than reserved. "
+                            + "Reserved stock: "
+                            + reservedStock
+                            + ", requested quantity: "
+                            + quantity
             );
         }
 
-        /*
-         * availableStock was already reduced during reservation.
-         *
-         * Therefore only remove the reservation here.
-         */
         inventory.setReservedStock(
-                inventory.getReservedStock() - quantity
+                reservedStock - quantity
         );
 
         inventoryRepository.save(inventory);
     }
 
-    // =========================================================
-    // GET LOCKED INVENTORY
-    // =========================================================
-
-    private InventoryEntity getLockedInventory(
-            Long productVariantId) {
-
-        return inventoryRepository
-                .findByProductVariantIdForUpdate(
-                        productVariantId
-                )
-                .orElseThrow(() ->
-                        new InventoryNotFoundException(
-                                "Inventory not found for product variant: "
-                                        + productVariantId
-                        )
-                );
-    }
 
     // =========================================================
     // VALIDATE ID
     // =========================================================
 
-    private void validateId(Long id) {
+    private void validateId(
+            Long id,
+            String fieldName) {
 
-        if (id == null) {
-            throw new IllegalArgumentException(
-                    "Inventory ID is required"
-            );
-        }
+        if (id == null || id <= 0) {
 
-        if (id <= 0) {
-            throw new IllegalArgumentException(
-                    "Inventory ID must be greater than zero"
+            throw new InventoryValidationException(
+                    fieldName + " must be greater than zero"
             );
         }
     }
 
+
     // =========================================================
-    // VALIDATE PRODUCT VARIANT
+    // VALIDATE NON-NEGATIVE QUANTITY
     // =========================================================
 
-    private void validateProductVariantId(
-            Long productVariantId) {
+    private void validateNonNegativeQuantity(
+            Integer quantity,
+            String fieldName) {
 
-        if (productVariantId == null) {
-            throw new IllegalArgumentException(
-                    "Product variant ID is required"
-            );
-        }
+        if (quantity == null || quantity < 0) {
 
-        if (productVariantId <= 0) {
-            throw new IllegalArgumentException(
-                    "Product variant ID must be greater than zero"
+            throw new InventoryValidationException(
+                    fieldName + " cannot be negative"
             );
         }
     }
 
+
     // =========================================================
-    // VALIDATE STOCK OPERATION
+    // VALIDATE POSITIVE QUANTITY
     // =========================================================
 
-    private void validateStockOperation(
-            Long productVariantId,
-            Integer quantity) {
+    private void validatePositiveQuantity(
+            Integer quantity,
+            String fieldName) {
 
-        validateProductVariantId(productVariantId);
+        if (quantity == null || quantity <= 0) {
 
-        if (quantity == null) {
-            throw new IllegalArgumentException(
-                    "Quantity is required"
-            );
-        }
-
-        if (quantity <= 0) {
-            throw new IllegalArgumentException(
-                    "Quantity must be greater than zero"
+            throw new InventoryValidationException(
+                    fieldName + " must be greater than zero"
             );
         }
     }
 
+
     // =========================================================
-    // MAP RESPONSE
+    // NULL-SAFE STOCK
     // =========================================================
 
-    private InventoryResponse mapToResponse(
-            InventoryEntity inventory) {
+    private int getSafeStock(Integer stock) {
 
-        ProductVariantEntity variant =
-                inventory.getProductVariant();
+        return stock == null ? 0 : stock;
+    }
 
-        return InventoryResponse.builder()
-                .id(inventory.getId())
-                .productVariantId(
-                        variant.getId()
-                )
-                .sku(
-                        variant.getSku()
-                )
-                .availableStock(
-                        inventory.getAvailableStock()
-                )
-                .reservedStock(
-                        inventory.getReservedStock()
-                )
-                .createdAt(
-                        inventory.getCreatedAt()
-                )
-                .updatedAt(
-                        inventory.getUpdatedAt()
-                )
-                .build();
+
+    // =========================================================
+    // SAFE STOCK ADDITION
+    // =========================================================
+
+    private int safeAdd(
+            int currentStock,
+            int quantity) {
+
+        long result =
+                (long) currentStock + quantity;
+
+        if (result > Integer.MAX_VALUE) {
+
+            throw new InventoryValidationException(
+                    "Stock quantity exceeds the maximum allowed value"
+            );
+        }
+
+        return (int) result;
     }
 }

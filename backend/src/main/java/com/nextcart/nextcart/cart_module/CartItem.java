@@ -13,7 +13,20 @@ import java.time.LocalDateTime;
         uniqueConstraints = {
                 @UniqueConstraint(
                         name = "uk_cart_product_variant",
-                        columnNames = {"cart_id", "product_variant_id"}
+                        columnNames = {
+                                "cart_id",
+                                "product_variant_id"
+                        }
+                )
+        },
+        indexes = {
+                @Index(
+                        name = "idx_cart_items_cart_id",
+                        columnList = "cart_id"
+                ),
+                @Index(
+                        name = "idx_cart_items_variant_id",
+                        columnList = "product_variant_id"
                 )
         }
 )
@@ -49,7 +62,10 @@ public class CartItem {
     )
     private ProductVariantEntity productVariant;
 
-    @Column(nullable = false)
+    @Column(
+            name = "quantity",
+            nullable = false
+    )
     private Integer quantity;
 
     @Column(
@@ -68,7 +84,11 @@ public class CartItem {
     @PrePersist
     protected void onCreate() {
         LocalDateTime now = LocalDateTime.now();
-        createdAt = now;
+
+        if (createdAt == null) {
+            createdAt = now;
+        }
+
         updatedAt = now;
     }
 

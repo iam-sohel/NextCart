@@ -14,7 +14,8 @@ public class CartResponseDTO {
 
     private Long id;
 
-    private List<CartItemResponseDTO> items;
+    @Builder.Default
+    private List<CartItemResponseDTO> items = List.of();
 
     private Integer totalItems;
 
@@ -23,4 +24,6 @@ public class CartResponseDTO {
     private BigDecimal totalDiscount;
 
     private BigDecimal orderTotal;
+
+    private String currency;
 }

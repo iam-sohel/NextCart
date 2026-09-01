@@ -21,6 +21,23 @@ public class OrderResponseDTO {
     private OrderStatus status;
 
     // =========================================================
+    // PAYMENT
+    // =========================================================
+    //
+    // Payment must be completed before this timestamp.
+    //
+    // Example:
+    // Order created      : 10:00 AM
+    // Payment expires at : 10:15 AM
+    //
+    // Frontend can use this value to display the countdown.
+    // Backend remains the source of truth.
+    // =========================================================
+
+    private LocalDateTime paymentExpiresAt;
+
+
+    // =========================================================
     // SHIPPING ADDRESS SNAPSHOT
     // =========================================================
 
@@ -40,6 +57,7 @@ public class OrderResponseDTO {
 
     private String shippingCountry;
 
+
     // =========================================================
     // PRICE
     // =========================================================
@@ -56,11 +74,13 @@ public class OrderResponseDTO {
 
     private String currency;
 
+
     // =========================================================
     // ITEMS
     // =========================================================
 
     private List<OrderItemResponseDTO> items;
+
 
     // =========================================================
     // TIMESTAMPS

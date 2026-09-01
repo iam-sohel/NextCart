@@ -562,16 +562,15 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ProductResponse> getAllProducts(
-            Pageable pageable
-    ) {
+    public Page<ProductDetailsResponse> getAllProducts(
+            Pageable pageable) {
 
         return productRepository
                 .findAllByStatus(
                         ProductStatus.ACTIVE,
                         pageable
                 )
-                .map(productMapper::toResponse);
+                .map(this::buildProductDetails);
     }
 
 

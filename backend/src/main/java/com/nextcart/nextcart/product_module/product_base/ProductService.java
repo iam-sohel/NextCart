@@ -19,7 +19,7 @@ public interface ProductService {
 
     ProductDetailsResponse getProductDetailsBySlug(String slug);
 
-    Page<ProductResponse> getAllProducts(Pageable pageable);
+    Page<ProductDetailsResponse> getAllProducts(Pageable pageable);
 
     Page<ProductResponse> getProductsByCategory(Long categoryId, Pageable pageable);
 

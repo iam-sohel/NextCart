@@ -6,6 +6,9 @@ import com.nextcart.nextcart.cart_module.dto.CartItemUpdateRequestDTO;
 import com.nextcart.nextcart.cart_module.dto.CartResponseDTO;
 import com.nextcart.nextcart.cart_module.exceptions.CartItemNotFoundException;
 import com.nextcart.nextcart.cart_module.exceptions.CartNotFoundException;
+import com.nextcart.nextcart.cart_module.exceptions.CartPriceNotFoundException;
+import com.nextcart.nextcart.cart_module.exceptions.CartProductVariantNotFoundException;
+import com.nextcart.nextcart.cart_module.exceptions.CartUserNotFoundException;
 import com.nextcart.nextcart.cart_module.exceptions.InvalidCartQuantityException;
 import com.nextcart.nextcart.discount_module.DiscountType;
 import com.nextcart.nextcart.discount_module.ProductVariantDiscountEntity;
@@ -33,18 +36,17 @@ import java.util.List;
 public class CartServiceImpl implements CartService {
 
     private static final int MONEY_SCALE = 2;
+    private static final int MAX_CART_QUANTITY = 99;
+    private static final String DEFAULT_CURRENCY = "INR";
 
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
     private final UserRepository userRepository;
-
     private final ProductVariantRepository productVariantRepository;
+    private final ProductVariantPriceRepository productVariantPriceRepository;
+    private final ProductVariantDiscountRepository productVariantDiscountRepository;
+    private final CartMapper cartMapper;
 
-    private final ProductVariantPriceRepository
-            productVariantPriceRepository;
-
-    private final ProductVariantDiscountRepository
-            productVariantDiscountRepository;
 
     // =========================================================
     // GET CART
@@ -58,10 +60,15 @@ public class CartServiceImpl implements CartService {
 
         Cart cart = cartRepository
                 .findByUserId(user.getId())
-                .orElseGet(() -> new Cart(user));
+                .orElse(null);
+
+        if (cart == null) {
+            return emptyCart();
+        }
 
         return buildCartResponse(cart);
     }
+
 
     // =========================================================
     // ADD ITEM
@@ -72,6 +79,12 @@ public class CartServiceImpl implements CartService {
             String userEmail,
             CartItemAddRequestDTO request) {
 
+        if (request == null) {
+            throw new InvalidCartQuantityException(
+                    "Cart item request is required"
+            );
+        }
+
         validateQuantity(request.getQuantity());
 
         User user = getUser(userEmail);
@@ -81,13 +94,7 @@ public class CartServiceImpl implements CartService {
                         request.getProductVariantId()
                 );
 
-        Cart cart = cartRepository
-                .findByUserId(user.getId())
-                .orElseGet(() ->
-                        cartRepository.save(
-                                new Cart(user)
-                        )
-                );
+        Cart cart = getOrCreateCart(user);
 
         CartItem existingItem =
                 cartItemRepository
@@ -99,15 +106,17 @@ public class CartServiceImpl implements CartService {
 
         if (existingItem != null) {
 
+            int currentQuantity =
+                    existingItem.getQuantity() == null
+                            ? 0
+                            : existingItem.getQuantity();
+
             int newQuantity =
-                    existingItem.getQuantity()
-                            + request.getQuantity();
+                    currentQuantity + request.getQuantity();
 
             validateQuantity(newQuantity);
 
             existingItem.setQuantity(newQuantity);
-
-            cartItemRepository.save(existingItem);
 
         } else {
 
@@ -115,19 +124,21 @@ public class CartServiceImpl implements CartService {
                     CartItem.builder()
                             .cart(cart)
                             .product(
-                                    productVariant.getProductEntity()
+                                    productVariant
+                                            .getProductEntity()
                             )
                             .productVariant(productVariant)
                             .quantity(request.getQuantity())
                             .build();
 
             cart.addItem(cartItem);
-
-            cartItemRepository.save(cartItem);
         }
+
+        cartRepository.save(cart);
 
         return buildCartResponse(cart);
     }
+
 
     // =========================================================
     // UPDATE ITEM
@@ -138,6 +149,14 @@ public class CartServiceImpl implements CartService {
             String userEmail,
             Long itemId,
             CartItemUpdateRequestDTO request) {
+
+        validateItemId(itemId);
+
+        if (request == null) {
+            throw new InvalidCartQuantityException(
+                    "Cart item update request is required"
+            );
+        }
 
         validateQuantity(request.getQuantity());
 
@@ -175,10 +194,9 @@ public class CartServiceImpl implements CartService {
                 request.getQuantity()
         );
 
-        cartItemRepository.save(cartItem);
-
         return buildCartResponse(cart);
     }
+
 
     // =========================================================
     // REMOVE ITEM
@@ -188,6 +206,8 @@ public class CartServiceImpl implements CartService {
     public void removeItem(
             String userEmail,
             Long itemId) {
+
+        validateItemId(itemId);
 
         User user = getUser(userEmail);
 
@@ -211,6 +231,7 @@ public class CartServiceImpl implements CartService {
         cartItemRepository.delete(cartItem);
     }
 
+
     // =========================================================
     // CLEAR CART
     // =========================================================
@@ -220,12 +241,19 @@ public class CartServiceImpl implements CartService {
 
         User user = getUser(userEmail);
 
-        Cart cart = getCart(user);
+        Cart cart = cartRepository
+                .findByUserId(user.getId())
+                .orElse(null);
+
+        if (cart == null) {
+            return;
+        }
 
         cart.clearItems();
 
         cartRepository.save(cart);
     }
+
 
     // =========================================================
     // USER
@@ -233,14 +261,25 @@ public class CartServiceImpl implements CartService {
 
     private User getUser(String userEmail) {
 
+        if (userEmail == null ||
+                userEmail.isBlank()) {
+
+            throw new CartUserNotFoundException(
+                    "Authenticated user is required"
+            );
+        }
+
         return userRepository
-                .findByEmail(userEmail)
+                .findByEmailIgnoreCase(
+                        userEmail.trim()
+                )
                 .orElseThrow(() ->
-                        new RuntimeException(
+                        new CartUserNotFoundException(
                                 "User not found"
                         )
                 );
     }
+
 
     // =========================================================
     // CART
@@ -257,6 +296,20 @@ public class CartServiceImpl implements CartService {
                 );
     }
 
+
+    private Cart getOrCreateCart(User user) {
+
+        return cartRepository
+                .findByUserId(user.getId())
+                .orElseGet(() -> {
+
+                    Cart cart = new Cart(user);
+
+                    return cartRepository.save(cart);
+                });
+    }
+
+
     // =========================================================
     // PRODUCT VARIANT
     // =========================================================
@@ -264,39 +317,80 @@ public class CartServiceImpl implements CartService {
     private ProductVariantEntity getActiveProductVariant(
             Long productVariantId) {
 
+        if (productVariantId == null ||
+                productVariantId <= 0) {
+
+            throw new CartProductVariantNotFoundException(
+                    "Invalid product variant ID"
+            );
+        }
+
         return productVariantRepository
                 .findByIdAndStatus(
                         productVariantId,
                         ProductVariantStatus.ACTIVE
                 )
                 .orElseThrow(() ->
-                        new CartItemNotFoundException(
+                        new CartProductVariantNotFoundException(
                                 "Active product variant not found with id: "
                                         + productVariantId
                         )
                 );
     }
 
+
     // =========================================================
-    // QUANTITY VALIDATION
+    // QUANTITY
     // =========================================================
 
     private void validateQuantity(Integer quantity) {
 
-        if (quantity == null || quantity < 1) {
+        if (quantity == null) {
+
+            throw new InvalidCartQuantityException(
+                    "Cart quantity is required"
+            );
+        }
+
+        if (quantity < 1) {
 
             throw new InvalidCartQuantityException(
                     "Cart quantity must be at least 1"
             );
         }
+
+        if (quantity > MAX_CART_QUANTITY) {
+
+            throw new InvalidCartQuantityException(
+                    "Maximum cart quantity is "
+                            + MAX_CART_QUANTITY
+            );
+        }
     }
 
+
+    private void validateItemId(Long itemId) {
+
+        if (itemId == null ||
+                itemId <= 0) {
+
+            throw new CartItemNotFoundException(
+                    "Invalid cart item ID"
+            );
+        }
+    }
+
+
     // =========================================================
-    // CART RESPONSE
+    // RESPONSE
     // =========================================================
 
     private CartResponseDTO buildCartResponse(
             Cart cart) {
+
+        if (cart == null) {
+            return emptyCart();
+        }
 
         if (cart.getItems() == null ||
                 cart.getItems().isEmpty()) {
@@ -305,9 +399,16 @@ public class CartServiceImpl implements CartService {
                     .id(cart.getId())
                     .items(List.of())
                     .totalItems(0)
-                    .productPrice(BigDecimal.ZERO)
-                    .totalDiscount(BigDecimal.ZERO)
-                    .orderTotal(BigDecimal.ZERO)
+                    .productPrice(
+                            money(BigDecimal.ZERO)
+                    )
+                    .totalDiscount(
+                            money(BigDecimal.ZERO)
+                    )
+                    .orderTotal(
+                            money(BigDecimal.ZERO)
+                    )
+                    .currency(DEFAULT_CURRENCY)
                     .build();
         }
 
@@ -325,14 +426,29 @@ public class CartServiceImpl implements CartService {
 
         int totalItems = 0;
 
+        String cartCurrency = DEFAULT_CURRENCY;
+
         LocalDateTime now =
                 LocalDateTime.now();
 
         for (CartItem cartItem :
                 cart.getItems()) {
 
-            int quantity =
+            if (cartItem == null ||
+                    cartItem.getProductVariant() == null ||
+                    cartItem.getProduct() == null) {
+
+                continue;
+            }
+
+            Integer quantity =
                     cartItem.getQuantity();
+
+            if (quantity == null ||
+                    quantity < 1) {
+
+                continue;
+            }
 
             totalItems += quantity;
 
@@ -341,17 +457,13 @@ public class CartServiceImpl implements CartService {
                             .getProductVariant()
                             .getId();
 
-            // -------------------------------------------------
-            // CURRENT PRICE
-            // -------------------------------------------------
-
             ProductVariantPriceEntity price =
                     productVariantPriceRepository
                             .findByProductVariantId(
                                     variantId
                             )
                             .orElseThrow(() ->
-                                    new RuntimeException(
+                                    new CartPriceNotFoundException(
                                             "Price not found for product variant id: "
                                                     + variantId
                                     )
@@ -363,9 +475,14 @@ public class CartServiceImpl implements CartService {
             BigDecimal sellingPrice =
                     money(price.getSellingPrice());
 
-            // -------------------------------------------------
-            // CURRENT DISCOUNT
-            // -------------------------------------------------
+            String currency =
+                    price.getCurrency();
+
+            if (currency != null &&
+                    !currency.isBlank()) {
+
+                cartCurrency = currency.trim();
+            }
 
             ProductVariantDiscountEntity discount =
                     productVariantDiscountRepository
@@ -382,118 +499,137 @@ public class CartServiceImpl implements CartService {
                     );
 
             BigDecimal finalUnitPrice =
-                    sellingPrice
-                            .subtract(
+                    money(
+                            sellingPrice.subtract(
                                     discountPerUnit
-                            );
+                            )
+                    );
 
             if (finalUnitPrice.compareTo(
-                    BigDecimal.ZERO) < 0) {
+                    BigDecimal.ZERO
+            ) < 0) {
 
                 finalUnitPrice =
-                        BigDecimal.ZERO;
+                        money(BigDecimal.ZERO);
             }
-
-            finalUnitPrice =
-                    money(finalUnitPrice);
-
-            // -------------------------------------------------
-            // TOTALS
-            // -------------------------------------------------
 
             BigDecimal quantityValue =
                     BigDecimal.valueOf(quantity);
 
             BigDecimal mrpTotal =
-                    mrp.multiply(quantityValue);
+                    money(
+                            mrp.multiply(
+                                    quantityValue
+                            )
+                    );
 
-            BigDecimal finalLineTotal =
-                    finalUnitPrice
-                            .multiply(quantityValue);
+            BigDecimal lineTotal =
+                    money(
+                            finalUnitPrice.multiply(
+                                    quantityValue
+                            )
+                    );
 
             BigDecimal itemDiscount =
-                    mrpTotal.subtract(
-                            finalLineTotal
+                    money(
+                            mrpTotal.subtract(
+                                    lineTotal
+                            )
                     );
 
             if (itemDiscount.compareTo(
-                    BigDecimal.ZERO) < 0) {
+                    BigDecimal.ZERO
+            ) < 0) {
 
                 itemDiscount =
-                        BigDecimal.ZERO;
+                        money(BigDecimal.ZERO);
             }
 
             productPrice =
                     productPrice.add(mrpTotal);
 
             totalDiscount =
-                    totalDiscount.add(
-                            itemDiscount
-                    );
+                    totalDiscount.add(itemDiscount);
 
             orderTotal =
-                    orderTotal.add(
-                            finalLineTotal
-                    );
-
-            // -------------------------------------------------
-            // ITEM RESPONSE
-            // -------------------------------------------------
+                    orderTotal.add(lineTotal);
 
             CartItemResponseDTO itemResponse =
-                    CartItemResponseDTO.builder()
-                            .id(cartItem.getId())
-                            .productId(
-                                    cartItem
-                                            .getProduct()
-                                            .getId()
-                            )
-                            .productVariantId(
-                                    variantId
-                            )
-                            .productName(
-                                    cartItem
-                                            .getProduct()
-                                            .getName()
-                            )
-                            .quantity(quantity)
-                            .unitPrice(
-                                    finalUnitPrice
-                            )
-                            .lineTotal(
-                                    money(finalLineTotal)
-                            )
-                            .build();
+                    cartMapper.toCartItemResponse(
+                            cartItem,
+                            mrp,
+                            sellingPrice,
+                            discountPerUnit,
+                            finalUnitPrice,
+                            lineTotal,
+                            currency
+                    );
 
             responseItems.add(itemResponse);
         }
 
+        return cartMapper.toCartResponse(
+                cart,
+                responseItems,
+                totalItems,
+                money(productPrice),
+                money(totalDiscount),
+                money(orderTotal),
+                cartCurrency
+        );
+    }
+
+
+    // =========================================================
+    // EMPTY CART
+    // =========================================================
+
+    private CartResponseDTO emptyCart() {
+
         return CartResponseDTO.builder()
-                .id(cart.getId())
-                .items(responseItems)
-                .totalItems(totalItems)
+                .id(null)
+                .items(List.of())
+                .totalItems(0)
                 .productPrice(
-                        money(productPrice)
+                        money(BigDecimal.ZERO)
                 )
                 .totalDiscount(
-                        money(totalDiscount)
+                        money(BigDecimal.ZERO)
                 )
                 .orderTotal(
-                        money(orderTotal)
+                        money(BigDecimal.ZERO)
                 )
+                .currency(DEFAULT_CURRENCY)
                 .build();
     }
 
+
     // =========================================================
-    // DISCOUNT CALCULATION
+    // DISCOUNT
     // =========================================================
 
     private BigDecimal calculateDiscount(
             BigDecimal sellingPrice,
             ProductVariantDiscountEntity discount) {
 
-        if (discount == null) {
-            return BigDecimal.ZERO;
+        if (discount == null ||
+                sellingPrice == null ||
+                sellingPrice.compareTo(
+                        BigDecimal.ZERO
+                ) <= 0) {
+
+            return money(BigDecimal.ZERO);
+        }
+
+        BigDecimal discountValue =
+                discount.getDiscountValue();
+
+        if (discountValue == null ||
+                discountValue.compareTo(
+                        BigDecimal.ZERO
+                ) <= 0) {
+
+            return money(BigDecimal.ZERO);
         }
 
         BigDecimal discountAmount;
@@ -503,10 +639,7 @@ public class CartServiceImpl implements CartService {
 
             discountAmount =
                     sellingPrice
-                            .multiply(
-                                    discount
-                                            .getDiscountValue()
-                            )
+                            .multiply(discountValue)
                             .divide(
                                     BigDecimal.valueOf(100),
                                     MONEY_SCALE,
@@ -517,7 +650,7 @@ public class CartServiceImpl implements CartService {
                 == DiscountType.FIXED_AMOUNT) {
 
             discountAmount =
-                    discount.getDiscountValue();
+                    discountValue;
 
         } else {
 
@@ -526,18 +659,16 @@ public class CartServiceImpl implements CartService {
         }
 
         if (discountAmount.compareTo(
-                BigDecimal.ZERO) < 0) {
+                BigDecimal.ZERO
+        ) < 0) {
 
             discountAmount =
                     BigDecimal.ZERO;
         }
 
-        /*
-         * Never allow discount to exceed
-         * the selling price.
-         */
         if (discountAmount.compareTo(
-                sellingPrice) > 0) {
+                sellingPrice
+        ) > 0) {
 
             discountAmount =
                     sellingPrice;
@@ -545,6 +676,7 @@ public class CartServiceImpl implements CartService {
 
         return money(discountAmount);
     }
+
 
     // =========================================================
     // MONEY

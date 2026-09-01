@@ -93,7 +93,7 @@ public class ProductController {
     // =========================================================
 
     @GetMapping
-    public ResponseEntity<ApiResponse<Page<ProductResponse>>>
+    public ResponseEntity<ApiResponse<Page<ProductDetailsResponse>>>
     getAllProducts(
             @PageableDefault(
                     size = 20,
@@ -102,7 +102,7 @@ public class ProductController {
             )
             Pageable pageable) {
 
-        Page<ProductResponse> response =
+        Page<ProductDetailsResponse> response =
                 productService.getAllProducts(pageable);
 
         return ResponseEntity.ok(

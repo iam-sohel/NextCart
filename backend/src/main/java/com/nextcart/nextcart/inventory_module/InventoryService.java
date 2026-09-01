@@ -24,3 +24,4 @@ public interface InventoryService {
 
     void deductStock(Long productVariantId, Integer quantity);
 }
+
