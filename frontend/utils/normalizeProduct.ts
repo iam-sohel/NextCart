@@ -1,10 +1,12 @@
 /**
  * NEXTCART — Product normalization helpers.
  *
- * Converts backend product payloads and legacy/mock product payloads
- * into the canonical frontend Product shape.
+ * Converts backend product payloads into the canonical frontend Product shape.
  *
- * UI components should consume only the canonical Product type.
+ * IMPORTANT:
+ * - No mock product data.
+ * - No placeholder image fallback.
+ * - Images come only from the backend.
  */
 
 import type {
@@ -14,7 +16,6 @@ import type {
   ProductVariant,
 } from "@/types/product";
 
-import { getProductImage } from "@/utils/productImages";
 import { API_BASE_URL } from "@/lib/api";
 
 /* -------------------------------------------------------------------------- */
@@ -24,48 +25,52 @@ import { API_BASE_URL } from "@/lib/api";
 export function absolutizeImageUrl(
   url: string | undefined | null,
 ): string {
-  if (!url) return "";
-
-  if (/^(https?:)?\/\//i.test(url)) {
-    return url;
+  if (!url) {
+    return "";
   }
 
-  if (url.startsWith("/")) {
+  const trimmed = url.trim();
+
+  if (!trimmed) {
+    return "";
+  }
+
+  // Absolute HTTP/HTTPS URL
+  if (/^(https?:)?\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  // Backend-relative URL
+  if (trimmed.startsWith("/")) {
     const base = API_BASE_URL.replace(/\/+$/, "");
-    return `${base}${url}`;
+    return `${base}${trimmed}`;
   }
 
-  return url;
+  return trimmed;
 }
 
 /* -------------------------------------------------------------------------- */
-/* Backend DTOs                                                               */
+/* Backend DTOs                                                              */
 /* -------------------------------------------------------------------------- */
 
 export interface BackendProductDto {
   id: number | string;
-
   name?: string;
   slug?: string;
   description?: string;
-
   categoryId?: number | string;
   subCategoryId?: number | string;
   brandId?: number | string;
-
   status?: string | null;
-
   createdAt?: string;
   updatedAt?: string;
 }
 
 export interface BackendProductDetailsDto {
   id?: number | string;
-
   name?: string;
   slug?: string;
   description?: string;
-
   categoryId?: number | string;
   subCategoryId?: number | string;
   brandId?: number | string;
@@ -88,10 +93,8 @@ export interface BackendProductDetailsDto {
   information?: {
     id?: number | string;
     productId?: number | string;
-
     shortDescription?: string;
     longDescription?: string;
-
     warranty?: string;
     manufacturer?: string;
   };
@@ -99,7 +102,6 @@ export interface BackendProductDetailsDto {
   specifications?: Array<{
     id?: number | string;
     productId?: number | string;
-
     specificationName?: string;
     specificationValue?: string;
   }>;
@@ -110,15 +112,10 @@ export interface BackendProductDetailsDto {
 
 export interface BackendProductVariantDto {
   id: number | string;
-
   productId?: number | string;
-
   sku?: string;
-
   status?: string | null;
-
   available?: boolean;
-
   stockStatus?: string;
 
   price?: {
@@ -139,29 +136,20 @@ export interface BackendProductVariantDto {
 
 export interface BackendProductImageDto {
   id?: number | string;
-
   productId?: number | string;
-
   imageUrl?: string;
-
   isPrimary?: boolean;
-
   displayOrder?: number;
 }
 
 export interface BackendInventoryDto {
   id?: number | string;
-
   productId?: number | string;
   variantId?: number | string;
-
   quantity?: number;
-
   reservedStock?: number;
   availableStock?: number;
-
   stockStatus?: string;
-
   lastUpdated?: string;
 }
 
@@ -271,29 +259,40 @@ export function normalizeProductImages(
   }
 
   return images
-    .map((image, index) => ({
-      id:
-        image.id !== undefined
-          ? toString(image.id)
-          : `image-${index}`,
-
-      url: absolutizeImageUrl(
+    .map((image, index) => {
+      const url = absolutizeImageUrl(
         image.imageUrl,
-      ),
+      );
 
-      isPrimary: Boolean(
-        image.isPrimary,
-      ),
+      return {
+        id:
+          image.id !== undefined
+            ? toNumber(image.id, index)
+            : index,
 
-      sortOrder:
-        image.displayOrder !== undefined
-          ? toNumber(image.displayOrder)
-          : index,
-    }))
-    .filter((image) => Boolean(image.url))
+        url,
+
+        isPrimary: Boolean(
+          image.isPrimary,
+        ),
+
+        sortOrder:
+          image.displayOrder !== undefined
+            ? toNumber(
+                image.displayOrder,
+                index,
+              )
+            : index,
+      };
+    })
+    .filter(
+      (image) =>
+        Boolean(image.url),
+    )
     .sort(
       (a, b) =>
-        a.sortOrder - b.sortOrder,
+        (a.sortOrder ?? 0) -
+        (b.sortOrder ?? 0),
     );
 }
 
@@ -366,20 +365,29 @@ export function normalizeProductVariant(
   return {
     id: toString(variant.id),
 
-    sku: variant.sku ?? "",
+    sku:
+      variant.sku ?? "",
 
-    price: sellingPrice,
+    price:
+      sellingPrice,
 
-    originalPrice: mrp > 0 ? mrp : undefined,
+    originalPrice:
+      mrp > 0
+        ? mrp
+        : undefined,
 
     attributes,
 
     inventory:
-      normalizeInventory(inventory),
+      normalizeInventory(
+        inventory,
+      ),
 
-    stockStatus: variant.stockStatus,
+    stockStatus:
+      variant.stockStatus,
 
-    available: variant.available,
+    available:
+      variant.available,
   };
 }
 
@@ -391,18 +399,21 @@ function getProductPricing(
   product: BackendProductDetailsDto,
   variants: ProductVariant[],
 ) {
-  const firstVariant = variants[0];
+  const firstVariant =
+    variants[0];
 
   const price =
     product.price !== undefined
       ? toNumber(product.price)
       : firstVariant?.price ?? 0;
 
-  // Use product-level originalPrice if available, otherwise derive from first variant's MRP
   const originalPrice =
     product.originalPrice !== undefined
-      ? toNumber(product.originalPrice)
-      : firstVariant?.originalPrice ?? price;
+      ? toNumber(
+          product.originalPrice,
+        )
+      : firstVariant?.originalPrice ??
+        price;
 
   const discount =
     product.discount !== undefined
@@ -430,21 +441,27 @@ function getProductPricing(
 export function normalizeBackendProduct(
   product: BackendProductDto,
 ): Product {
-  const name = product.name ?? "";
+  const name =
+    product.name ?? "";
 
   return {
-    id: toString(product.id),
+    id:
+      toString(product.id),
 
     name,
 
-    title: name,
+    title:
+      name,
 
     slug:
       product.slug ??
       name
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, ""),
+        .replace(
+          /(^-|-$)/g,
+          "",
+        ),
 
     description:
       product.description ?? "",
@@ -463,12 +480,15 @@ export function normalizeBackendProduct(
 
     variants: [],
 
+    /*
+     * List/search responses do not necessarily
+     * contain product images.
+     */
     image: "",
 
     rating: 0,
 
     reviewsCount: 0,
-
   };
 }
 
@@ -480,6 +500,8 @@ export function normalizeBackendProductDetails(
   product: BackendProductDetailsDto,
   inventories?: BackendInventoryDto[],
 ): Product {
+  /* ------------------------------ Variants -------------------------------- */
+
   const backendVariants =
     product.variants ?? [];
 
@@ -502,26 +524,52 @@ export function normalizeBackendProductDetails(
       },
     );
 
+  /* -------------------------------- Pricing -------------------------------- */
+
   const pricing =
     getProductPricing(
       product,
       normalizedVariants,
     );
 
+  /* -------------------------------- Images --------------------------------- */
+
   const images =
     normalizeProductImages(
       product.images,
     );
 
-  // Sort by isPrimary desc, then by sortOrder asc, then pick first
+  /*
+   * Image priority:
+   *
+   * 1. Backend image marked isPrimary=true
+   * 2. First backend image by displayOrder
+   * 3. Empty string when backend has no image
+   *
+   * NO placeholder.
+   * NO mock image.
+   * NO local fallback.
+   */
+
   const primaryImage =
     [...images]
       .sort((a, b) => {
-        if (a.isPrimary !== b.isPrimary) {
-          return a.isPrimary ? -1 : 1;
+        if (
+          a.isPrimary !==
+          b.isPrimary
+        ) {
+          return a.isPrimary
+            ? -1
+            : 1;
         }
-        return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
-      })[0] ?? images[0];
+
+        return (
+          (a.sortOrder ?? 0) -
+          (b.sortOrder ?? 0)
+        );
+      })[0] ?? null;
+
+  /* -------------------------------- Product -------------------------------- */
 
   const name =
     product.name ?? "";
@@ -531,14 +579,19 @@ export function normalizeBackendProductDetails(
     name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "");
+      .replace(
+        /(^-|-$)/g,
+        "",
+      );
 
-  const fallbackProduct: Product = {
-    id: toString(product.id),
+  return {
+    id:
+      toString(product.id),
 
     name,
 
-    title: name,
+    title:
+      name,
 
     slug,
 
@@ -548,12 +601,14 @@ export function normalizeBackendProductDetails(
         ?.longDescription ??
       "",
 
-    price: pricing.price,
+    price:
+      pricing.price,
 
     originalPrice:
       pricing.originalPrice,
 
-    discount: pricing.discount,
+    discount:
+      pricing.discount,
 
     brand:
       product.brand ??
@@ -570,22 +625,27 @@ export function normalizeBackendProductDetails(
     variants:
       normalizedVariants,
 
-    rating: product.rating !== undefined ? toNumber(product.rating) : undefined,
+    rating:
+      product.rating !== undefined
+        ? toNumber(
+            product.rating,
+          )
+        : undefined,
 
-    reviewsCount: product.reviewsCount !== undefined ? toNumber(product.reviewsCount) : 0,
+    reviewsCount:
+      product.reviewsCount !== undefined
+        ? toNumber(
+            product.reviewsCount,
+          )
+        : 0,
 
+    /*
+     * This is the ONLY product image assigned here.
+     * It comes directly from the backend image list.
+     */
     image:
       primaryImage?.url ?? "",
   };
-
-  if (!fallbackProduct.image) {
-    fallbackProduct.image =
-      getProductImage(
-        fallbackProduct,
-      );
-  }
-
-  return fallbackProduct;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -596,7 +656,9 @@ export function mergeVariantInventory(
   product: Product,
   inventories: BackendInventoryDto[],
 ): Product {
-  if (!product.variants?.length) {
+  if (
+    !product.variants?.length
+  ) {
     return product;
   }
 
@@ -618,6 +680,7 @@ export function mergeVariantInventory(
 
         return {
           ...variant,
+
           inventory:
             normalizeInventory(
               inventory,

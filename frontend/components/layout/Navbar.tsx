@@ -50,7 +50,7 @@ export default function Navbar() {
   const logout = useAuthStore((state) => state.logout);
 
   const resetAddresses = useAddressStore((s) => s.reset);
-  const resetCart = useCartStore((s) => s.reset);
+  const clearCart = useCartStore((s) => s.clearCart);
 
   // Gate auth-dependent UI on hydration so the server render
   // matches the first client paint.
@@ -82,7 +82,7 @@ export default function Navbar() {
   const handleLogout = () => {
     logout();
     resetAddresses();
-    resetCart();
+    clearCart();
 
     setMobileMenuOpen(false);
 

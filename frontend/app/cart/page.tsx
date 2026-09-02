@@ -29,26 +29,66 @@ import useAuthStore from "@/store/authStore";
 
 export default function CartPage() {
   const items = useCartStore((s) => s.items);
-  const increaseQuantity = useCartStore((s) => s.increaseQuantity);
-  const decreaseQuantity = useCartStore((s) => s.decreaseQuantity);
-  const removeFromCart = useCartStore((s) => s.removeFromCart);
-  const fetchCart = useCartStore((s) => s.fetchCart);
-  const serverGrandTotal = useCartStore((s) => s.serverGrandTotal);
-  const error = useCartStore((s) => s.error);
-  const clearError = useCartStore((s) => s.clearError);
-  const loading = useCartStore((s) => s.loading);
-  const token = useAuthStore((s) => s.token);
+  const increaseQuantity = useCartStore(
+    (s) => s.increaseQuantity,
+  );
+  const decreaseQuantity = useCartStore(
+    (s) => s.decreaseQuantity,
+  );
+  const removeFromCart = useCartStore(
+    (s) => s.removeFromCart,
+  );
+  const fetchCart = useCartStore(
+    (s) => s.fetchCart,
+  );
 
-  // Hydrate from the server when the page mounts.
-  // The server cart is the source of truth for authenticated users.
+  const serverGrandTotal = useCartStore(
+    (s) => s.serverGrandTotal,
+  );
+
+  const error = useCartStore(
+    (s) => s.error,
+  );
+
+  const clearError = useCartStore(
+    (s) => s.clearError,
+  );
+
+  const loading = useCartStore(
+    (s) => s.loading,
+  );
+
+  const token = useAuthStore(
+    (s) => s.token,
+  );
+
+  /*
+   * Hydrate from the server when the page mounts.
+   * The server cart is the source of truth for
+   * authenticated users.
+   */
   useEffect(() => {
     if (token) {
       void fetchCart();
     }
   }, [token, fetchCart]);
 
-  // Backend is authoritative for cart totals.
+  /*
+   * Backend is authoritative for the final
+   * payable cart amount.
+   */
   const total = serverGrandTotal;
+
+  /*
+   * Until productPrice / totalDiscount are
+   * exposed through the Zustand store, keep
+   * subtotal aligned with the current backend
+   * final total.
+   *
+   * We will improve this in the next store
+   * update to use:
+   * productPrice - totalDiscount = orderTotal
+   */
   const subtotal = serverGrandTotal;
 
   /*
@@ -66,7 +106,10 @@ export default function CartPage() {
             textAlign: "center",
           }}
         >
-          <Typography variant="h5" sx={{ fontWeight: 600 }}>
+          <Typography
+            variant="h5"
+            sx={{ fontWeight: 600 }}
+          >
             Loading your cart...
           </Typography>
         </Container>
@@ -104,7 +147,10 @@ export default function CartPage() {
             </Alert>
           )}
 
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
+          <Typography
+            variant="h4"
+            sx={{ fontWeight: 700 }}
+          >
             Your Cart is Empty
           </Typography>
 
@@ -114,7 +160,8 @@ export default function CartPage() {
               color: "text.secondary",
             }}
           >
-            Looks like you haven&apos;t added any products yet.
+            Looks like you haven&apos;t added any
+            products yet.
           </Typography>
 
           <Button
@@ -144,7 +191,10 @@ export default function CartPage() {
     <>
       <Header />
 
-      <Container maxWidth="xl" sx={{ py: 5 }}>
+      <Container
+        maxWidth="xl"
+        sx={{ py: 5 }}
+      >
         <Typography
           variant="h4"
           sx={{
@@ -193,22 +243,71 @@ export default function CartPage() {
                       display: "flex",
                       gap: 3,
                       alignItems: "center",
+                      flexDirection: {
+                        xs: "column",
+                        sm: "row",
+                      },
                     }}
                   >
-                    <Link href={`/products/${item.slug}`}>
-                      <Image
-                        src={item.image}
-                        alt={item.title}
-                        width={120}
-                        height={120}
-                        style={{
-                          objectFit: "contain",
-                          cursor: "pointer",
-                        }}
-                      />
-                    </Link>
+                    {/* Product image */}
+                    <Box
+                      sx={{
+                        width: 120,
+                        height: 120,
+                        flexShrink: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {item.image?.trim() ? (
+                        <Link
+                          href={`/products/${item.slug}`}
+                        >
+                          <Image
+                            src={item.image}
+                            alt={item.title}
+                            width={120}
+                            height={120}
+                            style={{
+                              objectFit: "contain",
+                              cursor: "pointer",
+                            }}
+                          />
+                        </Link>
+                      ) : (
+                        <Box
+                          sx={{
+                            width: 120,
+                            height: 120,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            border: "1px solid",
+                            borderColor: "divider",
+                            borderRadius: 2,
+                            color: "text.secondary",
+                            fontSize: 13,
+                            textAlign: "center",
+                            px: 1,
+                          }}
+                        >
+                          Image unavailable
+                        </Box>
+                      )}
+                    </Box>
 
-                    <Box sx={{ flex: 1 }}>
+                    {/* Product information */}
+                    <Box
+                      sx={{
+                        flex: 1,
+                        width: {
+                          xs: "100%",
+                          sm: "auto",
+                        },
+                      }}
+                    >
                       <Link
                         href={`/products/${item.slug}`}
                         style={{
@@ -218,7 +317,9 @@ export default function CartPage() {
                       >
                         <Typography
                           variant="h6"
-                          sx={{ fontWeight: 700 }}
+                          sx={{
+                            fontWeight: 700,
+                          }}
                         >
                           {item.title}
                         </Typography>
@@ -242,16 +343,19 @@ export default function CartPage() {
                           fontSize: 24,
                         }}
                       >
-                        ₹{item.price.toLocaleString()}
+                        ₹
+                        {item.price.toLocaleString()}
                       </Typography>
 
                       <Typography
                         color="text.secondary"
                         sx={{ mt: 1 }}
                       >
-                        Total: ₹{item.itemTotal.toLocaleString()}
+                        Total: ₹
+                        {item.itemTotal.toLocaleString()}
                       </Typography>
 
+                      {/* Quantity controls */}
                       <Box
                         sx={{
                           display: "flex",
@@ -266,9 +370,13 @@ export default function CartPage() {
                             border: "1px solid #ddd",
                           }}
                           onClick={() =>
-                            decreaseQuantity(item.id, {
-                              variantId: item.variantId,
-                            })
+                            decreaseQuantity(
+                              item.id,
+                              {
+                                variantId:
+                                  item.variantId,
+                              },
+                            )
                           }
                         >
                           <RemoveIcon />
@@ -280,9 +388,11 @@ export default function CartPage() {
                             width: 50,
                             height: 38,
                             display: "flex",
-                            justifyContent: "center",
+                            justifyContent:
+                              "center",
                             alignItems: "center",
-                            border: "1px solid #ddd",
+                            border:
+                              "1px solid #ddd",
                           }}
                         >
                           {item.quantity}
@@ -294,9 +404,13 @@ export default function CartPage() {
                             border: "1px solid #ddd",
                           }}
                           onClick={() =>
-                            increaseQuantity(item.id, {
-                              variantId: item.variantId,
-                            })
+                            increaseQuantity(
+                              item.id,
+                              {
+                                variantId:
+                                  item.variantId,
+                              },
+                            )
                           }
                         >
                           <AddIcon />
@@ -306,7 +420,9 @@ export default function CartPage() {
                           color="error"
                           disabled={loading}
                           onClick={() =>
-                            removeFromCart(item.id)
+                            void removeFromCart(
+                              item.id,
+                            )
                           }
                         >
                           <DeleteIcon />
@@ -341,27 +457,38 @@ export default function CartPage() {
               <Box
                 sx={{
                   display: "flex",
-                  justifyContent: "space-between",
+                  justifyContent:
+                    "space-between",
                   mb: 2,
                 }}
               >
-                <Typography>Subtotal</Typography>
+                <Typography>
+                  Subtotal
+                </Typography>
 
-                <Typography sx={{ fontWeight: 600 }}>
-                  ₹{subtotal.toLocaleString()}
+                <Typography
+                  sx={{ fontWeight: 600 }}
+                >
+                  ₹
+                  {subtotal.toLocaleString()}
                 </Typography>
               </Box>
 
               <Box
                 sx={{
                   display: "flex",
-                  justifyContent: "space-between",
+                  justifyContent:
+                    "space-between",
                   mb: 2,
                 }}
               >
-                <Typography>Discount</Typography>
+                <Typography>
+                  Discount
+                </Typography>
 
-                <Typography color="success.main">
+                <Typography
+                  color="success.main"
+                >
                   ₹0
                 </Typography>
               </Box>
@@ -369,13 +496,18 @@ export default function CartPage() {
               <Box
                 sx={{
                   display: "flex",
-                  justifyContent: "space-between",
+                  justifyContent:
+                    "space-between",
                   mb: 2,
                 }}
               >
-                <Typography>Shipping</Typography>
+                <Typography>
+                  Shipping
+                </Typography>
 
-                <Typography color="success.main">
+                <Typography
+                  color="success.main"
+                >
                   FREE
                 </Typography>
               </Box>
@@ -385,7 +517,8 @@ export default function CartPage() {
               <Box
                 sx={{
                   display: "flex",
-                  justifyContent: "space-between",
+                  justifyContent:
+                    "space-between",
                 }}
               >
                 <Typography
@@ -399,7 +532,8 @@ export default function CartPage() {
                   variant="h6"
                   sx={{ fontWeight: 700 }}
                 >
-                  ₹{total.toLocaleString()}
+                  ₹
+                  {total.toLocaleString()}
                 </Typography>
               </Box>
 

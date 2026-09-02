@@ -154,7 +154,7 @@ const ENDPOINTS = {
  */
 
 interface BackendProductPage {
-  content: BackendProductDto[];
+  content: BackendProductDetailsDto[];
   totalElements?: number;
   totalPages?: number;
   number?: number;
@@ -405,7 +405,7 @@ export async function getProductDetailsById(
   } = options;
 
   const result =
-    await apiRequest<BackendProductDetailsDto>(
+    await apiRequest<BackendProductDetailsResponse>(
       ENDPOINTS.productDetailsById(id),
       {
         method: "GET",
@@ -420,10 +420,19 @@ export async function getProductDetailsById(
   let product: Product;
 
   try {
+    const details = result.data?.data;
+
+    if (!details) {
+      return {
+        ok: false,
+        status: 500,
+        message: "Product details payload is missing.",
+        errorCode: "PRODUCT_DETAILS_INVALID_PAYLOAD",
+      };
+    }
+
     product =
-      normalizeBackendProductDetails(
-        result.data,
-      );
+      normalizeBackendProductDetails(details);
   } catch {
     return {
       ok: false,
@@ -740,7 +749,7 @@ export async function listBackendProducts(
   const products = page.content
     .map((dto) => {
       try {
-        return normalizeBackendProduct(dto);
+        return normalizeBackendProductDetails(dto);
       } catch {
         return null;
       }
@@ -1063,7 +1072,7 @@ export async function listProducts(
     page.content
       .map((dto) => {
         try {
-          return normalizeBackendProduct(
+          return normalizeBackendProductDetails(
             dto,
           );
         } catch {

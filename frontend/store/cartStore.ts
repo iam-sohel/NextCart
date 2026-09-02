@@ -1,149 +1,99 @@
-/**
- * NEXTCART — Cart store (Zustand)
- *
- * Server-authoritative. The `items` array is derived from the backend's
- * `CartResponseDTO`; every mutation round-trips through Spring Boot
- * and the local items are replaced with whatever the server returns.
- *
- * The store keeps the existing `CartItem` view-model so the Cart and
- * Checkout pages keep rendering without any UI changes. The
- * `subtotal` / `total` numbers shown to the user are derived from the
- * server's `grandTotal`, not from client-side arithmetic.
- *
- * Line identity & the variantId gap:
- *   - The backend keys every cart line by VARIANT id. Adding requires a
- *     variantId (@NotNull); update/remove hit `/cart/items/{variantId}`.
- *   - BUT `CartItemResponseDTO` does NOT echo the variantId (nor slug /
- *     image) back. So after a fresh `GET /cart` we cannot, from the
- *     response alone, address a line for update/remove.
- *   - Workaround (frontend-only, no fabricated backend data): we key the
- *     view-model line by the server's cart-item ROW id (`wire.id`, which
- *     IS returned and IS stable across reloads) and retain a
- *     rowId → {variantId, slug, image, variantLabel} map. That map is
- *     mirrored to localStorage so update/remove and product links keep
- *     working after a reload. When a line has no known variantId (e.g.
- *     it was added on another device), mutations on it are safely blocked
- *     with a clear message instead of sending a wrong id.
- *   - The proper fix belongs in the backend: include variantId in
- *     CartItemResponseDTO. Documented as a backend dependency.
- *
- * Persistence:
- *   - Logged-in users: the server cart is the source of truth. The cart
- *     page calls `fetchCart()` on mount. A reload repopulates from the
- *     server; the localStorage meta map re-attaches variant/slug/image.
- *   - Guests: the cart is auth-only on the backend, so add entry points
- *     redirect guests to /login before calling the API.
- */
+"use client";
 
 import { create } from "zustand";
-
 import {
-  addItemToCart as apiAddItem,
-  clearServerCart as apiClearCart,
-  getCart as apiGetCart,
-  removeCartItem as apiRemoveItem,
-  updateCartItem as apiUpdateItem,
+  addItemToCart,
+  clearServerCart,
+  getCart,
+  removeCartItem,
+  updateCartItem,
   type CartResponseWire,
 } from "@/services/cartService";
 
 /* ─────────────────────────────────────────────────────────────────────
-   View-model (UI compatibility)
+   Types
    ───────────────────────────────────────────────────────────────────── */
 
 export interface CartItem {
-  /** Cart-item ROW id from the server. */
   id: number | string;
-
-  /** Backend product id. */
   productId: number;
 
   slug: string;
   title: string;
   image: string;
 
-  /** Backend-authoritative unit price. */
+  /** Backend unitPrice */
   price: number;
 
   quantity: number;
 
-  /** Backend-authoritative line total. */
+  /** Backend lineTotal */
   itemTotal: number;
 
-  /** Backend variant id, retained until backend returns it directly. */
+  /** Backend productVariantId */
   variantId?: string | number;
 
   variantLabel?: string;
 }
 
-/**
- * Payload used by frontend callers when adding an item to the cart.
- *
- * The backend requires:
- *   productId
- *   variantId
- *   quantity
- */
-export interface CartAddPayload {
-  /** Backend product id. */
-  productId: number | string;
-
+interface CartMeta {
   slug?: string;
-  title: string;
-  image: string;
-  price: number;
-  quantity: number;
-
-  /** Backend variant id. */
+  title?: string;
+  image?: string;
   variantId?: string | number;
-
   variantLabel?: string;
 }
 
-type Result<T> =
-  | { ok: true; data: T }
-  | { ok: false; message: string };
+interface AddToCartInput {
+  productId: number | string;
+  slug?: string;
+  title?: string;
+  image?: string;
+  price?: number;
+  quantity?: number;
+  variantId?: string | number;
+  variantLabel?: string;
+}
 
 interface CartStore {
   items: CartItem[];
 
-  /** Backend-computed grand total. UI must read THIS, not local math. */
-  serverGrandTotal: number;
-
-  /** Backend-computed total units. */
-  serverTotalItems: number;
-
   loading: boolean;
   error: string | null;
 
-  /** Hydrate from `GET /api/v1/cart`. */
-  fetchCart: () => Promise<Result<CartItem[]>>;
+  /** Backend orderTotal */
+  serverGrandTotal: number;
 
-  /** Add a variant. Requires `variantId`; guards & rejects if missing. */
-  addToCart: (item: CartAddPayload) => Promise<Result<CartItem[]>>;
+  /** Backend totalItems */
+  serverTotalItems: number;
 
-  /** Update a line's quantity. `rowId` is the cart-item row id. */
+  addToCart: (input: AddToCartInput) => Promise<{
+    ok: boolean;
+    message?: string;
+  }>;
+
   updateQuantity: (
     rowId: number | string,
     quantity: number,
-  ) => Promise<Result<CartItem[]>>;
+  ) => Promise<{
+    ok: boolean;
+    message?: string;
+  }>;
 
-  /** Delete one line by cart-item row id. */
   removeFromCart: (
     rowId: number | string,
-  ) => Promise<Result<CartItem[]>>;
+  ) => Promise<{
+    ok: boolean;
+    message?: string;
+  }>;
 
-  /** Wipe server cart. */
-  clearCart: () => Promise<Result<true>>;
+  clearCart: () => Promise<void>;
 
-  /** Reset local-only state when the user logs out. */
-  reset: () => void;
+  fetchCart: () => Promise<void>;
 
   clearError: () => void;
 
-  /*
-   * Shims kept so the existing Cart page keeps compiling.
-   * They delegate to the async actions.
-   */
+  /** Existing page compatibility */
   increaseQuantity: (
     rowId: number | string,
     options?: { variantId?: string | number },
@@ -158,530 +108,732 @@ interface CartStore {
 }
 
 /* ─────────────────────────────────────────────────────────────────────
-   Retained per-line meta (rowId → variant/visual), mirrored to storage.
-   The backend response omits variantId/slug/image; this fills the gap.
+   Constants
    ───────────────────────────────────────────────────────────────────── */
 
-interface LineMeta {
-  productId?: number;
-  variantId?: number;
-  variantLabel?: string;
-  slug?: string;
-  title?: string;
-  image?: string;
-}
+const META_STORAGE_KEY = "nextcart-cart-meta";
 
-const META_STORAGE_KEY = "nextcart-cart-line-meta";
-const DEFAULT_PRODUCT_IMAGE = "/images/product-placeholder.png";
+/* ─────────────────────────────────────────────────────────────────────
+   Metadata helpers
+   ───────────────────────────────────────────────────────────────────── */
 
-function toFiniteNumber(v: unknown): number | undefined {
-  if (v === null || v === undefined || v === "") {
-    return undefined;
+function readMeta(): Record<string, CartMeta> {
+  if (typeof window === "undefined") {
+    return {};
   }
 
-  const n = Number(v);
+  try {
+    const raw = window.localStorage.getItem(
+      META_STORAGE_KEY,
+    );
 
-  return Number.isFinite(n) ? n : undefined;
+    if (!raw) {
+      return {};
+    }
+
+    const parsed = JSON.parse(raw);
+
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      !Array.isArray(parsed)
+    ) {
+      return parsed;
+    }
+  } catch {
+    // Ignore malformed local metadata.
+  }
+
+  return {};
+}
+
+function writeMeta(
+  meta: Record<string, CartMeta>,
+) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(
+      META_STORAGE_KEY,
+      JSON.stringify(meta),
+    );
+  } catch {
+    // Ignore localStorage failures.
+  }
+}
+
+function ensureMeta(): Map<string, CartMeta> {
+  const raw = readMeta();
+
+  return new Map(
+    Object.entries(raw).map(
+      ([key, value]) => [
+        key,
+        value ?? {},
+      ],
+    ),
+  );
+}
+
+function saveItemMeta(
+  cartItemId: number | string,
+  meta: CartMeta,
+) {
+  const existing = readMeta();
+
+  existing[String(cartItemId)] = {
+    ...(existing[String(cartItemId)] ?? {}),
+    ...meta,
+  };
+
+  writeMeta(existing);
+}
+
+function removeItemMeta(
+  cartItemId: number | string,
+) {
+  const existing = readMeta();
+
+  delete existing[String(cartItemId)];
+
+  writeMeta(existing);
 }
 
 /* ─────────────────────────────────────────────────────────────────────
-   Implementation
+   Backend → Frontend mapping
    ───────────────────────────────────────────────────────────────────── */
 
-const useCartStore = create<CartStore>((set, get) => {
-  // rowId(string) → LineMeta.
-  // Lazily loaded from localStorage on first client-side use so the
-  // store factory stays SSR-safe.
-  let metaByRowId = new Map<string, LineMeta>();
-  let metaLoaded = false;
+function mapWire(
+  wire: CartResponseWire["items"][number],
+): CartItem {
+  const meta = ensureMeta().get(
+    String(wire.id),
+  );
 
-  function loadMeta(): Map<string, LineMeta> {
-    if (typeof window === "undefined") {
-      return new Map();
-    }
+  const backendImage =
+    typeof wire.productImage === "string"
+      ? wire.productImage.trim()
+      : "";
 
-    try {
-      const raw = window.localStorage.getItem(META_STORAGE_KEY);
-
-      if (!raw) {
-        return new Map();
-      }
-
-      const parsed = JSON.parse(raw) as Record<string, LineMeta>;
-
-      return new Map(Object.entries(parsed));
-    } catch {
-      return new Map();
-    }
-  }
-
-  function saveMeta() {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    try {
-      const obj: Record<string, LineMeta> = {};
-
-      metaByRowId.forEach((value, key) => {
-        obj[key] = value;
-      });
-
-      window.localStorage.setItem(
-        META_STORAGE_KEY,
-        JSON.stringify(obj),
-      );
-    } catch {
-      /*
-       * Storage full / disabled — non-fatal.
-       * The in-memory map still works.
-       */
-    }
-  }
-
-  function ensureMeta() {
-    if (!metaLoaded) {
-      metaByRowId = loadMeta();
-      metaLoaded = true;
-    }
-
-    return metaByRowId;
-  }
-
-  function mapWire(
-    wire: CartResponseWire["items"][number],
-  ): CartItem {
-    const meta = ensureMeta().get(String(wire.id));
-
-    return {
-      id: wire.id,
-      productId: wire.productId,
-
-      slug: meta?.slug ?? "",
-      title: wire.productName || meta?.title || "",
-
-      image:
-        wire.productImage ??
-        meta?.image ??
-        DEFAULT_PRODUCT_IMAGE,
-
-      price: wire.price,
-      quantity: wire.quantity,
-
-      // Backend is authoritative for line totals.
-      itemTotal: wire.itemTotal,
-
-      variantId: meta?.variantId,
-      variantLabel: meta?.variantLabel,
-    };
-  }
-
-  function apply(response: CartResponseWire) {
-    const items = response.items.map(mapWire);
-
-    // Housekeeping: drop metadata for rows no longer in the cart.
-    const liveRowIds = new Set(
-      response.items.map((wire) => String(wire.id)),
-    );
-
-    let pruned = false;
-
-    ensureMeta().forEach((_value, key) => {
-      if (!liveRowIds.has(key)) {
-        metaByRowId.delete(key);
-        pruned = true;
-      }
-    });
-
-    if (pruned) {
-      saveMeta();
-    }
-
-    set({
-      items,
-      serverGrandTotal: response.grandTotal,
-      serverTotalItems: response.totalItems,
-      loading: false,
-      error: null,
-    });
-
-    return {
-      items,
-      grandTotal: response.grandTotal,
-      totalItems: response.totalItems,
-    };
-  }
-
-  function failWith(message: string) {
-    set({
-      loading: false,
-      error: message,
-    });
-
-    return {
-      ok: false as const,
-      message,
-    };
-  }
+  const metadataImage =
+    typeof meta?.image === "string"
+      ? meta.image.trim()
+      : "";
 
   return {
-    items: [],
-    serverGrandTotal: 0,
-    serverTotalItems: 0,
+    id: wire.id,
+
+    productId: wire.productId,
+
+    slug: meta?.slug ?? "",
+
+    title:
+      wire.productName ||
+      meta?.title ||
+      "",
+
+    /**
+     * Image priority:
+     *
+     * 1. Backend cart image
+     * 2. Real product image saved as cart metadata
+     * 3. Empty string
+     *
+     * No mock/placeholder image is used.
+     */
+    image:
+      backendImage ||
+      metadataImage ||
+      "",
+
+    /** Backend unitPrice */
+    price: wire.unitPrice,
+
+    quantity: wire.quantity,
+
+    /** Backend lineTotal */
+    itemTotal: wire.lineTotal,
+
+    /** Backend productVariantId */
+    variantId:
+      wire.productVariantId ??
+      meta?.variantId,
+
+    variantLabel:
+      meta?.variantLabel,
+  };
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Apply backend response
+   ───────────────────────────────────────────────────────────────────── */
+
+function apply(
+  response: CartResponseWire,
+  set: (
+    partial:
+      | Partial<CartStore>
+      | ((
+          state: CartStore,
+        ) => Partial<CartStore>),
+  ) => void,
+) {
+  const items =
+    response.items.map(mapWire);
+
+  /**
+   * Backend cart contract:
+   *
+   * productPrice  = price before discount
+   * totalDiscount = discount
+   * orderTotal    = final payable amount
+   */
+  const grandTotal =
+    response.orderTotal;
+
+  const totalItems =
+    response.totalItems;
+
+  set({
+    items,
+    serverGrandTotal: grandTotal,
+    serverTotalItems: totalItems,
     loading: false,
     error: null,
+  });
 
-    async fetchCart() {
+  return {
+    items,
+    grandTotal,
+    totalItems,
+  };
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Zustand store
+   ───────────────────────────────────────────────────────────────────── */
+
+const useCartStore =
+  create<CartStore>((set, get) => ({
+    items: [],
+
+    loading: false,
+
+    error: null,
+
+    serverGrandTotal: 0,
+
+    serverTotalItems: 0,
+
+    /* ───────────────────────────────────────────────────────────────
+       Fetch cart
+       ─────────────────────────────────────────────────────────────── */
+
+    fetchCart: async () => {
       set({
         loading: true,
         error: null,
       });
 
-      const res = await apiGetCart();
+      try {
+        const result =
+          await getCart();
 
-      if (!res.ok) {
+        if (!result.ok) {
+          const message =
+            result.message ??
+            "Failed to load cart.";
+
+          set({
+            loading: false,
+            error: message,
+          });
+
+          return;
+        }
+
+        apply(
+          result.data,
+          set,
+        );
+      } catch (error) {
         set({
           loading: false,
-          error: res.message,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to load cart.",
+        });
+      }
+    },
+
+    /* ───────────────────────────────────────────────────────────────
+       Add to cart
+       ─────────────────────────────────────────────────────────────── */
+
+    addToCart: async (
+      input,
+    ) => {
+      const quantity =
+        Math.max(
+          1,
+          Number(
+            input.quantity ?? 1,
+          ),
+        );
+
+      const variantId =
+        input.variantId !==
+          undefined &&
+        input.variantId !== null
+          ? Number(
+              input.variantId,
+            )
+          : undefined;
+
+      if (
+        variantId ===
+          undefined ||
+        !Number.isFinite(
+          variantId,
+        )
+      ) {
+        const message =
+          "Please select a product variant before adding to cart.";
+
+        set({
+          loading: false,
+          error: message,
         });
 
         return {
           ok: false,
-          message: res.message,
+          message,
         };
       }
 
-      const mapped = apply(res.data);
-
-      return {
-        ok: true,
-        data: mapped.items,
-      };
-    },
-
-    async addToCart(item) {
       set({
+        loading: true,
         error: null,
       });
 
-      const productId = toFiniteNumber(item.productId);
+      try {
+        const result =
+          await addItemToCart(
+            Number(
+              input.productId,
+            ),
+            variantId,
+            quantity,
+          );
 
-      if (productId === undefined) {
-        return failWith("Invalid product id.");
-      }
+        if (!result.ok) {
+          const message =
+            result.message ??
+            "Failed to add item to cart.";
 
-      const variantId = toFiniteNumber(item.variantId);
+          set({
+            loading: false,
+            error: message,
+          });
 
-      if (variantId === undefined) {
-        return failWith(
-          "Please select a variant before adding this item to your cart.",
-        );
-      }
+          return {
+            ok: false,
+            message,
+          };
+        }
 
-      const quantity = Math.max(
-        1,
-        Math.floor(item.quantity || 1),
-      );
-
-      /*
-       * Snapshot existing rows so we can attribute a newly created row
-       * to the variant we just added.
-       *
-       * The backend response does not echo variantId.
-       */
-      const beforeRowIds = new Set(
-        get().items.map((cartItem) => String(cartItem.id)),
-      );
-
-      set({
-        loading: true,
-      });
-
-      const res = await apiAddItem(
-        productId,
-        variantId,
-        quantity,
-      );
-
-      if (!res.ok) {
-        return failWith(res.message);
-      }
-
-      ensureMeta();
-
-      /*
-       * New rows for this product created by the add.
-       * Attach the variant/meta information locally because the backend
-       * CartItemResponseDTO does not return variantId, slug or image.
-       */
-      const newRowsForProduct = res.data.items.filter(
-        (wire) =>
-          !beforeRowIds.has(String(wire.id)) &&
-          wire.productId === productId,
-      );
-
-      const metaRecord: LineMeta = {
-        productId,
-        variantId,
-        variantLabel: item.variantLabel,
-        slug: item.slug,
-        title: item.title,
-        image: item.image,
-      };
-
-      if (newRowsForProduct.length === 1) {
-        /*
-         * Common case: exactly one new line → unambiguous.
+        /**
+         * Find the cart row returned by
+         * the backend.
          */
-        metaByRowId.set(
-          String(newRowsForProduct[0].id),
-          metaRecord,
-        );
-      } else if (newRowsForProduct.length === 0) {
-        /*
-         * Existing variant → quantity bumped on a known row.
+        const returnedItem =
+          result.data.items.find(
+            (item) =>
+              Number(
+                item.productId,
+              ) ===
+                Number(
+                  input.productId,
+                ) &&
+              Number(
+                item.productVariantId,
+              ) ===
+                Number(
+                  variantId,
+                ),
+          );
+
+        /**
+         * Save only real product metadata.
          *
-         * Refresh its metadata for any row of this product that we
-         * already track with the same variantId.
+         * No placeholder/mock image is
+         * generated here.
          */
-        res.data.items.forEach((wire) => {
-          if (wire.productId !== productId) {
-            return;
-          }
+        if (returnedItem) {
+          saveItemMeta(
+            returnedItem.id,
+            {
+              slug: input.slug,
+              title: input.title,
 
-          const existing = metaByRowId.get(String(wire.id));
+              ...(input.image?.trim()
+                ? {
+                    image:
+                      input.image.trim(),
+                  }
+                : {}),
 
-          if (
-            existing &&
-            existing.variantId === variantId
-          ) {
-            metaByRowId.set(
-              String(wire.id),
-              {
-                ...existing,
-                ...metaRecord,
-              },
-            );
-          }
-        });
-      }
+              variantId:
+                returnedItem.productVariantId,
 
-      saveMeta();
+              variantLabel:
+                input.variantLabel,
+            },
+          );
+        }
 
-      /*
-       * Server response remains authoritative.
-       * Never construct or optimistically invent cart totals/items.
-       */
-      const mapped = apply(res.data);
+        apply(
+          result.data,
+          set,
+        );
 
-      return {
-        ok: true,
-        data: mapped.items,
-      };
-    },
+        return {
+          ok: true,
+        };
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to add item to cart.";
 
-    async updateQuantity(rowId, quantity) {
-      set({
-        error: null,
-      });
-
-      // rowId is the cart-item row id ( = cartItem.id ), use it directly
-      // no need to look up variantId from localStorage meta.
-      const safeQty = Math.max(
-        1,
-        Math.floor(quantity || 1),
-      );
-
-      set({
-        loading: true,
-      });
-
-      const res = await apiUpdateItem(
-        Number(rowId),
-        safeQty,
-      );
-
-      if (!res.ok) {
-        return failWith(res.message);
-      }
-
-      const mapped = apply(res.data);
-
-      return {
-        ok: true,
-        data: mapped.items,
-      };
-    },
-
-    async removeFromCart(rowId) {
-      set({
-        error: null,
-      });
-
-      // rowId is the cart-item row id ( = cartItem.id ), use it directly
-      set({
-        loading: true,
-      });
-
-      const res = await apiRemoveItem(Number(rowId));
-
-      if (!res.ok) {
-        return failWith(res.message);
-      }
-
-      const mapped = apply(res.data);
-
-      return {
-        ok: true,
-        data: mapped.items,
-      };
-    },
-
-    async clearCart() {
-      set({
-        loading: true,
-        error: null,
-      });
-
-      /*
-       * Backend returns 204 No Content.
-       * cartService handles the empty response and returns success.
-       */
-      const res = await apiClearCart();
-
-      if (!res.ok) {
         set({
           loading: false,
-          error: res.message,
+          error: message,
         });
 
         return {
           ok: false,
-          message: res.message,
+          message,
+        };
+      }
+    },
+
+    /* ───────────────────────────────────────────────────────────────
+       Update quantity
+       ─────────────────────────────────────────────────────────────── */
+
+    updateQuantity: async (
+      rowId,
+      quantity,
+    ) => {
+      const safeQuantity =
+        Math.max(
+          1,
+          Math.floor(
+            Number(quantity),
+          ),
+        );
+
+      const numericRowId =
+        Number(rowId);
+
+      if (
+        !Number.isFinite(
+          numericRowId,
+        )
+      ) {
+        const message =
+          "Invalid cart item ID.";
+
+        set({
+          loading: false,
+          error: message,
+        });
+
+        return {
+          ok: false,
+          message,
         };
       }
 
-      ensureMeta().clear();
-      saveMeta();
-
       set({
-        items: [],
-        serverGrandTotal: 0,
-        serverTotalItems: 0,
-        loading: false,
+        loading: true,
         error: null,
       });
 
-      return {
-        ok: true,
-        data: true,
-      };
+      try {
+        const result =
+          await updateCartItem(
+            numericRowId,
+            safeQuantity,
+          );
+
+        if (!result.ok) {
+          const message =
+            result.message ??
+            "Failed to update cart item.";
+
+          set({
+            loading: false,
+            error: message,
+          });
+
+          return {
+            ok: false,
+            message,
+          };
+        }
+
+        apply(
+          result.data,
+          set,
+        );
+
+        return {
+          ok: true,
+        };
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to update cart item.";
+
+        set({
+          loading: false,
+          error: message,
+        });
+
+        return {
+          ok: false,
+          message,
+        };
+      }
     },
 
-    reset() {
-      ensureMeta().clear();
-      saveMeta();
+    /* ───────────────────────────────────────────────────────────────
+       Remove item
+       ─────────────────────────────────────────────────────────────── */
+
+    removeFromCart: async (
+      rowId,
+    ) => {
+      const numericRowId =
+        Number(rowId);
+
+      if (
+        !Number.isFinite(
+          numericRowId,
+        )
+      ) {
+        const message =
+          "Invalid cart item ID.";
+
+        set({
+          loading: false,
+          error: message,
+        });
+
+        return {
+          ok: false,
+          message,
+        };
+      }
 
       set({
-        items: [],
-        serverGrandTotal: 0,
-        serverTotalItems: 0,
-        loading: false,
+        loading: true,
+        error: null,
+      });
+
+      try {
+        const result =
+          await removeCartItem(
+            numericRowId,
+          );
+
+        if (!result.ok) {
+          const message =
+            result.message ??
+            "Failed to remove cart item.";
+
+          set({
+            loading: false,
+            error: message,
+          });
+
+          return {
+            ok: false,
+            message,
+          };
+        }
+
+        removeItemMeta(
+          numericRowId,
+        );
+
+        apply(
+          result.data,
+          set,
+        );
+
+        return {
+          ok: true,
+        };
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to remove cart item.";
+
+        set({
+          loading: false,
+          error: message,
+        });
+
+        return {
+          ok: false,
+          message,
+        };
+      }
+    },
+
+    /* ───────────────────────────────────────────────────────────────
+       Clear cart
+       ─────────────────────────────────────────────────────────────── */
+
+    clearCart: async () => {
+      set({
+        loading: true,
+        error: null,
+      });
+
+      try {
+        const result =
+          await clearServerCart();
+
+        if (!result.ok) {
+          const message =
+            result.message ??
+            "Failed to clear cart.";
+
+          set({
+            loading: false,
+            error: message,
+          });
+
+          throw new Error(
+            message,
+          );
+        }
+
+        if (
+          typeof window !==
+          "undefined"
+        ) {
+          try {
+            window.localStorage.removeItem(
+              META_STORAGE_KEY,
+            );
+          } catch {
+            // Ignore localStorage failures.
+          }
+        }
+
+        set({
+          items: [],
+          serverGrandTotal: 0,
+          serverTotalItems: 0,
+          loading: false,
+          error: null,
+        });
+      } catch (error) {
+        set({
+          loading: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to clear cart.",
+        });
+
+        throw error;
+      }
+    },
+
+    /* ───────────────────────────────────────────────────────────────
+       Clear error
+       ─────────────────────────────────────────────────────────────── */
+
+    clearError: () => {
+      set({
         error: null,
       });
     },
 
-    clearError() {
-      set({
-        error: null,
-      });
+    /* ───────────────────────────────────────────────────────────────
+       Increase quantity
+       ─────────────────────────────────────────────────────────────── */
+
+    increaseQuantity: (rowId) => {
+      const line =
+        get().items.find(
+          (item) =>
+            String(item.id) ===
+            String(rowId),
+        );
+
+      const next =
+        (line?.quantity ?? 0) + 1;
+
+      void get().updateQuantity(
+        rowId,
+        next,
+      );
     },
 
-    // ── Shims used by the existing Cart page ─────────────────────────
+    /* ───────────────────────────────────────────────────────────────
+       Decrease quantity
+       ─────────────────────────────────────────────────────────────── */
 
-    increaseQuantity(rowId, options) {
-      seedVariantFromOptions(rowId, options);
+    decreaseQuantity: (rowId) => {
+      const line =
+        get().items.find(
+          (item) =>
+            String(item.id) ===
+            String(rowId),
+        );
 
-      const line = get().items.find(
-        (item) => String(item.id) === String(rowId),
+      const next =
+        Math.max(
+          1,
+          (line?.quantity ?? 0) - 1,
+        );
+
+      void get().updateQuantity(
+        rowId,
+        next,
       );
-
-      const next = (line?.quantity ?? 0) + 1;
-
-      void get().updateQuantity(rowId, next);
     },
 
-    decreaseQuantity(rowId, options) {
-      seedVariantFromOptions(rowId, options);
+    /* ───────────────────────────────────────────────────────────────
+       Total count
+       ─────────────────────────────────────────────────────────────── */
 
-      const line = get().items.find(
-        (item) => String(item.id) === String(rowId),
-      );
-
-      const next = Math.max(
-        1,
-        (line?.quantity ?? 0) - 1,
-      );
-
-      void get().updateQuantity(rowId, next);
-    },
-
-    totalCount() {
+    totalCount: () => {
       return (
         get().serverTotalItems ||
         get().items.reduce(
-          (sum, item) => sum + item.quantity,
+          (sum, item) =>
+            sum + item.quantity,
           0,
         )
       );
     },
-  };
+  }));
 
-  /*
-   * If the caller (cart page) still knows a line's variantId,
-   * use it to seed the metadata map for lines we couldn't otherwise
-   * resolve.
-   */
-  function seedVariantFromOptions(
-    rowId: number | string,
-    options?: { variantId?: string | number },
-  ) {
-    const optVariant = toFiniteNumber(
-      options?.variantId,
-    );
-
-    if (optVariant === undefined) {
-      return;
-    }
-
-    const key = String(rowId);
-    const meta = ensureMeta().get(key) ?? {};
-
-    if (meta.variantId === optVariant) {
-      return;
-    }
-
-    metaByRowId.set(key, {
-      ...meta,
-      variantId: optVariant,
-    });
-
-    saveMeta();
-
-    /*
-     * Reflect the seeded variant on the in-memory line immediately.
-     */
-    set({
-      items: get().items.map((item) =>
-        String(item.id) === key
-          ? {
-              ...item,
-              variantId: optVariant,
-            }
-          : item,
-      ),
-    });
-  }
-});
+/* ─────────────────────────────────────────────────────────────────────
+   Default export
+   ───────────────────────────────────────────────────────────────────── */
 
 export default useCartStore;
