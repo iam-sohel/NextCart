@@ -1,16 +1,15 @@
 /**
  * NEXTCART — Order service boundary.
  *
- * Wraps Spring Boot's order module. The checkout endpoint is the only
- * mutation needed for this checkpoint; list/get/cancel are exposed for
- * future My Orders / tracking pages.
+ * Wraps Spring Boot's order module.
+ * Checkout is the order-creation mutation.
  */
 
 import { apiRequest, type ApiResult } from "@/lib/api";
 
-/* ─────────────────────────────────────────────────────────────────────
-   Wire types — match OrderResponseDTO
-   ───────────────────────────────────────────────────────────────────── */
+/* --------------------------------------------------------------------------
+   Wire types — match backend OrderResponseDTO
+   -------------------------------------------------------------------------- */
 
 export interface OrderItemWire {
   id: number;
@@ -24,7 +23,7 @@ export interface OrderItemWire {
 
 export type OrderStatus =
   | "PENDING"
-  | "CONFIRMED"
+  | "PAID"
   | "SHIPPED"
   | "DELIVERED"
   | "CANCELLED"
@@ -32,9 +31,8 @@ export type OrderStatus =
 
 export type PaymentStatus =
   | "PENDING"
-  | "PAID"
+  | "COMPLETED"
   | "FAILED"
-  | "REFUNDED"
   | (string & {});
 
 export interface OrderResponseWire {
@@ -61,76 +59,112 @@ interface Envelope<T> {
 
 function unwrap<T>(payload: unknown, fallback: T): T {
   if (payload && typeof payload === "object" && "data" in payload) {
-    const e = payload as Envelope<T>;
-    if (e.data !== undefined && e.data !== null) return e.data;
+    const envelope = payload as Envelope<T>;
+
+    if (envelope.data !== undefined && envelope.data !== null) {
+      return envelope.data;
+    }
   }
+
   return fallback;
 }
 
-function toNumber(v: unknown): number {
-  if (typeof v === "number") return v;
-  if (typeof v === "string") {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : 0;
+function toNumber(value: unknown): number {
+  if (typeof value === "number") return value;
+
+  if (typeof value === "string") {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : 0;
   }
+
   return 0;
 }
 
-function normaliseOrder(o: OrderResponseWire): OrderResponseWire {
+function normaliseOrder(order: OrderResponseWire): OrderResponseWire {
   return {
-    ...o,
-    totalAmount: toNumber(o.totalAmount),
-    items: Array.isArray(o.items)
-      ? o.items.map((i) => ({
-          ...i,
-          price: toNumber(i.price),
-          quantity: typeof i.quantity === "number" ? i.quantity : 0,
-          itemTotal: toNumber(i.itemTotal),
+    ...order,
+    totalAmount: toNumber(order.totalAmount),
+
+    items: Array.isArray(order.items)
+      ? order.items.map((item) => ({
+          ...item,
+          price: toNumber(item.price),
+          quantity:
+            typeof item.quantity === "number" ? item.quantity : 0,
+          itemTotal: toNumber(item.itemTotal),
         }))
       : [],
   };
 }
 
-/* ─────────────────────────────────────────────────────────────────────
+/* --------------------------------------------------------------------------
    Endpoints
-   ───────────────────────────────────────────────────────────────────── */
+   -------------------------------------------------------------------------- */
 
 const ENDPOINTS = {
-  checkout: "/api/v1/checkout",
-  list: "/api/orders",
-  byId: (id: number) => `/api/orders/${id}`,
-  cancel: (id: number) => `/api/orders/${id}/cancel`,
+  checkout: "/api/v1/orders/checkout",
+  checkoutPreview: "/api/v1/checkout",
+  list: "/api/v1/orders",
+  byId: (id: number) => `/api/v1/orders/${id}`,
+  cancel: (id: number) => `/api/v1/orders/${id}/cancel`,
 } as const;
 
-/* ─────────────────────────────────────────────────────────────────────
+/* --------------------------------------------------------------------------
    Public API
-   ───────────────────────────────────────────────────────────────────── */
+   -------------------------------------------------------------------------- */
 
 /**
  * POST /api/v1/orders/checkout
  *
- * Body: { addressId, paymentMethod }
- * Server returns an `ApiResponse<OrderResponseDTO>` envelope; we unwrap.
+ * Creates an order from the user's current cart.
+ *
+ * Body:
+ * {
+ *   addressId: number,
+ *   paymentMethod: string
+ * }
+ *
+ * Server returns:
+ * ApiResponse<OrderResponseDTO>
  */
 export async function checkout(
   addressId: number,
   paymentMethod: string,
   signal?: AbortSignal,
 ): Promise<ApiResult<OrderResponseWire>> {
-  const res = await apiRequest<Envelope<OrderResponseWire> | OrderResponseWire>(
-    ENDPOINTS.checkout,
-    { method: "POST", body: { addressId, paymentMethod }, signal },
-  );
+  const res = await apiRequest<
+    Envelope<OrderResponseWire> | OrderResponseWire
+  >(ENDPOINTS.checkout, {
+    method: "POST",
+    body: {
+      addressId,
+      paymentMethod,
+    },
+    signal,
+  });
+
   if (!res.ok) return res;
+
   const data = unwrap<OrderResponseWire | null>(res.data, null);
-  if (!data || typeof data.orderNumber !== "string") {
+
+  if (
+    !data ||
+    typeof data.orderNumber !== "string" ||
+    !data.orderNumber.trim()
+  ) {
     return {
       ok: false,
       status: res.status,
-      message: "Empty or invalid order response.",
+      message:
+        "Order was created but the server returned an invalid order response.",
     };
   }
-  return { ok: true, status: res.status, data: normaliseOrder(data) };
+
+  return {
+    ok: true,
+    status: res.status,
+    data: normaliseOrder(data),
+  };
 }
 
 /**
@@ -141,12 +175,17 @@ export async function checkout(
 export async function getOrders(
   signal?: AbortSignal,
 ): Promise<ApiResult<OrderResponseWire[]>> {
-  const res = await apiRequest<Envelope<OrderResponseWire[]> | OrderResponseWire[]>(
-    ENDPOINTS.list,
-    { method: "GET", signal },
-  );
+  const res = await apiRequest<
+    Envelope<OrderResponseWire[]> | OrderResponseWire[]
+  >(ENDPOINTS.list, {
+    method: "GET",
+    signal,
+  });
+
   if (!res.ok) return res;
+
   const data = unwrap<OrderResponseWire[] | null>(res.data, null);
+
   if (!Array.isArray(data)) {
     return {
       ok: false,
@@ -154,7 +193,12 @@ export async function getOrders(
       message: "Empty or invalid orders response.",
     };
   }
-  return { ok: true, status: res.status, data: data.map(normaliseOrder) };
+
+  return {
+    ok: true,
+    status: res.status,
+    data: data.map(normaliseOrder),
+  };
 }
 
 export type { ApiResult };
