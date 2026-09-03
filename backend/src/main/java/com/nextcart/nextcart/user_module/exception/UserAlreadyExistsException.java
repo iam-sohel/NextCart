@@ -1,4 +1,4 @@
-package com.nextcart.nextcart.user_module.exceptions;
+package com.nextcart.nextcart.user_module.exception;
 
 public class UserAlreadyExistsException extends RuntimeException {
 

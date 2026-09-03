@@ -8,6 +8,7 @@ import com.nextcart.nextcart.product_module.product_base.dto.ProductUpdateReques
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -93,14 +94,23 @@ public class ProductController {
     // =========================================================
 
     @GetMapping
-    public ResponseEntity<ApiResponse<Page<ProductDetailsResponse>>>
-    getAllProducts(
-            @PageableDefault(
-                    size = 20,
-                    sort = "name",
-                    direction = Sort.Direction.ASC
-            )
-            Pageable pageable) {
+    public ResponseEntity<ApiResponse<Page<ProductDetailsResponse>>> getAllProducts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt,asc") String sort) {
+
+        String[] sortParts = sort.split(",");
+
+        Sort.Direction direction =
+                sortParts.length > 1
+                        ? Sort.Direction.fromString(sortParts[1])
+                        : Sort.Direction.ASC;
+
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(direction, sortParts[0])
+        );
 
         Page<ProductDetailsResponse> response =
                 productService.getAllProducts(pageable);
@@ -108,7 +118,7 @@ public class ProductController {
         return ResponseEntity.ok(
                 new ApiResponse<>(
                         true,
-                        "Products fetched successfully",
+                        "Products retrieved successfully",
                         response
                 )
         );

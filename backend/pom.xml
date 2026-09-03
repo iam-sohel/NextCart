@@ -118,12 +118,18 @@
             <scope>test</scope>
         </dependency>
 
-<!-- Razorpay Java SDK -->
-<dependency>
-    <groupId>com.razorpay</groupId>
-    <artifactId>razorpay-java</artifactId>
-    <version>1.4.8</version>
-</dependency>
+        <!-- Email / Gmail SMTP -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
+        <!-- Razorpay Java SDK -->
+        <dependency>
+            <groupId>com.razorpay</groupId>
+            <artifactId>razorpay-java</artifactId>
+            <version>1.4.8</version>
+        </dependency>
 
         <!-- Spring Security Testing -->
         <dependency>
