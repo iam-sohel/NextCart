@@ -8,6 +8,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.http.HttpMethod;
 
 @Configuration
 @EnableMethodSecurity
@@ -42,27 +43,37 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
-                        // =========================================
-                        // PUBLIC AUTH APIs
-                        // =========================================
-                        .requestMatchers(
-                                "/api/v1/auth/**"
-                        ).permitAll()
+        // =========================================
+        // PUBLIC AUTH APIs
+        // =========================================
+        .requestMatchers(
+                "/api/v1/auth/**"
+        ).permitAll()
 
-                        // =========================================
-                        // SWAGGER / OPENAPI
-                        // =========================================
-                        .requestMatchers(
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/v3/api-docs/**"
-                        ).permitAll()
+        // =========================================
+        // PUBLIC CATALOGUE APIs - READ ONLY
+        // =========================================
+        .requestMatchers(
+                HttpMethod.GET,
+                "/api/v1/products/**",
+                "/api/v1/categories/**",
+                "/api/v1/subcategories/**"
+        ).permitAll()
 
-                        // =========================================
-                        // ALL OTHER APIs
-                        // =========================================
-                        .anyRequest().authenticated()
-                );
+        // =========================================
+        // SWAGGER / OPENAPI
+        // =========================================
+        .requestMatchers(
+                "/swagger-ui/**",
+                "/swagger-ui.html",
+                "/v3/api-docs/**"
+        ).permitAll()
+
+        // =========================================
+        // ALL OTHER APIs
+        // =========================================
+        .anyRequest().authenticated()
+);
 
         return http.build();
     }
