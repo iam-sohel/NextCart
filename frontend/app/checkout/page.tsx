@@ -483,15 +483,34 @@ export default function CheckoutPage() {
                     alignItems: "center",
                   }}
                 >
-                  <Image
-                    src={item.image}
-                    alt={item.title}
-                    width={50}
-                    height={50}
-                    style={{
-                      objectFit: "contain",
-                    }}
-                  />
+                 {item.image ? (
+  <Image
+    src={item.image}
+    alt={item.title}
+    width={50}
+    height={50}
+    style={{
+      objectFit: "cover",
+      borderRadius: 4,
+    }}
+  />
+) : (
+  <Box
+    sx={{
+      width: 50,
+      height: 50,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      bgcolor: "grey.100",
+      borderRadius: 1,
+      color: "text.secondary",
+      fontSize: 11,
+    }}
+  >
+    No image
+  </Box>
+)}
 
                   <Box sx={{ flex: 1 }}>
                     <Typography
