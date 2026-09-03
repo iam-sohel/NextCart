@@ -1,6 +1,9 @@
 package com.nextcart.nextcart.adcommon.exception;
 
 import com.nextcart.nextcart.adcommon.dto.ApiResponse;
+import com.nextcart.nextcart.auth_module.exceptions.PendingRegistrationNotFoundException;
+import com.nextcart.nextcart.auth_module.exceptions.RegistrationExpiredException;
+import com.nextcart.nextcart.auth_module.exceptions.RegistrationVerificationException;
 import com.nextcart.nextcart.brand_module.exceptions.BrandAlreadyExistsException;
 import com.nextcart.nextcart.brand_module.exceptions.BrandNotFoundException;
 import com.nextcart.nextcart.cart_module.exceptions.CartItemNotFoundException;
@@ -38,7 +41,10 @@ import com.nextcart.nextcart.product_module.exceptions.VariantAttributeAlreadyEx
 import com.nextcart.nextcart.product_module.exceptions.VariantAttributeNotFoundException;
 import com.nextcart.nextcart.subcategory_module.exceptions.SubCategoryAlreadyExistsException;
 import com.nextcart.nextcart.subcategory_module.exceptions.SubCategoryNotFoundException;
-import com.nextcart.nextcart.user_module.exceptions.UserAlreadyExistsException;
+import com.nextcart.nextcart.user_module.exception.InvalidPasswordException;
+import com.nextcart.nextcart.user_module.exception.PasswordMismatchException;
+import com.nextcart.nextcart.user_module.exception.UserAlreadyExistsException;
+import com.nextcart.nextcart.user_module.exception.UserNotFoundException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -60,6 +66,19 @@ public class GlobalExceptionHandler {
     // USER
     // =========================================================
 
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleUserNotFound(
+            UserNotFoundException exception) {
+
+        return buildError(
+                HttpStatus.NOT_FOUND,
+                exception.getMessage(),
+                "USER_NOT_FOUND"
+        );
+    }
+
+
     @ExceptionHandler(UserAlreadyExistsException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>>
     handleUserAlreadyExists(
@@ -69,6 +88,75 @@ public class GlobalExceptionHandler {
                 HttpStatus.CONFLICT,
                 exception.getMessage(),
                 "USER_ALREADY_EXISTS"
+        );
+    }
+
+
+    @ExceptionHandler(InvalidPasswordException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleInvalidPassword(
+            InvalidPasswordException exception) {
+
+        return buildError(
+                HttpStatus.BAD_REQUEST,
+                exception.getMessage(),
+                "INVALID_PASSWORD"
+        );
+    }
+
+
+    @ExceptionHandler(PasswordMismatchException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handlePasswordMismatch(
+            PasswordMismatchException exception) {
+
+        return buildError(
+                HttpStatus.BAD_REQUEST,
+                exception.getMessage(),
+                "PASSWORD_MISMATCH"
+        );
+    }
+
+
+    // =========================================================
+    // REGISTRATION
+    // =========================================================
+
+    @ExceptionHandler(PendingRegistrationNotFoundException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handlePendingRegistrationNotFound(
+            PendingRegistrationNotFoundException exception) {
+
+        return buildError(
+                HttpStatus.NOT_FOUND,
+                exception.getMessage(),
+                "PENDING_REGISTRATION_NOT_FOUND"
+        );
+    }
+
+
+    @ExceptionHandler(RegistrationExpiredException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleRegistrationExpired(
+            RegistrationExpiredException exception) {
+
+        return buildError(
+                HttpStatus.GONE,
+                exception.getMessage(),
+                "REGISTRATION_EXPIRED"
+        );
+    }
+
+
+    @ExceptionHandler(RegistrationVerificationException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    handleRegistrationVerification(
+            RegistrationVerificationException exception) {
+
+        return buildError(
+                HttpStatus.BAD_REQUEST,
+                exception.getMessage(),
+                "REGISTRATION_VERIFICATION_FAILED"
         );
     }
 
@@ -752,4 +840,3 @@ public class GlobalExceptionHandler {
                 .body(response);
     }
 }
-

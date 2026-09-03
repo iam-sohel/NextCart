@@ -1,5 +1,4 @@
-package com.nextcart.nextcart.user_module.security;
-
+package com.nextcart.nextcart.auth_module.security;
 
 import com.nextcart.nextcart.user_module.entity.User;
 import com.nextcart.nextcart.user_module.repository.UserRepository;
@@ -8,11 +7,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class CustomUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
@@ -23,7 +20,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         if (username == null || username.isBlank()) {
             throw new UsernameNotFoundException(
-                    "User email is required"
+                    "Username is required"
             );
         }
 
@@ -40,4 +37,3 @@ public class CustomUserDetailsService implements UserDetailsService {
         return new CustomUserDetails(user);
     }
 }
-
