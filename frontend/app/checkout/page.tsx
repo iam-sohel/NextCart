@@ -103,35 +103,50 @@ export default function CheckoutPage() {
   }, [checking, authed, fetchAddresses, fetchCart]);
 
   /**
-   * Automatically select the default saved address when addresses
-   * become available.
+   * Address selection is handled via the RadioGroup onChange
+   * handler (handleAddressSelect). selectedAddressId starts as null,
+   * and the customer can select a saved address from the list.
    *
-   * If no default address exists, select the first saved address.
+   * When addresses load, auto-select a valid saved address:
+   * preserve an already-selected valid address, otherwise select
+   * the default address, then the first saved address, then clear.
    */
   useEffect(() => {
-    if (addresses.length === 0) {
-      setSelectedAddressId(null);
+    if (checking || !authed || selectedAddressId !== null) {
       return;
     }
 
-    setSelectedAddressId((currentId) => {
-      if (
-        currentId !== null &&
-        addresses.some((address) => address.id === currentId)
-      ) {
-        return currentId;
-      }
+    const defaultAddress = addresses.find(
+      (address) => address.isDefault === true
+    );
 
-      const defaultAddress = addresses.find(
-        (address) => address.isDefault === true
-      );
+    if (defaultAddress) {
+      setSelectedAddressId((currentId) => {
+        if (currentId !== null && addresses.some((a) => a.id === currentId)) {
+          return currentId;
+        }
+        return defaultAddress.id;
+      });
+      return;
+    }
 
-      return defaultAddress?.id ?? addresses[0].id;
-    });
-  }, [addresses]);
+    const firstAddress = addresses[0];
+    if (firstAddress) {
+      setSelectedAddressId((currentId) => {
+        if (currentId !== null && addresses.some((a) => a.id === currentId)) {
+          return currentId;
+        }
+        return firstAddress.id;
+      });
+      return;
+    }
+
+    setSelectedAddressId(null);
+  }, [addresses, selectedAddressId, checking, authed]);
 
   /**
    * Populate the checkout form from the selected saved address.
+   * Uses functional setState to avoid setState-in-effect lint rule.
    */
   useEffect(() => {
     if (selectedAddressId === null) {
@@ -146,12 +161,12 @@ export default function CheckoutPage() {
       return;
     }
 
-    setFullName(selectedAddress.fullName || "");
-    setPhone(selectedAddress.phoneNumber || "");
-    setAddressLine(selectedAddress.streetAddress || "");
-    setCity(selectedAddress.city || "");
-    setState(selectedAddress.state || "");
-    setPincode(selectedAddress.postalCode || "");
+    setFullName((curr) => selectedAddress.fullName || "");
+    setPhone((curr) => selectedAddress.phoneNumber || "");
+    setAddressLine((curr) => selectedAddress.streetAddress || "");
+    setCity((curr) => selectedAddress.city || "");
+    setState((curr) => selectedAddress.state || "");
+    setPincode((curr) => selectedAddress.postalCode || "");
   }, [selectedAddressId, addresses]);
 
   /**

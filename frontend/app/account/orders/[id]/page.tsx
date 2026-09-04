@@ -75,7 +75,7 @@ export default function OrderDetailsPage() {
   const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState("");
 
-  const idParam = Array.isArray(params?.id)
+const idParam = Array.isArray(params?.id)
     ? params.id[0]
     : params?.id;
 
@@ -134,7 +134,7 @@ export default function OrderDetailsPage() {
     return () => {
       cancelled = true;
     };
-  }, [checking, authed, orderId]);
+}, [checking, authed, orderId]);
 
   async function handleCancelOrder() {
     if (!order) {

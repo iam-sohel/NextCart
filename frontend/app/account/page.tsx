@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 
 import {
   Container,
@@ -12,7 +12,6 @@ import {
   Button,
   Alert,
   Divider,
-  Skeleton,
   Stack,
   Chip,
   TextField,
@@ -27,7 +26,6 @@ import useAuthStore from "@/store/authStore";
 import useRequireAuth from "@/hooks/useRequireAuth";
 import { getMyProfile, updateMyProfile, changeMyPassword, deactivateMyAccount } from "@/services/userService";
 
-import { formatPrice } from "@/utils/formatPrice";
 import { useRouter } from "next/navigation";
 
 type PageMode = "profile" | "profile-edit" | "change-password" | "deactivate-confirm";
@@ -48,7 +46,6 @@ export default function AccountPage() {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
 
-  const [passwordMode, setPasswordMode] = useState<"current" | "new" | "confirm">("current");
   const [passwordFields, setPasswordFields] = useState({
     currentPassword: "",
     newPassword: "",
@@ -57,17 +54,11 @@ export default function AccountPage() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
 
-  const [deactivateMode, setDeactivateMode] = useState<"idle" | "confirm" | "deactivating">("idle");
-  const [deactivateError, setDeactivateError] = useState<string | null>(null);
-  const [deactivateSuccess, setDeactivateSuccess] = useState<string | null>(null);
+  const [deactivating, setDeactivating] = useState(false);
 
-  // Load profile on mount
-  if (token) {
-    void loadProfile();
-  }
-
-  // --- Handler functions ---
-
+  // Load profile on mount — call once when a screen needs the profile data.
+  // Moved from render to useEffect to avoid "setState in useEffect" lint error
+  // and repeated API requests on refresh.
   async function loadProfile() {
     const res = await getMyProfile();
     if (res.ok && res.data) {
@@ -79,6 +70,16 @@ export default function AccountPage() {
       });
       setProfileError(null);
       setProfileSuccess(null);
+      // Sync the auth store user with the authoritative backend response
+      useAuthStore.setState({
+        user: {
+          id: res.data.id,
+          firstName: res.data.firstName ?? "",
+          lastName: res.data.lastName ?? "",
+          email: res.data.email ?? "",
+          phone: res.data.phone ?? "",
+        },
+      });
     } else {
       setProfileError("Failed to load profile");
     }
@@ -89,6 +90,8 @@ export default function AccountPage() {
       void loadProfile();
     }
   }, [token]);
+
+  // --- Handler functions ---
 
   const handleProfileSubmit = async () => {
     setProfileError(null);
@@ -153,20 +156,14 @@ export default function AccountPage() {
     } else {
       setPasswordError("Failed to change password");
     }
-  };
-
-  function openDeactivateConfirm() {
-    setDeactivateMode("confirm");
   }
 
   function closeDeactivateConfirm() {
-    setDeactivateMode("idle");
+    setDeactivating(false);
   }
 
   const handleDeactivateConfirm = async () => {
-    setDeactivateMode("deactivating");
-    setDeactivateError(null);
-    setDeactivateSuccess(null);
+    setDeactivating(false);
 
     const res = await deactivateMyAccount();
 
@@ -177,24 +174,12 @@ export default function AccountPage() {
         refreshToken: null,
       });
       router.push("/login");
-    } else {
-      setDeactivateError("Failed to deactivate account");
-      setDeactivateMode("idle");
     }
   };
 
   // --- Profile section content ---
   let profileSection = null;
   if (mode === "profile") {
-    let profileName = "";
-    if (profile.firstName && profile.lastName) {
-      profileName = profile.firstName + " " + profile.lastName;
-    }
-    let phoneDisplay = "not provided";
-    if (profile.phone) {
-      phoneDisplay = profile.phone;
-    }
-    const statusText = "Active account";
     profileSection = (
       <Card sx={{ borderRadius: 3, mb: 4 }}>
         <CardContent>
@@ -216,7 +201,7 @@ export default function AccountPage() {
           <Grid container spacing={2}>
             <Grid size={4}>
               <Typography variant="body2" sx={{ fontWeight: 600 }}>Phone</Typography>
-              <Typography variant="body1">{phoneDisplay}</Typography>
+              <Typography variant="body1">{profile.phone || "not provided"}</Typography>
             </Grid>
             <Grid size={4} sx={{ textAlign: "right" }}>
               <Button variant="outlined" sx={{ width: "100%" }} onClick={() => setMode("profile-edit")}>Edit Profile</Button>
@@ -292,7 +277,7 @@ export default function AccountPage() {
 
   // --- Deactivation section content ---
   let deactivateSection = null;
-  if (mode === "deactivate-confirm") {
+  if (deactivating) {
     deactivateSection = (
       <Card sx={{ borderRadius: 3, mb: 4 }}>
         <CardContent>

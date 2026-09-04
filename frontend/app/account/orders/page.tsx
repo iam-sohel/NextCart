@@ -156,10 +156,10 @@ export default function OrdersPage() {
 }, [checking, authed]);
 
   useEffect(() => {
-  if (!checking && authed) {
-    loadOrders();
-  }
-}, [checking, authed, loadOrders]);
+    if (!checking && authed) {
+      void loadOrders();
+    }
+  }, [checking, authed, loadOrders]);
 
   return (
     <>
