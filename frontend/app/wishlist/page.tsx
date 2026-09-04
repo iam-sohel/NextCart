@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 import {
   Container,
@@ -29,22 +30,72 @@ export default function WishlistPage() {
   const fetchAll = useWishlistStore((s) => s.fetchAll);
   const token = useAuthStore((s) => s.token);
 
-  // Load the wishlist once on mount, only when authenticated.
-  // A 401 here triggers the global interceptor; we just don't double-fire.
+  const addToCart = useCartStore(
+    (state) => state.addToCart
+  );
+
+  const router = useRouter();
+
+  /*
+   * Load wishlist only after authentication is available.
+   */
   useEffect(() => {
     if (token) {
       void fetchAll();
     }
   }, [token, fetchAll]);
 
-  const addToCart = useCartStore(
-    (state) => state.addToCart
-  );
+  /*
+   * Move wishlist item to cart.
+   *
+   * Important:
+   * The wishlist backend stores products, while the cart backend
+   * requires a concrete product variant.
+   *
+   * Therefore:
+   *
+   * 1. If no variant is available, open the product page.
+   * 2. If a variant exists, add it to cart.
+   * 3. Remove the wishlist item ONLY after successful cart addition.
+   */
+  const moveToCart = async (
+    item: typeof items[number]
+  ) => {
+    const hasVariant =
+      item.variantId !== undefined &&
+      item.variantId !== null &&
+      String(item.variantId).trim() !== "";
 
-  const moveToCart = (item: typeof items[number]) => {
-    addToCart({
+    /*
+     * Wishlist item does not contain a usable variant.
+     * Never manufacture a variant ID.
+     */
+    if (!hasVariant) {
+      if (item.slug) {
+        router.push(
+          "/products/" +
+            encodeURIComponent(item.slug)
+        );
+        return;
+      }
+
+      /*
+       * Fallback when legacy wishlist metadata does not
+       * contain the product slug.
+       */
+      router.push(
+        "/products/" +
+          encodeURIComponent(
+            String(item.productId)
+          )
+      );
+
+      return;
+    }
+
+    const result = await addToCart({
       productId: item.productId,
-      slug: item.slug,
+      slug: item.slug || "",
       title: item.title,
       image: item.image,
       price: item.price,
@@ -52,9 +103,19 @@ export default function WishlistPage() {
       variantId: item.variantId,
       variantLabel: item.variantLabel,
     });
-    void removeAction(item.productId);
+
+    /*
+     * Only remove the wishlist entry after the cart API
+     * confirms that the item was added successfully.
+     */
+    if (result.ok === true) {
+      await removeAction(item.productId);
+    }
   };
 
+  /*
+   * Empty wishlist.
+   */
   if (items.length === 0) {
     return (
       <>
@@ -67,7 +128,10 @@ export default function WishlistPage() {
             textAlign: "center",
           }}
         >
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
+          <Typography
+            variant="h4"
+            sx={{ fontWeight: 700 }}
+          >
             Your Wishlist is Empty
           </Typography>
 
@@ -99,10 +163,16 @@ export default function WishlistPage() {
     <>
       <Header />
 
-      <Container maxWidth="xl" sx={{ py: 5 }}>
+      <Container
+        maxWidth="xl"
+        sx={{ py: 5 }}
+      >
         <Typography
           variant="h4"
-          sx={{ fontWeight: 700, mb: 4 }}
+          sx={{
+            fontWeight: 700,
+            mb: 4,
+          }}
         >
           My Wishlist ({items.length})
         </Typography>
@@ -121,11 +191,18 @@ export default function WishlistPage() {
                   display: "flex",
                   alignItems: "center",
                   gap: 3,
+                  flexWrap: "wrap",
                 }}
               >
                 <Image
-                  src={item.image || "/placeholder.png"}
-                  alt={item.title || "Wishlist item"}
+                  src={
+                    item.image ||
+                    "/placeholder.png"
+                  }
+                  alt={
+                    item.title ||
+                    "Wishlist item"
+                  }
                   width={120}
                   height={120}
                   style={{
@@ -133,10 +210,17 @@ export default function WishlistPage() {
                   }}
                 />
 
-                <Box sx={{ flex: 1 }}>
+                <Box
+                  sx={{
+                    flex: 1,
+                    minWidth: 200,
+                  }}
+                >
                   <Typography
                     variant="h6"
-                    sx={{ fontWeight: 700 }}
+                    sx={{
+                      fontWeight: 700,
+                    }}
                   >
                     {item.title}
                   </Typography>
@@ -153,24 +237,40 @@ export default function WishlistPage() {
 
                   <Typography
                     color="primary"
-                    sx={{ fontWeight: 700, mt: 1 }}
+                    sx={{
+                      fontWeight: 700,
+                      mt: 1,
+                    }}
                   >
-                    ₹{Number(item.price || 0).toLocaleString()}
+                    ₹
+                    {Number(
+                      item.price || 0
+                    ).toLocaleString()}
                   </Typography>
                 </Box>
 
                 <Button
                   variant="contained"
                   color="warning"
-                  onClick={() => moveToCart(item)}
+                  onClick={() =>
+                    void moveToCart(item)
+                  }
                 >
                   Add To Cart
                 </Button>
 
                 <IconButton
                   color="error"
+                  aria-label={
+                    "Remove " +
+                    (item.title ||
+                      "item") +
+                    " from wishlist"
+                  }
                   onClick={() =>
-                    void removeAction(item.productId)
+                    void removeAction(
+                      item.productId
+                    )
                   }
                 >
                   <DeleteIcon />

@@ -1,24 +1,21 @@
 /**
  * NEXTCART — Order service boundary.
  *
- * Wraps Spring Boot's order module.
- * Checkout is the order-creation mutation.
+ * Mirrors the Spring Boot order module contract.
  */
 
 import { apiRequest, type ApiResult } from "@/lib/api";
 
-/* --------------------------------------------------------------------------
-   Wire types — match backend OrderResponseDTO
-   -------------------------------------------------------------------------- */
-
 export interface OrderItemWire {
   id: number;
-  productId: number;
+  productVariantId: number;
   productName: string;
-  productImage?: string | null;
-  price: number;
+  sku?: string | null;
   quantity: number;
-  itemTotal: number;
+  unitMrp?: number | string | null;
+  unitSellingPrice?: number | string | null;
+  discountAmount?: number | string | null;
+  lineTotal?: number | string | null;
 }
 
 export type OrderStatus =
@@ -29,25 +26,33 @@ export type OrderStatus =
   | "CANCELLED"
   | (string & {});
 
-export type PaymentStatus =
-  | "PENDING"
-  | "COMPLETED"
-  | "FAILED"
-  | (string & {});
-
 export interface OrderResponseWire {
   id: number;
   orderNumber: string;
-  status?: OrderStatus;
-  paymentStatus?: PaymentStatus;
-  paymentMethod?: string;
-  totalAmount: number;
-  shippingFullName?: string;
-  shippingStreetAddress?: string;
-  shippingCity?: string;
-  shippingPostalCode?: string;
+  status: OrderStatus;
+
+  paymentExpiresAt?: string | null;
+
+  shippingFullName?: string | null;
+  shippingPhoneNumber?: string | null;
+  shippingStreetAddress?: string | null;
+  shippingLandmark?: string | null;
+  shippingCity?: string | null;
+  shippingState?: string | null;
+  shippingPostalCode?: string | null;
+  shippingCountry?: string | null;
+
+  subtotal?: number | string | null;
+  discountAmount?: number | string | null;
+  shippingCharge?: number | string | null;
+  taxAmount?: number | string | null;
+  totalAmount?: number | string | null;
+  currency?: string | null;
+
   items: OrderItemWire[];
-  createdAt?: string;
+
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 interface Envelope<T> {
@@ -57,24 +62,33 @@ interface Envelope<T> {
   errorCode?: string;
 }
 
-function unwrap<T>(payload: unknown, fallback: T): T {
+interface PageWire<T> {
+  content: T[];
+  totalElements?: number;
+  totalPages?: number;
+  number?: number;
+  size?: number;
+  first?: boolean;
+  last?: boolean;
+}
+
+function unwrap<T>(payload: unknown): T | null {
   if (payload && typeof payload === "object" && "data" in payload) {
     const envelope = payload as Envelope<T>;
-
-    if (envelope.data !== undefined && envelope.data !== null) {
-      return envelope.data;
-    }
+    return envelope.data ?? null;
   }
 
-  return fallback;
+  return (payload as T) ?? null;
 }
 
 function toNumber(value: unknown): number {
-  if (typeof value === "number") return value;
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : 0;
+  }
 
   if (typeof value === "string") {
-    const number = Number(value);
-    return Number.isFinite(number) ? number : 0;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
   }
 
   return 0;
@@ -83,69 +97,55 @@ function toNumber(value: unknown): number {
 function normaliseOrder(order: OrderResponseWire): OrderResponseWire {
   return {
     ...order,
+
+    subtotal: toNumber(order.subtotal),
+    discountAmount: toNumber(order.discountAmount),
+    shippingCharge: toNumber(order.shippingCharge),
+    taxAmount: toNumber(order.taxAmount),
     totalAmount: toNumber(order.totalAmount),
 
     items: Array.isArray(order.items)
       ? order.items.map((item) => ({
           ...item,
-          price: toNumber(item.price),
-          quantity:
-            typeof item.quantity === "number" ? item.quantity : 0,
-          itemTotal: toNumber(item.itemTotal),
+          unitMrp: toNumber(item.unitMrp),
+          unitSellingPrice: toNumber(item.unitSellingPrice),
+          discountAmount: toNumber(item.discountAmount),
+          lineTotal: toNumber(item.lineTotal),
+          quantity: Number(item.quantity) || 0,
         }))
       : [],
   };
 }
 
-/* --------------------------------------------------------------------------
-   Endpoints
-   -------------------------------------------------------------------------- */
-
 const ENDPOINTS = {
-  checkout: "/api/v1/orders/checkout",
-  checkoutPreview: "/api/v1/checkout",
-  list: "/api/v1/orders",
-  byId: (id: number) => `/api/v1/orders/${id}`,
-  cancel: (id: number) => `/api/v1/orders/${id}/cancel`,
+  create: "/api/orders",
+  list: "/api/orders/my",
+  byId: (id: number) => `/api/orders/${id}`,
+  byNumber: (orderNumber: string) =>
+    `/api/orders/number/${encodeURIComponent(orderNumber)}`,
+  byStatus: (status: OrderStatus) =>
+    `/api/orders/my/status/${encodeURIComponent(status)}`,
+  cancel: (id: number) => `/api/orders/${id}/cancel`,
 } as const;
 
-/* --------------------------------------------------------------------------
-   Public API
-   -------------------------------------------------------------------------- */
-
 /**
- * POST /api/v1/orders/checkout
- *
- * Creates an order from the user's current cart.
- *
- * Body:
- * {
- *   addressId: number,
- *   paymentMethod: string
- * }
- *
- * Server returns:
- * ApiResponse<OrderResponseDTO>
+ * Creates an order from the authenticated customer's current cart.
  */
 export async function checkout(
   addressId: number,
-  paymentMethod: string,
   signal?: AbortSignal,
 ): Promise<ApiResult<OrderResponseWire>> {
   const res = await apiRequest<
     Envelope<OrderResponseWire> | OrderResponseWire
-  >(ENDPOINTS.checkout, {
+  >(ENDPOINTS.create, {
     method: "POST",
-    body: {
-      addressId,
-      paymentMethod,
-    },
+    body: { addressId },
     signal,
   });
 
   if (!res.ok) return res;
 
-  const data = unwrap<OrderResponseWire | null>(res.data, null);
+  const data = unwrap<OrderResponseWire>(res.data);
 
   if (
     !data ||
@@ -155,8 +155,7 @@ export async function checkout(
     return {
       ok: false,
       status: res.status,
-      message:
-        "Order was created but the server returned an invalid order response.",
+      message: "The server returned an invalid order response.",
     };
   }
 
@@ -168,15 +167,17 @@ export async function checkout(
 }
 
 /**
- * GET /api/v1/orders
- *
- * Returns the authenticated user's order history.
+ * Returns the authenticated customer's order history.
  */
 export async function getOrders(
   signal?: AbortSignal,
 ): Promise<ApiResult<OrderResponseWire[]>> {
   const res = await apiRequest<
-    Envelope<OrderResponseWire[]> | OrderResponseWire[]
+    | Envelope<
+        PageWire<OrderResponseWire> | OrderResponseWire[]
+      >
+    | PageWire<OrderResponseWire>
+    | OrderResponseWire[]
   >(ENDPOINTS.list, {
     method: "GET",
     signal,
@@ -184,9 +185,13 @@ export async function getOrders(
 
   if (!res.ok) return res;
 
-  const data = unwrap<OrderResponseWire[] | null>(res.data, null);
+  const data = unwrap<PageWire<OrderResponseWire> | OrderResponseWire[]>(
+    res.data,
+  );
 
-  if (!Array.isArray(data)) {
+  const orders = Array.isArray(data) ? data : data?.content;
+
+  if (!Array.isArray(orders)) {
     return {
       ok: false,
       status: res.status,
@@ -197,7 +202,106 @@ export async function getOrders(
   return {
     ok: true,
     status: res.status,
-    data: data.map(normaliseOrder),
+    data: orders.map(normaliseOrder),
+  };
+}
+
+/**
+ * Returns one order belonging to the authenticated customer.
+ */
+export async function getOrderById(
+  id: number,
+  signal?: AbortSignal,
+): Promise<ApiResult<OrderResponseWire>> {
+  const res = await apiRequest<
+    Envelope<OrderResponseWire> | OrderResponseWire
+  >(ENDPOINTS.byId(id), {
+    method: "GET",
+    signal,
+  });
+
+  if (!res.ok) return res;
+
+  const data = unwrap<OrderResponseWire>(res.data);
+
+  if (!data) {
+    return {
+      ok: false,
+      status: res.status,
+      message: "Order not found.",
+    };
+  }
+
+  return {
+    ok: true,
+    status: res.status,
+    data: normaliseOrder(data),
+  };
+}
+
+/**
+ * Returns one order by its server-generated order number.
+ */
+export async function getOrderByNumber(
+  orderNumber: string,
+  signal?: AbortSignal,
+): Promise<ApiResult<OrderResponseWire>> {
+  const res = await apiRequest<
+    Envelope<OrderResponseWire> | OrderResponseWire
+  >(ENDPOINTS.byNumber(orderNumber), {
+    method: "GET",
+    signal,
+  });
+
+  if (!res.ok) return res;
+
+  const data = unwrap<OrderResponseWire>(res.data);
+
+  if (!data) {
+    return {
+      ok: false,
+      status: res.status,
+      message: "Order not found.",
+    };
+  }
+
+  return {
+    ok: true,
+    status: res.status,
+    data: normaliseOrder(data),
+  };
+}
+
+/**
+ * Cancels an eligible customer order.
+ */
+export async function cancelOrder(
+  id: number,
+  signal?: AbortSignal,
+): Promise<ApiResult<OrderResponseWire>> {
+  const res = await apiRequest<
+    Envelope<OrderResponseWire> | OrderResponseWire
+  >(ENDPOINTS.cancel(id), {
+    method: "PATCH",
+    signal,
+  });
+
+  if (!res.ok) return res;
+
+  const data = unwrap<OrderResponseWire>(res.data);
+
+  if (!data) {
+    return {
+      ok: false,
+      status: res.status,
+      message: "The server returned an invalid cancellation response.",
+    };
+  }
+
+  return {
+    ok: true,
+    status: res.status,
+    data: normaliseOrder(data),
   };
 }
 
