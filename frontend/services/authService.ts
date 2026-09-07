@@ -48,7 +48,8 @@ export interface LoginCredentials {
 }
 
 export interface SignupDetails {
-  fullName: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone: string;
   password: string;
@@ -71,6 +72,7 @@ interface BackendRegisterResponse {
   firstName?: string;
   lastName?: string;
   email?: string;
+  phone?: string;
   message?: string;
 }
 
@@ -102,26 +104,36 @@ interface BackendTokenRefreshResponse {
 }
 
 /* ──────────────────────────────────────────────────────────────────────
+   OTP / Complete registration wire DTOs
+   ────────────────────────────────────────────────────────────────────── */
+
+interface BackendSendEmailOtpRequest {
+  email: string;
+}
+
+interface BackendVerifyEmailOtpRequest {
+  email: string;
+  otp: string;
+}
+
+interface BackendSendPhoneOtpRequest {
+  phone: string;
+}
+
+interface BackendVerifyPhoneOtpRequest {
+  phone: string;
+  otp: string;
+}
+
+interface BackendCompleteRegistrationRequest {
+  email: string;
+  phone: string;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
    Helpers
    ────────────────────────────────────────────────────────────────────── */
 
-function splitFullName(fullName: string): { firstName: string; lastName: string } {
-  const trimmed = fullName.trim().replace(/\s+/g, " ");
-  if (!trimmed) return { firstName: "", lastName: "" };
-  const parts = trimmed.split(" ");
-  if (parts.length === 1) return { firstName: parts[0], lastName: "" };
-  const firstName = parts[0];
-  const lastName = parts.slice(1).join(" ");
-  return { firstName, lastName };
-}
-
-/**
- * The backend returns HTTP 500 (not 401) for invalid credentials, with no
- * usable `message`. Treat 401 and any 5xx from /login as an auth failure and
- * show actionable copy. A status of 0 means the request never reached the
- * server (network/CORS) — keep that message so the user knows it's not a
- * password problem.
- */
 function isLikelyBadCredentials(status: number): boolean {
   return status === 401 || status >= 500;
 }
@@ -144,13 +156,13 @@ export const authService = {
     credentials: LoginCredentials,
     signal?: AbortSignal,
   ): Promise<
-  ApiResult<{
-    token: string;
-    refreshToken: string;
-    message: string;
-    user?: AuthUser;
-  }>
->{
+    ApiResult<{
+      token: string;
+      refreshToken: string;
+      message: string;
+      user?: AuthUser;
+    }>
+  >{
     const res = await apiRequest<BackendLoginResponse>("/api/v1/auth/login", {
       method: "POST",
       body: {
@@ -172,44 +184,43 @@ export const authService = {
     }
 
     const token = res.data?.token ?? "";
-const refreshToken = res.data?.refreshToken ?? "";
-const message = res.data?.message ?? "Login successful";
+    const refreshToken = res.data?.refreshToken ?? "";
+    const message = res.data?.message ?? "Login successful";
 
-const user: AuthUser | undefined = res.data?.user
-  ? {
-      id: res.data.user.id,
-      firstName: res.data.user.firstName ?? "",
-      lastName: res.data.user.lastName ?? "",
-      email: res.data.user.email ?? "",
-      phone: res.data.user.phone ?? "",
-    }
-  : undefined;
+    const user: AuthUser | undefined = res.data?.user
+      ? {
+          id: res.data.user.id,
+          firstName: res.data.user.firstName ?? "",
+          lastName: res.data.user.lastName ?? "",
+          email: res.data.user.email ?? "",
+          phone: res.data.user.phone ?? "",
+        }
+      : undefined;
 
-return {
-  ok: true,
-  status: res.status,
-  data: {
-    token,
-    refreshToken,
-    message,
-    user,
-  },
-};
+    return {
+      ok: true,
+      status: res.status,
+      data: {
+        token,
+        refreshToken,
+        message,
+        user,
+      },
+    };
   },
 
   /**
    * POST /api/v1/auth/register
-   * The backend requires firstName + lastName + phone — we accept a single
-   * "Full Name" field from the user and split it sensibly.
+   * The backend requires firstName + lastName + phone — we now accept them
+   * directly from the form, no splitting needed.
    */
   async register(
     details: SignupDetails,
     signal?: AbortSignal,
   ): Promise<ApiResult<{ user: AuthUser; message: string }>> {
-    const { firstName, lastName } = splitFullName(details.fullName);
     const body: BackendRegisterRequest = {
-      firstName,
-      lastName,
+      firstName: details.firstName,
+      lastName: details.lastName,
       email: details.email,
       phone: details.phone,
       password: details.password,
@@ -238,8 +249,8 @@ return {
 
     const user: AuthUser = {
       id: res.data?.id,
-      firstName: res.data?.firstName ?? firstName,
-      lastName: res.data?.lastName ?? lastName,
+      firstName: res.data?.firstName ?? details.firstName,
+      lastName: res.data?.lastName ?? details.lastName,
       email: res.data?.email ?? details.email,
     };
     const message = res.data?.message ?? "Registration successful";
@@ -320,6 +331,194 @@ return {
       // Intentionally ignored — client-side token removal is authoritative.
     }
   },
+
+  /* ──────────────────────────────────────────────────────────────────────
+   OTP verification & complete registration
+   ────────────────────────────────────────────────────────────────────── */
+
+  /**
+   * POST /api/v1/auth/email/send-otp
+   * Sends a 6-digit verification code to the given email address.
+   * The backend stores the OTP hash and associates it with a pending
+   * registration (or creates one if none exists for this email).
+   *
+   * OTP expiry: 5 minutes. Max attempts: 5.
+   */
+  async sendEmailVerificationOtp(
+    email: string,
+    signal?: AbortSignal,
+  ): Promise<ApiResult<void>> {
+    const res = await apiRequest<BackendSendEmailOtpRequest>("/api/v1/auth/email/send-otp", {
+      method: "POST",
+      body: { email },
+      skipAuthRefresh: true,
+      signal,
+    });
+
+    if (!res.ok) {
+      if (res.status >= 500) {
+        return {
+          ...res,
+          message: "We couldn't send the email verification code. Please try again.",
+        };
+      }
+      return res;
+    }
+
+    return { ok: true, status: res.status, data: undefined };
+  },
+
+  /**
+   * POST /api/v1/auth/email/verify-otp
+   * Verifies a 6-digit OTP for the given email.
+   * On success, marks the email as verified on the pending registration.
+   *
+   * OTP expiry: 5 minutes. Max attempts: 5.
+   */
+  async verifyEmailOtp(
+    email: string,
+    otp: string,
+    signal?: AbortSignal,
+  ): Promise<ApiResult<void>> {
+    const res = await apiRequest<BackendVerifyEmailOtpRequest>("/api/v1/auth/email/verify-otp", {
+      method: "POST",
+      body: { email, otp },
+      skipAuthRefresh: true,
+      signal,
+    });
+
+    if (!res.ok) {
+      if (res.status >= 500) {
+        return {
+          ...res,
+          message: "We couldn't verify the email code. Please try again.",
+        };
+      }
+      return res;
+    }
+
+    return { ok: true, status: res.status, data: undefined };
+  },
+
+  /**
+   * POST /api/v1/auth/phone/send-otp
+   * Sends a 6-digit verification code to the given phone number via SMS.
+   * Note: The SMS service is currently a stub that only logs the request.
+   * In production, integrate with Twilio/MSG91/AWS SNS.
+   *
+   * OTP expiry: 5 minutes. Max attempts: 5.
+   */
+  async sendPhoneVerificationOtp(
+    phone: string,
+    signal?: AbortSignal,
+  ): Promise<ApiResult<void>> {
+    const res = await apiRequest<BackendSendPhoneOtpRequest>("/api/v1/auth/phone/send-otp", {
+      method: "POST",
+      body: { phone },
+      skipAuthRefresh: true,
+      signal,
+    });
+
+    if (!res.ok) {
+      if (res.status >= 500) {
+        return {
+          ...res,
+          message: "We couldn't send the phone verification code. Please try again.",
+        };
+      }
+      return res;
+    }
+
+    return { ok: true, status: res.status, data: undefined };
+  },
+
+  /**
+   * POST /api/v1/auth/phone/verify-otp
+   * Verifies a 6-digit OTP for the given phone number.
+   * On success, marks the phone as verified on the pending registration.
+   *
+   * OTP expiry: 5 minutes. Max attempts: 5.
+   */
+  async verifyPhoneOtp(
+    phone: string,
+    otp: string,
+    signal?: AbortSignal,
+  ): Promise<ApiResult<void>> {
+    const res = await apiRequest<BackendVerifyPhoneOtpRequest>("/api/v1/auth/phone/verify-otp", {
+      method: "POST",
+      body: { phone, otp },
+      skipAuthRefresh: true,
+      signal,
+    });
+
+    if (!res.ok) {
+      if (res.status >= 500) {
+        return {
+          ...res,
+          message: "We couldn't verify the phone code. Please try again.",
+        };
+      }
+      return res;
+    }
+
+    return { ok: true, status: res.status, data: undefined };
+  },
+
+  /**
+   * POST /api/v1/auth/register/complete
+   * Finalizes customer registration after both email and phone OTPs are verified.
+   * Looks up the pending registration by email+phone, checks that both
+   * verifications succeeded, then creates the real user account.
+   *
+   * Do NOT send password or OTPs in this request — the backend already has
+   * the password hash from the initial /register call.
+   */
+  async completeRegistration(
+    email: string,
+    phone: string,
+    signal?: AbortSignal,
+  ): Promise<ApiResult<{ user: AuthUser; message: string }>> {
+    const body: BackendCompleteRegistrationRequest = {
+      email,
+      phone,
+    };
+
+    const res = await apiRequest<BackendRegisterResponse>("/api/v1/auth/register/complete", {
+      method: "POST",
+      body,
+      skipAuthRefresh: true,
+      signal,
+    });
+
+    if (!res.ok) {
+      // Handle specific backend errors
+      if (res.status >= 500) {
+        return {
+          ...res,
+          message:
+            "We couldn't complete your registration. Please try again or create a new account.",
+        };
+      }
+      return res;
+    }
+
+    const user: AuthUser = {
+      id: res.data?.id,
+      firstName: res.data?.firstName ?? "",
+      lastName: res.data?.lastName ?? "",
+      email: res.data?.email ?? email,
+      phone: res.data?.phone ?? phone,
+    };
+
+    const message = res.data?.message ?? "Registration complete";
+
+    return { ok: true, status: res.status, data: { user, message } };
+  },
 };
+
+/* ──────────────────────────────────────────────────────────────────────
+   Wire DTOs for OTP / complete endpoints
+   (kept for reference, re-exported if needed)
+   ────────────────────────────────────────────────────────────────────── */
 
 export type { ApiResult };

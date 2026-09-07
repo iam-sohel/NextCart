@@ -41,10 +41,17 @@ export const validatePhone = (raw: string): ValidationResult => {
   return null;
 };
 
-export const validateFullName = (raw: string): ValidationResult => {
+export const validateFirstName = (raw: string): ValidationResult => {
   const value = raw.trim();
-  if (!value) return "Full name is required.";
-  if (value.length < 2) return "Full name must be at least 2 characters.";
+  if (!value) return "First name is required.";
+  if (value.length < 1) return "First name is required.";
+  return null;
+};
+
+export const validateLastName = (raw: string): ValidationResult => {
+  const value = raw.trim();
+  if (!value) return "Last name is required.";
+  if (value.length < 1) return "Last name is required.";
   return null;
 };
 

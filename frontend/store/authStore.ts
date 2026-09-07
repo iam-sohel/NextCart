@@ -43,13 +43,20 @@ interface AuthState {
   /** True once localStorage rehydration has completed on the client. */
   hasHydrated: boolean;
 
+  /** Email verification status for pending registration flow. */
+  emailVerified: boolean;
+
+  /** Phone verification status for pending registration flow. */
+  phoneVerified: boolean;
+
   login: (
     email: string,
     password: string,
   ) => Promise<{ ok: true } | { ok: false; message: string }>;
 
   register: (
-    fullName: string,
+    firstName: string,
+    lastName: string,
     email: string,
     phone: string,
     password: string,
@@ -69,7 +76,34 @@ interface AuthState {
   clearError: () => void;
 
   setHasHydrated: (value: boolean) => void;
+
+  /**
+   * Update email verification status during registration flow.
+   * Does NOT persist to localStorage — transient flow state.
+   */
+  setEmailVerified: (value: boolean) => void;
+
+  /**
+   * Update phone verification status during registration flow.
+   * Does NOT persist to localStorage — transient flow state.
+   */
+  setPhoneVerified: (value: boolean) => void;
+
+  verifyEmailOtp: (email: string, otp: string) => Promise<{ ok: true } | { ok: false; message: string }>;
+
+  verifyPhoneOtp: (phone: string, otp: string) => Promise<{ ok: true } | { ok: false; message: string }>;
+
+  completeRegistration: (email: string, phone: string) => Promise<{ ok: true } | { ok: false; message: string }>;
+
+  sendEmailVerificationOtp: (email: string) => Promise<{ ok: true } | { ok: false; message: string }>;
+
+  sendPhoneVerificationOtp: (phone: string) => Promise<{ ok: true } | { ok: false; message: string }>;
+
 }
+
+/* ──────────────────────────────────────────────────────────────────────
+   Auth state persistent via Zustand
+   ────────────────────────────────────────────────────────────────────── */
 
 const useAuthStore = create<AuthState>()(
   persist(
@@ -81,6 +115,8 @@ const useAuthStore = create<AuthState>()(
       error: null,
       isAuthenticating: false,
       hasHydrated: false,
+      emailVerified: false,
+      phoneVerified: false,
 
       // `lib/authInterceptor.ts` reads the live token via
       // `useAuthStore.getState().token` on every authenticated request.
@@ -138,7 +174,7 @@ const useAuthStore = create<AuthState>()(
         return { ok: true };
       },
 
-      async register(fullName, email, phone, password) {
+      async register(firstName, lastName, email, phone, password) {
         set({
           loading: true,
           isAuthenticating: true,
@@ -146,7 +182,8 @@ const useAuthStore = create<AuthState>()(
         });
 
         const result = await authService.register({
-          fullName,
+          firstName,
+          lastName,
           email,
           phone,
           password,
@@ -212,6 +249,85 @@ const useAuthStore = create<AuthState>()(
           token: accessToken,
           refreshToken,
         });
+      },
+
+      setEmailVerified(value) {
+        set({
+          emailVerified: value,
+        });
+      },
+
+      setPhoneVerified(value) {
+        set({
+          phoneVerified: value,
+        });
+      },
+
+      async verifyEmailOtp(email: string, otp: string) {
+        const result = await authService.verifyEmailOtp(email, otp);
+        if (!result.ok) {
+          set({
+            error: result.message,
+          });
+          return { ok: false, message: result.message };
+        }
+        set({
+          emailVerified: true,
+        });
+        return { ok: true };
+      },
+
+      async verifyPhoneOtp(phone: string, otp: string) {
+        const result = await authService.verifyPhoneOtp(phone, otp);
+        if (!result.ok) {
+          set({
+            error: result.message,
+          });
+          return { ok: false, message: result.message };
+        }
+        set({
+          phoneVerified: true,
+        });
+        return { ok: true };
+      },
+
+      async completeRegistration(email: string, phone: string) {
+        const result = await authService.completeRegistration(email, phone);
+        if (!result.ok) {
+          set({
+            error: result.message,
+          });
+          return { ok: false, message: result.message };
+        }
+        // Registration complete - user is created but not automatically logged in.
+        // They should be redirected to /login to authenticate.
+        set({
+          user: result.data.user,
+          error: null,
+        });
+        return { ok: true };
+      },
+
+      async sendEmailVerificationOtp(email: string) {
+        const result = await authService.sendEmailVerificationOtp(email);
+        if (!result.ok) {
+          set({
+            error: result.message,
+          });
+          return { ok: false, message: result.message };
+        }
+        return { ok: true };
+      },
+
+      async sendPhoneVerificationOtp(phone: string) {
+        const result = await authService.sendPhoneVerificationOtp(phone);
+        if (!result.ok) {
+          set({
+            error: result.message,
+          });
+          return { ok: false, message: result.message };
+        }
+        return { ok: true };
       },
 
       clearError() {
