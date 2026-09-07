@@ -75,26 +75,22 @@ export default function OrderDetailsPage() {
   const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState("");
 
-const idParam = Array.isArray(params?.id)
+  const idParam = Array.isArray(params?.id)
     ? params.id[0]
     : params?.id;
 
   const orderId = Number(idParam);
+  const invalidOrderId =
+    !Number.isInteger(orderId) || orderId <= 0;
 
   useEffect(() => {
-    if (checking || !authed) {
-      return;
-    }
-
-    if (!Number.isInteger(orderId) || orderId <= 0) {
-      setError("Invalid order ID.");
-      setLoading(false);
+    if (checking || !authed || invalidOrderId) {
       return;
     }
 
     let cancelled = false;
 
-    async function loadOrder() {
+    const loadOrder = async () => {
       setLoading(true);
       setError("");
 
@@ -109,7 +105,8 @@ const idParam = Array.isArray(params?.id)
           setOrder(response.data);
         } else if ("message" in response) {
           setError(
-            response.message || "Unable to load order details."
+            response.message ||
+              "Unable to load order details."
           );
         } else {
           setError("Unable to load order details.");
@@ -127,14 +124,19 @@ const idParam = Array.isArray(params?.id)
           setLoading(false);
         }
       }
-    }
+    };
 
-    loadOrder();
+    void loadOrder();
 
     return () => {
       cancelled = true;
     };
-}, [checking, authed, orderId]);
+  }, [
+    checking,
+    authed,
+    invalidOrderId,
+    orderId,
+  ]);
 
   async function handleCancelOrder() {
     if (!order) {
@@ -162,7 +164,8 @@ const idParam = Array.isArray(params?.id)
 
       if ("message" in response) {
         setError(
-          response.message || "Unable to cancel the order."
+          response.message ||
+            "Unable to cancel the order."
         );
       } else {
         setError("Unable to cancel the order.");
@@ -178,7 +181,7 @@ const idParam = Array.isArray(params?.id)
     }
   }
 
-  if (checking || loading) {
+  if (checking || (loading && !invalidOrderId)) {
     return (
       <>
         <Header />
@@ -192,18 +195,19 @@ const idParam = Array.isArray(params?.id)
           }}
         >
           <Box
-  sx={{
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: 2,
-  }}
->
-  <CircularProgress />
-  <Typography color="text.secondary">
-    Loading order details...
-  </Typography>
-</Box>
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 2,
+            }}
+          >
+            <CircularProgress />
+
+            <Typography color="text.secondary">
+              Loading order details...
+            </Typography>
+          </Box>
         </Box>
 
         <Footer />
@@ -211,7 +215,7 @@ const idParam = Array.isArray(params?.id)
     );
   }
 
-  if (error && !order) {
+  if ((error || invalidOrderId) && !order) {
     return (
       <>
         <Header />
@@ -225,12 +229,16 @@ const idParam = Array.isArray(params?.id)
           }}
         >
           <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
+            {invalidOrderId
+              ? "Invalid order ID."
+              : error}
           </Alert>
 
           <Button
             variant="contained"
-            onClick={() => router.push("/account/orders")}
+            onClick={() =>
+              router.push("/account/orders")
+            }
           >
             Back to My Orders
           </Button>
@@ -279,7 +287,9 @@ const idParam = Array.isArray(params?.id)
         <Stack spacing={3}>
           <Box>
             <Button
-              onClick={() => router.push("/account/orders")}
+              onClick={() =>
+                router.push("/account/orders")
+              }
               sx={{ mb: 2 }}
             >
               ← Back to My Orders
@@ -289,7 +299,10 @@ const idParam = Array.isArray(params?.id)
               variant="h4"
               sx={{
                 fontWeight: 700,
-                fontSize: { xs: "1.7rem", sm: "2.125rem" },
+                fontSize: {
+                  xs: "1.7rem",
+                  sm: "2.125rem",
+                },
               }}
             >
               Order Details
@@ -303,15 +316,22 @@ const idParam = Array.isArray(params?.id)
           )}
 
           <Card>
-            <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-            <Box
+            <CardContent
+              sx={{
+                p: { xs: 2, md: 3 },
+              }}
+            >
+              <Box
                 sx={{
-                    display: "flex",
-                    flexDirection: { xs: "column", sm: "row" },
-                    justifyContent: "space-between",
-                    gap: 2,
+                  display: "flex",
+                  flexDirection: {
+                    xs: "column",
+                    sm: "row",
+                  },
+                  justifyContent: "space-between",
+                  gap: 2,
                 }}
->
+              >
                 <Box>
                   <Typography
                     variant="h6"
@@ -324,7 +344,8 @@ const idParam = Array.isArray(params?.id)
                     variant="body2"
                     color="text.secondary"
                   >
-                    Placed on {formatDate(order.createdAt)}
+                    Placed on{" "}
+                    {formatDate(order.createdAt)}
                   </Typography>
                 </Box>
 
@@ -357,59 +378,11 @@ const idParam = Array.isArray(params?.id)
           </Card>
 
           <Card>
-  <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-    <Box
-      sx={{
-        display: "flex",
-        flexDirection: { xs: "column", sm: "row" },
-        justifyContent: "space-between",
-        gap: 2,
-      }}
-    >
-      <Box>
-        <Typography
-          variant="h6"
-          sx={{ fontWeight: 700 }}
-        >
-          Order #{order.orderNumber}
-        </Typography>
-
-        <Typography
-          variant="body2"
-          color="text.secondary"
-        >
-          Placed on {formatDate(order.createdAt)}
-        </Typography>
-      </Box>
-
-      <Box>
-        <Typography
-          sx={{
-            fontWeight: 700,
-            textTransform: "capitalize",
-          }}
-        >
-          {order.status || "Pending"}
-        </Typography>
-      </Box>
-
-      {canCancel(order.status) && (
-        <Button
-          variant="outlined"
-          color="error"
-          disabled={cancelling}
-          onClick={handleCancelOrder}
-          sx={{ mt: 3 }}
-        >
-          {cancelling ? "Cancelling..." : "Cancel Order"}
-        </Button>
-      )}
-    </Box>
-  </CardContent>
-</Card>
-
-          <Card>
-            <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+            <CardContent
+              sx={{
+                p: { xs: 2, md: 3 },
+              }}
+            >
               <Typography
                 variant="h6"
                 sx={{ fontWeight: 700 }}
@@ -418,14 +391,18 @@ const idParam = Array.isArray(params?.id)
                 Items
               </Typography>
 
-              <Stack divider={<Divider />} spacing={0}>
+              <Stack
+                divider={<Divider />}
+                spacing={0}
+              >
                 {order.items?.map((item) => (
                   <Box
                     key={item.id}
                     sx={{
                       py: 2,
                       display: "flex",
-                      justifyContent: "space-between",
+                      justifyContent:
+                        "space-between",
                       gap: 2,
                     }}
                   >
@@ -454,7 +431,8 @@ const idParam = Array.isArray(params?.id)
                         variant="body2"
                         color="text.secondary"
                       >
-                        MRP: {formatMoney(item.unitMrp)}
+                        MRP:{" "}
+                        {formatMoney(item.unitMrp)}
                       </Typography>
 
                       <Typography
@@ -462,16 +440,22 @@ const idParam = Array.isArray(params?.id)
                         color="text.secondary"
                       >
                         Selling Price:{" "}
-                        {formatMoney(item.unitSellingPrice)}
+                        {formatMoney(
+                          item.unitSellingPrice
+                        )}
                       </Typography>
 
-                      {Number(item.discountAmount ?? 0) > 0 && (
+                      {Number(
+                        item.discountAmount ?? 0
+                      ) > 0 && (
                         <Typography
                           variant="body2"
                           color="text.secondary"
                         >
                           Discount:{" "}
-                          {formatMoney(item.discountAmount)}
+                          {formatMoney(
+                            item.discountAmount
+                          )}
                         </Typography>
                       )}
                     </Box>
@@ -491,7 +475,11 @@ const idParam = Array.isArray(params?.id)
           </Card>
 
           <Card>
-            <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+            <CardContent
+              sx={{
+                p: { xs: 2, md: 3 },
+              }}
+            >
               <Typography
                 variant="h6"
                 sx={{ fontWeight: 700 }}
@@ -504,11 +492,17 @@ const idParam = Array.isArray(params?.id)
                 <Box
                   sx={{
                     display: "flex",
-                    justifyContent: "space-between",
+                    justifyContent:
+                      "space-between",
                   }}
                 >
-                  <Typography>Payment Method</Typography>
-                  <Typography sx={{ fontWeight: 600 }}>
+                  <Typography>
+                    Payment Method
+                  </Typography>
+
+                  <Typography
+                    sx={{ fontWeight: 600 }}
+                  >
                     Cash on Delivery
                   </Typography>
                 </Box>
@@ -518,48 +512,73 @@ const idParam = Array.isArray(params?.id)
                 <Box
                   sx={{
                     display: "flex",
-                    justifyContent: "space-between",
+                    justifyContent:
+                      "space-between",
                   }}
                 >
-                  <Typography>Subtotal</Typography>
                   <Typography>
-                    {formatMoney(order.subtotal)}
+                    Subtotal
+                  </Typography>
+
+                  <Typography>
+                    {formatMoney(
+                      order.subtotal
+                    )}
                   </Typography>
                 </Box>
 
                 <Box
                   sx={{
                     display: "flex",
-                    justifyContent: "space-between",
+                    justifyContent:
+                      "space-between",
                   }}
                 >
-                  <Typography>Discount</Typography>
                   <Typography>
-                    -{formatMoney(order.discountAmount)}
+                    Discount
+                  </Typography>
+
+                  <Typography>
+                    -
+                    {formatMoney(
+                      order.discountAmount
+                    )}
                   </Typography>
                 </Box>
 
                 <Box
                   sx={{
                     display: "flex",
-                    justifyContent: "space-between",
+                    justifyContent:
+                      "space-between",
                   }}
                 >
-                  <Typography>Shipping</Typography>
                   <Typography>
-                    {formatMoney(order.shippingCharge)}
+                    Shipping
+                  </Typography>
+
+                  <Typography>
+                    {formatMoney(
+                      order.shippingCharge
+                    )}
                   </Typography>
                 </Box>
 
                 <Box
                   sx={{
                     display: "flex",
-                    justifyContent: "space-between",
+                    justifyContent:
+                      "space-between",
                   }}
                 >
-                  <Typography>Tax</Typography>
                   <Typography>
-                    {formatMoney(order.taxAmount)}
+                    Tax
+                  </Typography>
+
+                  <Typography>
+                    {formatMoney(
+                      order.taxAmount
+                    )}
                   </Typography>
                 </Box>
 
@@ -568,7 +587,8 @@ const idParam = Array.isArray(params?.id)
                 <Box
                   sx={{
                     display: "flex",
-                    justifyContent: "space-between",
+                    justifyContent:
+                      "space-between",
                   }}
                 >
                   <Typography
@@ -582,7 +602,9 @@ const idParam = Array.isArray(params?.id)
                     variant="h6"
                     sx={{ fontWeight: 700 }}
                   >
-                    {formatMoney(order.totalAmount)}
+                    {formatMoney(
+                      order.totalAmount
+                    )}
                   </Typography>
                 </Box>
               </Stack>

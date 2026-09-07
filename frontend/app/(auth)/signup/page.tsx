@@ -34,24 +34,9 @@ import {
 
 import useAuthStore from "@/store/authStore";
 
-/**
- * NEXTCART — /signup
- *
- * Multi-step registration flow per backend contract:
- *   STEP 1: Account Details     → POST /api/v1/auth/register
- *                           ↓ (PendingRegistration created,
- *                            Email+Phone OTPs sent)
- *   STEP 2: Verify Email        → POST /api/v1/auth/email/verify-otp
- *   STEP 3: Verify Phone        → POST /api/v1/auth/phone/verify-otp
- *   STEP 4: Registration Complete → POST /api/v1/auth/register/complete
- *                           ↓ Redirect to /login
- *
- * The backend is the source of truth for all endpoint contracts.
- * This page never redirects to /login immediately after /register.
- */
-
 export default function SignupPage() {
   const router = useRouter();
+
   const {
     register,
     verifyEmailOtp,
@@ -62,15 +47,10 @@ export default function SignupPage() {
     loading,
     error,
     clearError,
-    // user, emailVerified, phoneVerified - unused in this component
-    setEmailVerified,
-    setPhoneVerified,
   } = useAuthStore();
 
-  // Step state: 1=details, 2=verify-email, 3=verify-phone, 4=complete
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
-  // Step 1 form state
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -79,7 +59,6 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
-  // Step 1 error state
   const [firstNameError, setFirstNameError] = useState<string | null>(null);
   const [lastNameError, setLastNameError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -88,16 +67,13 @@ export default function SignupPage() {
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [termsError, setTermsError] = useState<string | null>(null);
 
-  // Step 2 (email OTP) state
   const [emailOtp, setEmailOtp] = useState("");
   const [emailOtpError, setEmailOtpError] = useState<string | null>(null);
   const [emailOtpTouched, setEmailOtpTouched] = useState(false);
 
-  // Step 3 (phone OTP) state
   const [phoneOtp, setPhoneOtp] = useState("");
   const [phoneOtpError, setPhoneOtpError] = useState<string | null>(null);
 
-  // Step 4 state
   const [completeSuccess, setCompleteSuccess] = useState<boolean>(false);
 
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -112,108 +88,95 @@ export default function SignupPage() {
   const stepMarkTouched = markTouched;
 
   const revalidate = (
-    key:
+    field:
       | "firstName"
       | "lastName"
       | "email"
       | "phone"
       | "password"
-      | "confirm"
+      | "confirmPassword"
       | "terms",
-    current?: Partial<{
-      firstName: string;
-      lastName: string;
-      email: string;
-      phone: string;
-      password: string;
-      confirmPassword: string;
-      acceptedTerms: boolean;
-    }>,
+    value: string | boolean,
   ) => {
-    const c = current ?? {};
-    switch (key) {
+    switch (field) {
       case "firstName":
-        setFirstNameError(validateFirstName(c.firstName ?? firstName));
-        return;
+        setFirstNameError(validateFirstName(value as string));
+        break;
       case "lastName":
-        setLastNameError(validateLastName(c.lastName ?? lastName));
-        return;
+        setLastNameError(validateLastName(value as string));
+        break;
       case "email":
-        setEmailError(validateEmail(c.email ?? email));
-        return;
+        setEmailError(validateEmail(value as string));
+        break;
       case "phone":
-        setPhoneError(validatePhone(c.phone ?? phone));
-        return;
+        setPhoneError(validatePhone(value as string));
+        break;
       case "password":
-        setPasswordError(validatePassword(c.password ?? password));
-        // When the password changes, the confirm field may now mismatch.
-        if ((c.confirmPassword ?? confirmPassword) !== (c.password ?? password)) {
-          setConfirmError(
-            validateConfirmPassword(
-              c.confirmPassword ?? confirmPassword,
-              c.password ?? password,
-            ),
-          );
-        }
-        return;
-      case "confirm":
+        setPasswordError(validatePassword(value as string));
+        break;
+      case "confirmPassword":
         setConfirmError(
-          validateConfirmPassword(
-            c.confirmPassword ?? confirmPassword,
-            c.password ?? password,
-          ),
+          validateConfirmPassword(password, value as string),
         );
-        return;
+        break;
       case "terms":
-        setTermsError(
-          validateTermsAccepted(c.acceptedTerms ?? acceptedTerms),
-        );
-        return;
-      default:
-        return;
+        setTermsError(validateTermsAccepted(value as boolean));
+        break;
     }
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
 
-    const fnErr = validateFirstName(firstName);
-    const lnErr = validateLastName(lastName);
-    const emErr = validateEmail(email);
-    const phErr = validatePhone(phone);
-    const pwErr = validatePassword(password);
-    const cpErr = validateConfirmPassword(confirmPassword, password);
-    const tmErr = validateTermsAccepted(acceptedTerms);
+    clearError();
 
-    setFirstNameError(fnErr);
-    setLastNameError(lnErr);
-    setEmailError(emErr);
-    setPhoneError(phErr);
-    setPasswordError(pwErr);
-    setConfirmError(cpErr);
-    setTermsError(tmErr);
+    const firstErr = validateFirstName(firstName);
+    const lastErr = validateLastName(lastName);
+    const emailErr = validateEmail(email);
+    const phoneErr = validatePhone(phone);
+    const passwordErr = validatePassword(password);
+    const confirmErr = validateConfirmPassword(password, confirmPassword);
+    const termsErr = validateTermsAccepted(acceptedTerms);
+
+    setFirstNameError(firstErr);
+    setLastNameError(lastErr);
+    setEmailError(emailErr);
+    setPhoneError(phoneErr);
+    setPasswordError(passwordErr);
+    setConfirmError(confirmErr);
+    setTermsError(termsErr);
+
     setTouched({
       firstName: true,
       lastName: true,
       email: true,
       phone: true,
       password: true,
-      confirm: true,
+      confirmPassword: true,
       terms: true,
     });
 
-    if (fnErr || lnErr || emErr || phErr || pwErr || cpErr || tmErr) return;
+    if (
+      firstErr ||
+      lastErr ||
+      emailErr ||
+      phoneErr ||
+      passwordErr ||
+      confirmErr ||
+      termsErr
+    ) {
+      return;
+    }
 
-    // Step 1: Submit registration details
     setStep(2);
     setTouched({});
 
     const result = await register(
-      firstName.trim(),
-      lastName.trim(),
-      email.trim(),
-      phone.trim(),
-      password
+      firstName,
+      lastName,
+      email,
+      phone,
+      password,
     );
 
     if (!result.ok) {
@@ -222,61 +185,67 @@ export default function SignupPage() {
       return;
     }
 
-    // Registration initiated — PendingRegistration created, OTPs sent
-    // Stay on step 2 (verify email) and begin email verification
     setEmailOtp("");
     setEmailOtpError(null);
     setEmailOtpTouched(false);
     setStep(2);
   };
 
-  const handleEmailOtpSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleEmailOtpSubmit = async (
+    e: React.FormEvent<HTMLFormElement>,
+  ) => {
     e.preventDefault();
 
-    const otpErr = validateEmailOtp(emailOtp);
-    setEmailOtpError(otpErr ?? null);
-    stepMarkTouched("email-otp");
+    clearError();
 
-    if (otpErr) return;
+    const validationError = validateEmailOtp(emailOtp);
 
-    setTouched({ emailOtpTouched: true });
-    setStep(3); // move to phone verification
+    if (validationError) {
+      setEmailOtpError(validationError);
+      setEmailOtpTouched(true);
+      return;
+    }
 
     const result = await verifyEmailOtp(email, emailOtp);
 
     if (!result.ok) {
-      setEmailOtpError(result.message ?? "Invalid verification code.");
-      setStep(2); // stay on email verification
+      setEmailOtpError(
+        result.message ?? "Invalid verification code.",
+      );
+      setEmailOtpTouched(true);
+      setStep(2);
       return;
     }
 
-    // Email verified — transition to phone verification
-    setEmailVerified(true);
     setEmailOtp("");
+    setEmailOtpError(null);
+    setEmailOtpTouched(false);
     setStep(3);
   };
 
-  const handlePhoneOtpSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handlePhoneOtpSubmit = async (
+    e: React.FormEvent<HTMLFormElement>,
+  ) => {
     e.preventDefault();
 
-    const otpErr = validatePhoneOtp(phoneOtp);
-    setPhoneOtpError(otpErr ?? null);
-    stepMarkTouched("phone-otp");
+    clearError();
 
-    if (otpErr) return;
+    const validationError = validatePhoneOtp(phoneOtp);
 
-    setTouched({ phone: true });
-    const result = await verifyPhoneOtp(phone, phoneOtp);
-
-    if (!result.ok) {
-      setPhoneOtpError(result.message ?? "Invalid verification code.");
-      setStep(3); // stay on phone verification
+    if (validationError) {
+      setPhoneOtpError(validationError);
       return;
     }
 
-    // Phone verified — complete registration
-    setPhoneVerified(true);
-    setStep(4);
+    const result = await verifyPhoneOtp(phone, phoneOtp);
+
+    if (!result.ok) {
+      setPhoneOtpError(
+        result.message ?? "Invalid verification code.",
+      );
+      setStep(3);
+      return;
+    }
 
     const completeResult = await completeRegistration(email, phone);
 
@@ -285,58 +254,99 @@ export default function SignupPage() {
       return;
     }
 
-    // Registration complete — show success and redirect
+    setStep(4);
     setCompleteSuccess(true);
+
     setTimeout(() => {
       router.push("/login");
     }, 3000);
   };
 
-  // Helper: validate for email OTP (6-digit)
   const validateEmailOtp = (value: string): string | null => {
     const trimmed = value.trim();
-    if (!trimmed) return "OTP is required.";
-    if (!/^\d{6}$/.test(trimmed)) return "Enter a 6-digit code.";
+
+    if (!trimmed) {
+      return "OTP is required.";
+    }
+
+    if (!/^\d{6}$/.test(trimmed)) {
+      return "Enter a 6-digit code.";
+    }
+
     return null;
   };
 
-  // Helper: validate for phone OTP (6-digit)
   const validatePhoneOtp = (value: string): string | null => {
     const trimmed = value.trim();
-    if (!trimmed) return "OTP is required.";
-    if (!/^\d{6}$/.test(trimmed)) return "Enter a 6-digit code.";
+
+    if (!trimmed) {
+      return "OTP is required.";
+    }
+
+    if (!/^\d{6}$/.test(trimmed)) {
+      return "Enter a 6-digit code.";
+    }
+
     return null;
   };
 
-  // OTP input change handler with auto-focus
+  /**
+   * Handles a single OTP box.
+   *
+   * Each box represents one digit. The value is stored as
+   * one six-character string in Zustand/page state.
+   */
   const handleOtpChange = (
     e: React.ChangeEvent<HTMLInputElement>,
     index: number,
+    currentValue: string,
+    setOtp: React.Dispatch<React.SetStateAction<string>>,
   ) => {
-    const value = e.target.value;
-    if (value.length > 0 && index < 5) {
+    const inputValue = e.target.value.replace(/\D/g, "");
+
+    // Keep only the latest entered digit.
+    const digit = inputValue.slice(-1);
+
+    const nextValue =
+      currentValue.substring(0, index) +
+      digit +
+      currentValue.substring(index + 1);
+
+    setOtp(nextValue);
+
+    // Automatically move to the next OTP box.
+    if (digit && index < 5) {
       const nextInput = document.querySelector(
         `[data-otp-index="${index + 1}"]`,
       ) as HTMLInputElement | null;
+
       if (nextInput) {
         nextInput.focus();
       }
     }
   };
 
+  /**
+   * Reusable six-digit OTP input.
+   */
   const renderOtpInput = (
     label: string,
     value: string,
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
+    setOtp: React.Dispatch<React.SetStateAction<string>>,
     error: string | null,
     touched: boolean,
     stepIndex: "email" | "phone",
   ) => {
     return (
       <Box sx={{ mb: 2 }}>
-        <Typography variant="body1" color="text.primary" sx={{ mb: 1 }}>
+        <Typography
+          variant="body1"
+          color="text.primary"
+          sx={{ mb: 1 }}
+        >
           {label}
         </Typography>
+
         <Box>
           {[...Array(6).keys()].map((i) => (
             <TextField
@@ -344,22 +354,69 @@ export default function SignupPage() {
               size="small"
               variant="outlined"
               label={i + 1}
-              type="number"
+              type="text"
               inputMode="numeric"
               data-otp-index={i}
               value={value[i] || ""}
               onChange={(e) => {
-                const newValue = value.substring(0, i) + e.target.value + value.substring(i + 1);
-                if (newValue.length === 1 && i < 5) {
-                  handleOtpChange(e as React.ChangeEvent<HTMLInputElement>, i);
-                }
-                if (stepIndex === "email") {
-                  setEmailOtp(newValue);
-                } else {
-                  setPhoneOtp(newValue);
+                handleOtpChange(
+                  e as React.ChangeEvent<HTMLInputElement>,
+                  i,
+                  value,
+                  setOtp,
+                );
+              }}
+              onKeyDown={(e) => {
+                if (
+                  e.key === "Backspace" &&
+                  !value[i] &&
+                  i > 0
+                ) {
+                  const previousInput = document.querySelector(
+                    `[data-otp-index="${i - 1}"]`,
+                  ) as HTMLInputElement | null;
+
+                  if (previousInput) {
+                    previousInput.focus();
+                  }
+
+                  const nextValue =
+                    value.substring(0, i - 1) +
+                    value.substring(i);
+
+                  setOtp(nextValue);
                 }
               }}
-              onBlur={() => stepMarkTouched(`otp-${stepIndex}`)}
+              onPaste={(e) => {
+                e.preventDefault();
+
+                const pastedValue = e.clipboardData
+                  .getData("text")
+                  .replace(/\D/g, "")
+                  .slice(0, 6);
+
+                if (!pastedValue) {
+                  return;
+                }
+
+                setOtp(pastedValue);
+
+                const focusIndex = Math.min(
+                  pastedValue.length,
+                  5,
+                );
+
+                const targetInput = document.querySelector(
+                  `[data-otp-index="${focusIndex}"]`,
+                ) as HTMLInputElement | null;
+
+                if (targetInput) {
+                  targetInput.focus();
+                }
+              }}
+              onBlur={() =>
+                stepMarkTouched(`otp-${stepIndex}`)
+              }
               error={Boolean(touched && error)}
               fullWidth
               sx={{
@@ -369,8 +426,12 @@ export default function SignupPage() {
             />
           ))}
         </Box>
+
         {touched && error ? (
-          <FormHelperText error sx={{ mt: 0.5, color: "error.main" }}>
+          <FormHelperText
+            error
+            sx={{ mt: 0.5, color: "error.main" }}
+          >
             {error}
           </FormHelperText>
         ) : null}
@@ -378,408 +439,370 @@ export default function SignupPage() {
     );
   };
 
-  // Clear errors when step changes
-  useEffect(() => {
-    // No setState in effect - errors are cleared via form re-render
-  }, [step]);
-
-  if (step === 4 && completeSuccess) {
-    return (
-      <AuthCard
-        title="Registration Complete"
-        subtitle="Your account has been created successfully."
-        footer={
-          <Typography variant="body2" color="text.secondary">
-            Already have an account?{" "}
-            <MuiLink component={Link} href="/login" sx={{ fontWeight: 600 }}>
-              Sign in
-            </MuiLink>
-          </Typography>
-        }
-      >
-        <Box component="form" noValidate>
-          <Stack spacing={3}>
-            <Alert severity="success" variant="outlined" role="alert">
-              ✓ Account created successfully
-            </Alert>
-            <Typography variant="body2" color="text.secondary">
-              Your email and mobile number have been verified.
-            </Typography>
-            <Button
-              type="button"
-              fullWidth
-              variant="contained"
-              size="large"
-              sx={{
-                py: 1.125,
-                fontWeight: 700,
-                fontSize: "0.9rem",
-                borderRadius: 1,
-              }}
-              onClick={() => router.push("/login")}
-            >
-              Continue to Sign In
-            </Button>
-          </Stack>
-        </Box>
-      </AuthCard>
-    );
-  }
-
   return (
     <AuthCard
-      title="Create your account"
-      subtitle="Join NextCart and start shopping smarter."
-      footer={
-        <Typography variant="body2" color="text.secondary">
-          Already have an account?{" "}
-          <MuiLink component={Link} href="/login" sx={{ fontWeight: 600 }}>
-            Sign in
-          </MuiLink>
-        </Typography>
+      title={
+        step === 1
+          ? "Create your account"
+          : step === 2
+            ? "Verify Your Email"
+            : step === 3
+              ? "Verify Your Phone"
+              : "Account Created"
+      }
+      subtitle={
+        step === 1
+          ? "Create an account to get started"
+          : step === 2
+            ? "Enter the verification code sent to your email"
+            : step === 3
+              ? "Enter the verification code sent to your phone"
+              : "Your account has been created successfully"
       }
     >
-      <Box>
-        <Stack spacing={2}>
-          {error ? (
-            <Alert severity="error" variant="outlined" role="alert">
-              {error}
+      {error ? (
+        <Alert
+          severity="error"
+          sx={{ mb: 2 }}
+          onClose={clearError}
+        >
+          {error}
+        </Alert>
+      ) : null}
+
+      {step === 1 && (
+        <>
+          <Box component="form" onSubmit={handleSubmit}>
+            <Stack spacing={2}>
+              <TextField
+                label="First Name"
+                value={firstName}
+                onChange={(e) => {
+                  setFirstName(e.target.value);
+                  if (touched.firstName) {
+                    revalidate("firstName", e.target.value);
+                  }
+                }}
+                onBlur={() => {
+                  markTouched("firstName");
+                  revalidate("firstName", firstName);
+                }}
+                error={Boolean(
+                  touched.firstName && firstNameError,
+                )}
+                helperText={
+                  touched.firstName ? firstNameError : ""
+                }
+                fullWidth
+              />
+
+              <TextField
+                label="Last Name"
+                value={lastName}
+                onChange={(e) => {
+                  setLastName(e.target.value);
+                  if (touched.lastName) {
+                    revalidate("lastName", e.target.value);
+                  }
+                }}
+                onBlur={() => {
+                  markTouched("lastName");
+                  revalidate("lastName", lastName);
+                }}
+                error={Boolean(
+                  touched.lastName && lastNameError,
+                )}
+                helperText={
+                  touched.lastName ? lastNameError : ""
+                }
+                fullWidth
+              />
+
+              <TextField
+                label="Email"
+                type="email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (touched.email) {
+                    revalidate("email", e.target.value);
+                  }
+                }}
+                onBlur={() => {
+                  markTouched("email");
+                  revalidate("email", email);
+                }}
+                error={Boolean(
+                  touched.email && emailError,
+                )}
+                helperText={
+                  touched.email ? emailError : ""
+                }
+                fullWidth
+              />
+
+              <TextField
+                label="Phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => {
+                  setPhone(e.target.value);
+                  if (touched.phone) {
+                    revalidate("phone", e.target.value);
+                  }
+                }}
+                onBlur={() => {
+                  markTouched("phone");
+                  revalidate("phone", phone);
+                }}
+                error={Boolean(
+                  touched.phone && phoneError,
+                )}
+                helperText={
+                  touched.phone ? phoneError : ""
+                }
+                fullWidth
+              />
+
+              <PasswordField
+                label="Password"
+                name="password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+
+                  if (touched.password) {
+                    revalidate("password", e.target.value);
+                  }
+
+                  if (touched.confirmPassword) {
+                    revalidate(
+                      "confirmPassword",
+                      confirmPassword,
+                    );
+                  }
+                }}
+                onBlur={() => {
+                  markTouched("password");
+                  revalidate("password", password);
+                }}
+                error={
+                  Boolean(
+                    touched.password && passwordError,
+                  )
+                }
+                helperText={
+                  touched.password ? passwordError : ""
+                }
+              />
+
+              <PasswordField
+                label="Confirm Password"
+                name="confirmPassword"
+                value={confirmPassword}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+
+                  if (touched.confirmPassword) {
+                    revalidate(
+                      "confirmPassword",
+                      e.target.value,
+                    );
+                  }
+                }}
+                onBlur={() => {
+                  markTouched("confirmPassword");
+                  revalidate(
+                    "confirmPassword",
+                    confirmPassword,
+                  );
+                }}
+                error={
+                  Boolean(
+                    touched.confirmPassword && confirmError,
+                  )
+                }
+                helperText={
+                  touched.confirmPassword
+                    ? confirmError
+                    : ""
+                }
+              />
+
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={acceptedTerms}
+                    onChange={(e) => {
+                      setAcceptedTerms(e.target.checked);
+
+                      if (touched.terms) {
+                        revalidate(
+                          "terms",
+                          e.target.checked,
+                        );
+                      }
+                    }}
+                    onBlur={() => {
+                      markTouched("terms");
+                      revalidate(
+                        "terms",
+                        acceptedTerms,
+                      );
+                    }}
+                  />
+                }
+                label={
+                  <Typography variant="body2">
+                    I agree to the terms and conditions
+                  </Typography>
+                }
+              />
+
+              {touched.terms && termsError ? (
+                <FormHelperText error>
+                  {termsError}
+                </FormHelperText>
+              ) : null}
+
+              <Button
+                type="submit"
+                variant="contained"
+                fullWidth
+                disabled={loading}
+              >
+                {loading ? "Creating account..." : "Create Account"}
+              </Button>
+            </Stack>
+          </Box>
+
+          <OrDivider />
+
+          <Stack spacing={1.5}>
+            <SocialAuthButton />
+            <SocialAuthButton />
+          </Stack>
+
+          <Box sx={{ mt: 2, textAlign: "center" }}>
+            <Typography variant="body2">
+              Already have an account?{" "}
+              <MuiLink component={Link} href="/login">
+                Login
+              </MuiLink>
+            </Typography>
+          </Box>
+        </>
+      )}
+
+      {step === 2 && (
+        <Box component="form" onSubmit={handleEmailOtpSubmit}>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ mb: 2 }}
+          >
+            We sent a verification code to {email}
+          </Typography>
+
+          {renderOtpInput(
+            "Enter verification code",
+            emailOtp,
+            setEmailOtp,
+            emailOtpError,
+            emailOtpTouched,
+            "email",
+          )}
+
+          <Button
+            type="submit"
+            variant="contained"
+            fullWidth
+            disabled={loading}
+          >
+            {loading ? "Verifying..." : "Verify Email"}
+          </Button>
+
+          <Box sx={{ mt: 2, textAlign: "center" }}>
+            <MuiLink
+              component="button"
+              type="button"
+              onClick={async () => {
+                clearError();
+                setEmailOtpError(null);
+                setEmailOtpTouched(false);
+                await sendEmailVerificationOtp(email);
+              }}
+              sx={{
+                border: 0,
+                background: "none",
+                cursor: "pointer",
+              }}
+            >
+              Resend OTP
+            </MuiLink>
+          </Box>
+        </Box>
+      )}
+
+      {step === 3 && (
+        <Box component="form" onSubmit={handlePhoneOtpSubmit}>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ mb: 2 }}
+          >
+            We sent a verification code to {phone}
+          </Typography>
+
+          {renderOtpInput(
+            "Enter verification code",
+            phoneOtp,
+            setPhoneOtp,
+            phoneOtpError,
+            phoneOtp.length > 0,
+            "phone",
+          )}
+
+          <Button
+            type="submit"
+            variant="contained"
+            fullWidth
+            disabled={loading}
+          >
+            {loading ? "Verifying..." : "Verify Phone"}
+          </Button>
+
+          <Box sx={{ mt: 2, textAlign: "center" }}>
+            <MuiLink
+              component="button"
+              type="button"
+              onClick={async () => {
+                clearError();
+                setPhoneOtpError(null);
+                await sendPhoneVerificationOtp(phone);
+              }}
+              sx={{
+                border: 0,
+                background: "none",
+                cursor: "pointer",
+              }}
+            >
+              Resend OTP
+            </MuiLink>
+          </Box>
+        </Box>
+      )}
+
+      {step === 4 && (
+        <Box sx={{ textAlign: "center" }}>
+          {completeSuccess ? (
+            <Alert severity="success">
+              Your account has been created successfully.
+              Redirecting you to login...
             </Alert>
           ) : null}
-
-          {step === 1 && (
-            <Box component="form" onSubmit={handleSubmit} noValidate>
-              <Stack spacing={2}>
-                {error ? (
-                  <Alert severity="error" variant="outlined" role="alert">
-                    {error}
-                  </Alert>
-                ) : null}
-
-                <Box sx={{ display: { xs: "100%", sm: "initial" }, mb: 2 }}>
-                  <TextField
-                    name="firstName"
-                    label="First Name"
-                    placeholder="First"
-                    autoComplete="given-name"
-                    fullWidth
-                    size="small"
-                    value={firstName}
-                    onChange={(e) => {
-                      setFirstName(e.target.value);
-                      if (touched.firstName) revalidate("firstName", { firstName: e.target.value });
-                      if (error) clearError();
-                    }}
-                    onBlur={() => {
-                      markTouched("firstName");
-                      revalidate("firstName");
-                    }}
-                    error={Boolean(firstNameError)}
-                    helperText={touched.firstName ? firstNameError ?? " " : " "}
-                  />
-
-                  <TextField
-                    name="lastName"
-                    label="Last Name"
-                    placeholder="Last"
-                    autoComplete="family-name"
-                    fullWidth
-                    size="small"
-                    value={lastName}
-                    onChange={(e) => {
-                      setLastName(e.target.value);
-                      if (touched.lastName) revalidate("lastName", { lastName: e.target.value });
-                      if (error) clearError();
-                    }}
-                    onBlur={() => {
-                      markTouched("lastName");
-                      revalidate("lastName");
-                    }}
-                    error={Boolean(lastNameError)}
-                    helperText={touched.lastName ? lastNameError ?? " " : " "}
-                  />
-                </Box>
-
-                <TextField
-                  name="email"
-                  label="Email"
-                  placeholder="you@example.com"
-                  type="email"
-                  autoComplete="email"
-                  inputMode="email"
-                  fullWidth
-                  size="small"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    if (touched.email) revalidate("email", { email: e.target.value });
-                    if (error) clearError();
-                  }}
-                  onBlur={() => {
-                    markTouched("email");
-                    revalidate("email");
-                  }}
-                  error={Boolean(emailError)}
-                  helperText={touched.email ? emailError ?? " " : " "}
-                />
-
-                <TextField
-                  name="phone"
-                  label="Mobile Number"
-                  placeholder="9876543210"
-                  type="tel"
-                  autoComplete="tel"
-                  inputMode="tel"
-                  fullWidth
-                  size="small"
-                  value={phone}
-                  onChange={(e) => {
-                    setPhone(e.target.value);
-                    if (touched.phone) revalidate("phone", { phone: e.target.value });
-                    if (error) clearError();
-                  }}
-                  onBlur={() => {
-                    markTouched("phone");
-                    revalidate("phone");
-                  }}
-                  error={Boolean(phoneError)}
-                  helperText={touched.phone ? phoneError ?? " " : " "}
-                />
-
-                <Box>
-                  <PasswordField
-                    name="password"
-                    label="Password"
-                    autoComplete="new-password"
-                    value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      if (touched.password || touched.confirm)
-                        revalidate("password", {
-                          password: e.target.value,
-                          confirmPassword,
-                        });
-                      if (error) clearError();
-                    }}
-                    onBlur={() => {
-                      markTouched("password");
-                      revalidate("password");
-                    }}
-                    error={Boolean(passwordError)}
-                    helperText={touched.password ? passwordError ?? " " : " "}
-                  />
-                  <FormHelperText sx={{ ml: 0.25, mt: 0.5, color: "text.secondary" }}>
-                    At least 8 characters, with upper and lower case, a number, and a
-                    special character.
-                  </FormHelperText>
-                </Box>
-
-                <PasswordField
-                  name="confirmPassword"
-                  label="Confirm Password"
-                  autoComplete="new-password"
-                  value={confirmPassword}
-                  onChange={(e) => {
-                    setConfirmPassword(e.target.value);
-                    if (touched.confirm)
-                      revalidate("confirm", {
-                        password,
-                        confirmPassword: e.target.value,
-                      });
-                    if (error) clearError();
-                  }}
-                  onBlur={() => {
-                    markTouched("confirm");
-                    revalidate("confirm");
-                  }}
-                  error={Boolean(confirmError)}
-                  helperText={touched.confirm ? confirmError ?? " " : " "}
-                />
-
-                <Box>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        size="small"
-                        checked={acceptedTerms}
-                        onChange={(e) => {
-                          setAcceptedTerms(e.target.checked);
-                          if (touched.terms)
-                            revalidate("terms", { acceptedTerms: e.target.checked });
-                        }}
-                        onBlur={() => {
-                          markTouched("terms");
-                          revalidate("terms");
-                        }}
-                        slotProps={{
-                          input: { "aria-label": "Agree to Terms and Conditions" },
-                        }}
-                      />
-                    }
-                    label={
-                      <Typography variant="body2" color="text.secondary">
-                        I agree to the{" "}
-                        <MuiLink
-                          component={Link}
-                          href="/terms"
-                          sx={{ fontWeight: 600 }}
-                        >
-                          Terms & Conditions
-                        </MuiLink>
-                      </Typography>
-                    }
-                  />
-                  {touched.terms && termsError ? (
-                    <FormHelperText error sx={{ ml: 3.25 }}>
-                      {termsError}
-                    </FormHelperText>
-                  ) : null}
-                </Box>
-
-                <Button
-                  type="submit"
-                  fullWidth
-                  variant="contained"
-                  size="large"
-                  disabled={loading}
-                  sx={{
-                    py: 1.125,
-                    fontWeight: 700,
-                    fontSize: "0.9rem",
-                    borderRadius: 1,
-                  }}
-                >
-                  {loading ? "Creating account…" : "Create Account"}
-                </Button>
-
-                <OrDivider />
-
-                <SocialAuthButton />
-              </Stack>
-            </Box>
-          )}
-
-          {step === 2 && (
-            <Box component="form" onSubmit={handleEmailOtpSubmit} noValidate>
-              <Stack spacing={2}>
-                <Typography variant="h6" component="h6">
-                  Verify Your Email
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  We&apos;ve sent a 6-digit verification code to
-                  <strong>{email}</strong>
-                </Typography>
-
-                {emailOtpTouched && emailOtpError ? (
-                  <FormHelperText error>
-                    {emailOtpError}
-                  </FormHelperText>
-                ) : null}
-
-                <Box>
-                  {renderOtpInput(
-                    "Enter verification code",
-                    emailOtp,
-                    () => {}, // handled via data-otp-index
-                    emailOtpError,
-                    emailOtpTouched,
-                    "email",
-                  )}
-                </Box>
-
-                <Button
-                  type="submit"
-                  fullWidth
-                  variant="contained"
-                  size="medium"
-                  disabled={emailOtpTouched && emailOtp.length < 6}
-                  sx={{
-                    py: 1,
-                    fontWeight: 700,
-                    fontSize: "0.85rem",
-                    borderRadius: 1,
-                  }}
-                >
-                  Verify Email
-                </Button>
-
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  Did&apos;t receive the code?{" "}
-                  <a href="javascript:void(0)" onClick={() => {
-                    sendEmailVerificationOtp(email);
-                  }}>
-                    Resend OTP
-                  </a>
-                </Typography>
-              </Stack>
-            </Box>
-          )}
-
-          {step === 3 && (
-            <Box component="form" onSubmit={handlePhoneOtpSubmit} noValidate>
-              <Stack spacing={2}>
-                <Typography variant="h6" component="h6">
-                  Verify Your Mobile Number
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  We&apos;ve sent a 6-digit code to
-                  <strong>{phone.substring(phone.length - 4)}</strong>
-                </Typography>
-
-                {phoneOtpError ? (
-                  <FormHelperText error>
-                    {phoneOtpError}
-                  </FormHelperText>
-                ) : null}
-
-                <Box>
-                  {renderOtpInput(
-                    "Enter verification code",
-                    phoneOtp,
-                    () => {}, // handled via data-otp-index
-                    phoneOtpError,
-                    phoneOtp.length > 0,
-                    "phone",
-                  )}
-                </Box>
-
-                <Button
-                  type="submit"
-                  fullWidth
-                  variant="contained"
-                  size="medium"
-                  disabled={phoneOtp.length < 6}
-                  sx={{
-                    py: 1,
-                    fontWeight: 700,
-                    fontSize: "0.85rem",
-                    borderRadius: 1,
-                  }}
-                >
-                  Verify Mobile
-                </Button>
-
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  Did&apos;t receive the code?{" "}
-                  <a href="javascript:void(0)" onClick={() => {
-                    sendPhoneVerificationOtp(phone);
-                  }}>
-                    Resend OTP
-                  </a>
-                </Typography>
-              </Stack>
-            </Box>
-          )}
-
-          {step === 4 && !completeSuccess && (
-            <Box>
-              <Typography variant="body2" color="text.secondary">
-                Registration in progress...
-              </Typography>
-            </Box>
-          )}
-        </Stack>
-      </Box>
+        </Box>
+      )}
     </AuthCard>
   );
 }

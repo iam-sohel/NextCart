@@ -103,71 +103,46 @@ export default function CheckoutPage() {
   }, [checking, authed, fetchAddresses, fetchCart]);
 
   /**
-   * Address selection is handled via the RadioGroup onChange
-   * handler (handleAddressSelect). selectedAddressId starts as null,
-   * and the customer can select a saved address from the list.
-   *
-   * When addresses load, auto-select a valid saved address:
-   * preserve an already-selected valid address, otherwise select
-   * the default address, then the first saved address, then clear.
+   * Derive the automatic selection during render rather than updating state
+   * synchronously from an effect.
    */
-  useEffect(() => {
-    if (checking || !authed || selectedAddressId !== null) {
-      return;
-    }
-
-    const defaultAddress = addresses.find(
-      (address) => address.isDefault === true
-    );
-
-    if (defaultAddress) {
-      setSelectedAddressId((currentId) => {
-        if (currentId !== null && addresses.some((a) => a.id === currentId)) {
-          return currentId;
-        }
-        return defaultAddress.id;
-      });
-      return;
-    }
-
-    const firstAddress = addresses[0];
-    if (firstAddress) {
-      setSelectedAddressId((currentId) => {
-        if (currentId !== null && addresses.some((a) => a.id === currentId)) {
-          return currentId;
-        }
-        return firstAddress.id;
-      });
-      return;
-    }
-
-    setSelectedAddressId(null);
-  }, [addresses, selectedAddressId, checking, authed]);
+  const effectiveSelectedAddressId = addresses.some(
+    (address) => address.id === selectedAddressId
+  )
+    ? selectedAddressId
+    : addresses.find((address) => address.isDefault === true)?.id ??
+      addresses[0]?.id ??
+      null;
 
   /**
    * Populate the checkout form from the selected saved address.
    * Uses functional setState to avoid setState-in-effect lint rule.
    */
   useEffect(() => {
-    if (selectedAddressId === null) {
+    if (effectiveSelectedAddressId === null) {
       return;
     }
 
     const selectedAddress = addresses.find(
-      (address) => address.id === selectedAddressId
+      (address) => address.id === effectiveSelectedAddressId
     );
 
     if (!selectedAddress) {
       return;
     }
 
-    setFullName((curr) => selectedAddress.fullName || "");
-    setPhone((curr) => selectedAddress.phoneNumber || "");
-    setAddressLine((curr) => selectedAddress.streetAddress || "");
-    setCity((curr) => selectedAddress.city || "");
-    setState((curr) => selectedAddress.state || "");
-    setPincode((curr) => selectedAddress.postalCode || "");
-  }, [selectedAddressId, addresses]);
+    // Address selection is intentionally synchronized into the controlled
+    // checkout fields. Keep this exception local rather than disabling the
+    // rule for the entire file.
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setFullName(selectedAddress.fullName || "");
+setPhone(selectedAddress.phoneNumber || "");
+setAddressLine(selectedAddress.streetAddress || "");
+setCity(selectedAddress.city || "");
+setState(selectedAddress.state || "");
+setPincode(selectedAddress.postalCode || "");
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [effectiveSelectedAddressId, addresses]);
 
   /**
    * Handle selection of a saved address.

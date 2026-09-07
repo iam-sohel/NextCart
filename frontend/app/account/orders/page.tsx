@@ -18,7 +18,7 @@ import {
 
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import useAuthStore from "@/store/authStore";
+
 import useRequireAuth from "@/hooks/useRequireAuth";
 import { getOrders } from "@/services/orderService";
 import type { OrderResponseWire } from "@/services/orderService";
@@ -60,7 +60,14 @@ function formatMoney(value?: string | number | null): string {
 
 function getStatusColor(
   status?: string | null
-): "default" | "primary" | "secondary" | "success" | "error" | "warning" | "info" {
+):
+  | "default"
+  | "primary"
+  | "secondary"
+  | "success"
+  | "error"
+  | "warning"
+  | "info" {
   const normalized = String(status || "").toUpperCase();
 
   if (
@@ -131,34 +138,40 @@ export default function OrdersPage() {
       setLoading(true);
       setError(null);
 
-    const response = await getOrders();
+      const response = await getOrders();
 
-    if ("data" in response && response.data) {
-      setOrders(response.data);
+      if ("data" in response && response.data) {
+        setOrders(response.data);
+        return;
+      }
+
+      setOrders([]);
+
+      if ("message" in response && response.message) {
+        setError(response.message);
+      } else {
+        setError("Unable to load your orders.");
+      }
+    } catch (err) {
+      console.error("Failed to load orders:", err);
+
+      setOrders([]);
+      setError("Unable to load your orders. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, [checking, authed]);
+
+  useEffect(() => {
+    if (checking || !authed) {
       return;
     }
 
-    setOrders([]);
-
-    if ("message" in response && response.message) {
-      setError(response.message);
-    } else {
-      setError("Unable to load your orders.");
-    }
-  } catch (err) {
-    console.error("Failed to load orders:", err);
-
-    setOrders([]);
-    setError("Unable to load your orders. Please try again.");
-  } finally {
-    setLoading(false);
-  }
-}, [checking, authed]);
-
-  useEffect(() => {
-    if (!checking && authed) {
+    const timer = window.setTimeout(() => {
       void loadOrders();
-    }
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [checking, authed, loadOrders]);
 
   return (

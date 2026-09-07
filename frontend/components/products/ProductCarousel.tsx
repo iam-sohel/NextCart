@@ -16,9 +16,9 @@ export default function ProductCarousel({ products }: Props) {
         maxWidth: "100%",
         minWidth: 0,
         display: "flex",
-        gap: 3,
+        gap: { xs: 1.5, sm: 2, md: 3 },
         overflowX: "auto",
-        pb: 2,
+        pb: { xs: 1, sm: 2 },
         "&::-webkit-scrollbar": {
           display: "none",
         },
@@ -28,7 +28,7 @@ export default function ProductCarousel({ products }: Props) {
         <Box
           key={product.id}
           sx={{
-            minWidth: 280,
+            minWidth: { xs: 205, sm: 240, md: 280 },
             flexShrink: 0,
           }}
         >

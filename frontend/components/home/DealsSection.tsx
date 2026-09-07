@@ -20,12 +20,12 @@ export default function DealsSection({ products }: Props) {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 3 }}>
+    <Container maxWidth="xl" sx={{ mt: { xs: 1.5, sm: 2 } }}>
       <Box
         sx={{
           bgcolor: "#fff",
           borderRadius: 2,
-          p: 3,
+          p: { xs: 1.5, sm: 2, md: 3 },
         }}
       >
         <SectionTitle title="🔥 Top Deals" />

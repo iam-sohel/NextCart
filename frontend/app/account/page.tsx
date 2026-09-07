@@ -87,7 +87,11 @@ export default function AccountPage() {
 
   useEffect(() => {
     if (token) {
-      void loadProfile();
+      const timeoutId = window.setTimeout(() => {
+        void loadProfile();
+      }, 0);
+
+      return () => window.clearTimeout(timeoutId);
     }
   }, [token]);
 

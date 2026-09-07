@@ -166,23 +166,23 @@ export default function ProductCard({
           }}
         >
           {/* Product photo stage */}
-          <Box
-            sx={{
-              height: { xs: 180, sm: 200, md: 220 },
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              bgcolor: "#F3F1EC",
-              overflow: "hidden",
-            }}
-          >
+<Box
+              sx={{
+                height: { xs: 145, sm: 200, md: 220 },
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                bgcolor: "#F3F1EC",
+                overflow: "hidden",
+              }}
+            >
             <Box
               className="product-card-image"
               sx={{
                 position: "relative",
-                width: { xs: "100%", sm: 170 },
+                width: { xs: 150, sm: 170 },
                 maxWidth: 170,
-                height: { xs: "100%", sm: 170 },
+                height: { xs: 140, sm: 170 },
                 maxHeight: 170,
                 transition: "transform .35s ease",
               }}
@@ -294,7 +294,16 @@ export default function ProductCard({
         </IconButton>
       </Box>
 
-      <CardContent sx={{ pb: { xs: 1.5, sm: 2 }, flex: 1, display: "flex", flexDirection: "column" }}>
+<CardContent
+            sx={{
+              pt: { xs: 1.25, sm: 2 },
+              px: { xs: 1.25, sm: 2 },
+              pb: { xs: 1.5, sm: 2 },
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
         {/* Brand */}
         <Typography
           variant="caption"
@@ -338,7 +347,7 @@ export default function ProductCard({
               display: "flex",
               alignItems: "center",
               gap: 0.5,
-              my: 1,
+              my: { xs: 0.5, sm: 1 },
             }}
           >
             <StarIcon
@@ -372,7 +381,7 @@ export default function ProductCard({
             display: "flex",
             alignItems: "center",
             gap: { xs: 0.75, sm: 1.25 },
-            mb: { xs: 1, sm: 1.5 },
+            mb: { xs: 0.75, sm: 1.5 },
             flexWrap: "wrap",
           }}
         >

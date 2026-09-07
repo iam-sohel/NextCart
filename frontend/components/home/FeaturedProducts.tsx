@@ -21,18 +21,18 @@ export default function FeaturedProducts({ products }: Props) {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: 5 }}>
-      <Typography
-        variant="h4"
-        sx={{
-          fontWeight: 700,
-          mb: 4,
-        }}
-      >
+    <Container maxWidth="xl" sx={{ py: { xs: 2, sm: 3, md: 5 } }}>
+<Typography
+          variant="h4"
+          sx={{
+            fontWeight: 700,
+            mb: { xs: 1.5, sm: 2, md: 4 },
+          }}
+        >
         ⭐ Featured Products
       </Typography>
 
-      <Grid container spacing={3}>
+      <Grid container spacing={ { xs: 1.5, sm: 2, md: 3 } }>
         {products.map((product) => (
           <Grid
             key={product.id}

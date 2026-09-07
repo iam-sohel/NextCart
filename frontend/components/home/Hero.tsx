@@ -53,7 +53,7 @@ export default function Hero({ product }: Props) {
         width: "100%",
         bgcolor: "#2A1F18",
         color: "#F4EFE6",
-        mt: 2,
+        mt: { xs: 1, md: 2 },
         borderRadius: 0,
         overflow: "hidden",
         position: "relative",
@@ -63,16 +63,16 @@ export default function Hero({ product }: Props) {
         sx={{
           maxWidth: "1400px",
           mx: "auto",
-          px: { xs: 2, md: 4 },
-          py: { xs: 2.5, md: 3 },
+          px: { xs: 1.5, md: 4 },
+          py: { xs: 1.5, md: 3 },
           display: "grid",
           gridTemplateColumns: {
             xs: "1fr",
             md: "1.1fr 1fr",
           },
           alignItems: "center",
-          gap: { xs: 2, md: 4 },
-          minHeight: { xs: 220, md: 280 },
+          gap: { xs: 1.5, md: 4 },
+          minHeight: { xs: 200, md: 280 },
         }}
       >
         {/* Left — copy block */}
@@ -263,10 +263,7 @@ export default function Hero({ product }: Props) {
         <Box
           sx={{
             position: "relative",
-            height: {
-              xs: 160,
-              md: 220,
-            },
+            height: { xs: 145, md: 220 },
             borderRadius: 2,
             bgcolor: "#F4EFE6",
             display: "flex",

@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 export default function OrderSuccessClient() {
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   const orderNumber = searchParams.get("orderId");

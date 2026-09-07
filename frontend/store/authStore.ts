@@ -7,20 +7,23 @@
  *
  * Design notes:
  *   - `user` is the domain user object on success. `null` means "guest".
- *   - `token` is the JWT bearer token. `lib/api.ts` reads it via the
- *     registered token-getter and sends it as `Authorization: Bearer …`.
- *   - `refreshToken` is the opaque, rotating refresh token. When `lib/api.ts`
- *     sees an authenticated request rejected (the access token has expired),
- *     it calls the registered refresher (`lib/tokenRefresh.ts`), which trades
- *     this refresh token for a fresh access token + a new refresh token and
- *     writes both back here via `applyRefreshedTokens`.
- *   - Persistence: the backend is a STATELESS bearer-JWT API. The access
- *     token and refresh token are persisted with the user profile so the
- *     session survives a page reload.
+ *   - `token` is the JWT bearer token.
+ *   - `refreshToken` is the opaque, rotating refresh token.
+ *   - Persistence stores only durable authentication/session information.
  *   - `hasHydrated` flips to true only after rehydration runs on the client.
  *   - `loading` is per-action so the UI can disable just the submit button.
- *   - `error` carries the latest backend / network message; `clearError()`
- *     lets the UI reset between attempts.
+ *   - `error` carries the latest backend / network message.
+ *
+ * Registration flow:
+ *   1. register()
+ *   2. verifyEmailOtp()
+ *   3. verifyPhoneOtp()
+ *   4. completeRegistration()
+ *   5. redirect to /login
+ *
+ * IMPORTANT:
+ *   Registration does NOT authenticate the user.
+ *   Only login() establishes an authenticated session.
  */
 
 "use client";
@@ -89,16 +92,28 @@ interface AuthState {
    */
   setPhoneVerified: (value: boolean) => void;
 
-  verifyEmailOtp: (email: string, otp: string) => Promise<{ ok: true } | { ok: false; message: string }>;
+  verifyEmailOtp: (
+    email: string,
+    otp: string,
+  ) => Promise<{ ok: true } | { ok: false; message: string }>;
 
-  verifyPhoneOtp: (phone: string, otp: string) => Promise<{ ok: true } | { ok: false; message: string }>;
+  verifyPhoneOtp: (
+    phone: string,
+    otp: string,
+  ) => Promise<{ ok: true } | { ok: false; message: string }>;
 
-  completeRegistration: (email: string, phone: string) => Promise<{ ok: true } | { ok: false; message: string }>;
+  completeRegistration: (
+    email: string,
+    phone: string,
+  ) => Promise<{ ok: true } | { ok: false; message: string }>;
 
-  sendEmailVerificationOtp: (email: string) => Promise<{ ok: true } | { ok: false; message: string }>;
+  sendEmailVerificationOtp: (
+    email: string,
+  ) => Promise<{ ok: true } | { ok: false; message: string }>;
 
-  sendPhoneVerificationOtp: (phone: string) => Promise<{ ok: true } | { ok: false; message: string }>;
-
+  sendPhoneVerificationOtp: (
+    phone: string,
+  ) => Promise<{ ok: true } | { ok: false; message: string }>;
 }
 
 /* ──────────────────────────────────────────────────────────────────────
@@ -115,11 +130,17 @@ const useAuthStore = create<AuthState>()(
       error: null,
       isAuthenticating: false,
       hasHydrated: false,
+
+      /**
+       * These values belong only to the current registration flow.
+       * They are intentionally excluded from partialize() below.
+       */
       emailVerified: false,
       phoneVerified: false,
 
-      // `lib/authInterceptor.ts` reads the live token via
-      // `useAuthStore.getState().token` on every authenticated request.
+      /* ────────────────────────────────────────────────────────────────
+         LOGIN
+         ──────────────────────────────────────────────────────────────── */
 
       async login(email, password) {
         set({
@@ -146,17 +167,9 @@ const useAuthStore = create<AuthState>()(
           };
         }
 
-        /*
-         * The backend login endpoint now returns the authenticated user's
-         * profile together with the access and refresh tokens.
-         *
-         * This is important because the frontend previously created:
-         *
-         *   { firstName: "", lastName: "", email }
-         *
-         * which caused the logged-in user's name to be blank.
-         *
-         * We now use the authoritative user object returned by the backend.
+        /**
+         * Login is the ONLY point where the authenticated user and
+         * authentication tokens are established.
          */
         set({
           token: result.data.token,
@@ -169,16 +182,34 @@ const useAuthStore = create<AuthState>()(
           loading: false,
           isAuthenticating: false,
           error: null,
+
+          /**
+           * Registration verification state is no longer relevant
+           * after successful authentication.
+           */
+          emailVerified: false,
+          phoneVerified: false,
         });
 
         return { ok: true };
       },
 
+      /* ────────────────────────────────────────────────────────────────
+         REGISTER
+         ──────────────────────────────────────────────────────────────── */
+
       async register(firstName, lastName, email, phone, password) {
+        /**
+         * Registration starts a new verification flow.
+         *
+         * It does NOT mean the user is authenticated.
+         */
         set({
           loading: true,
-          isAuthenticating: true,
+          isAuthenticating: false,
           error: null,
+          emailVerified: false,
+          phoneVerified: false,
         });
 
         const result = await authService.register({
@@ -202,16 +233,21 @@ const useAuthStore = create<AuthState>()(
           };
         }
 
-        /*
-         * Registration does not return authentication tokens.
-         * The user is sent to /login to authenticate.
+        /**
+         * IMPORTANT:
          *
-         * We retain the returned profile in the store, but login will
-         * replace it with the authoritative profile returned by the
-         * login endpoint.
+         * Registration does NOT authenticate the user.
+         *
+         * Do not store result.data.user.
+         * Do not create authentication tokens.
+         *
+         * The user must complete verification and then explicitly
+         * authenticate through login().
          */
         set({
-          user: result.data.user,
+          user: null,
+          token: null,
+          refreshToken: null,
           loading: false,
           isAuthenticating: false,
           error: null,
@@ -220,13 +256,16 @@ const useAuthStore = create<AuthState>()(
         return { ok: true };
       },
 
+      /* ────────────────────────────────────────────────────────────────
+         LOGOUT
+         ──────────────────────────────────────────────────────────────── */
+
       logout() {
-        /*
+        /**
          * Backend logout deletes the refresh token server-side.
          *
          * The access JWT is stateless and remains valid until expiration,
-         * so client-side removal of both tokens is still authoritative
-         * for ending the local session.
+         * so client-side removal of both tokens ends the local session.
          */
         void authService.logout();
 
@@ -235,15 +274,25 @@ const useAuthStore = create<AuthState>()(
           token: null,
           refreshToken: null,
           error: null,
+          loading: false,
+          isAuthenticating: false,
+
+          /**
+           * Verification state belongs to registration only.
+           */
+          emailVerified: false,
+          phoneVerified: false,
         });
       },
 
+      /* ────────────────────────────────────────────────────────────────
+         TOKEN REFRESH
+         ──────────────────────────────────────────────────────────────── */
+
       applyRefreshedTokens(accessToken, refreshToken) {
-        /*
-         * Swap in the rotated credentials from a silent refresh.
-         *
-         * The user profile is deliberately preserved because refreshing
-         * credentials does not change the authenticated user.
+        /**
+         * Replace the rotated credentials while preserving
+         * the authenticated user profile.
          */
         set({
           token: accessToken,
@@ -251,11 +300,46 @@ const useAuthStore = create<AuthState>()(
         });
       },
 
+      /* ────────────────────────────────────────────────────────────────
+         EMAIL VERIFICATION
+         ──────────────────────────────────────────────────────────────── */
+
       setEmailVerified(value) {
         set({
           emailVerified: value,
         });
       },
+
+      async verifyEmailOtp(email: string, otp: string) {
+        const result = await authService.verifyEmailOtp(email, otp);
+
+        if (!result.ok) {
+          set({
+            error: result.message,
+          });
+
+          return {
+            ok: false,
+            message: result.message,
+          };
+        }
+
+        /**
+         * The backend verification succeeded.
+         *
+         * This method owns emailVerified state.
+         */
+        set({
+          emailVerified: true,
+          error: null,
+        });
+
+        return { ok: true };
+      },
+
+      /* ────────────────────────────────────────────────────────────────
+         PHONE VERIFICATION
+         ──────────────────────────────────────────────────────────────── */
 
       setPhoneVerified(value) {
         set({
@@ -263,72 +347,133 @@ const useAuthStore = create<AuthState>()(
         });
       },
 
-      async verifyEmailOtp(email: string, otp: string) {
-        const result = await authService.verifyEmailOtp(email, otp);
-        if (!result.ok) {
-          set({
-            error: result.message,
-          });
-          return { ok: false, message: result.message };
-        }
-        set({
-          emailVerified: true,
-        });
-        return { ok: true };
-      },
-
       async verifyPhoneOtp(phone: string, otp: string) {
         const result = await authService.verifyPhoneOtp(phone, otp);
+
         if (!result.ok) {
           set({
             error: result.message,
           });
-          return { ok: false, message: result.message };
+
+          return {
+            ok: false,
+            message: result.message,
+          };
         }
+
+        /**
+         * The backend verification succeeded.
+         *
+         * This method owns phoneVerified state.
+         */
         set({
           phoneVerified: true,
-        });
-        return { ok: true };
-      },
-
-      async completeRegistration(email: string, phone: string) {
-        const result = await authService.completeRegistration(email, phone);
-        if (!result.ok) {
-          set({
-            error: result.message,
-          });
-          return { ok: false, message: result.message };
-        }
-        // Registration complete - user is created but not automatically logged in.
-        // They should be redirected to /login to authenticate.
-        set({
-          user: result.data.user,
           error: null,
         });
+
         return { ok: true };
       },
+
+      /* ────────────────────────────────────────────────────────────────
+         COMPLETE REGISTRATION
+         ──────────────────────────────────────────────────────────────── */
+
+      async completeRegistration(email: string, phone: string) {
+        /**
+         * This should only be called after successful email and
+         * phone OTP verification.
+         */
+        const result = await authService.completeRegistration(
+          email,
+          phone,
+        );
+
+        if (!result.ok) {
+          set({
+            error: result.message,
+          });
+
+          return {
+            ok: false,
+            message: result.message,
+          };
+        }
+
+        /**
+         * IMPORTANT:
+         *
+         * Completing registration does NOT authenticate the user.
+         *
+         * Do not store result.data.user.
+         * Do not create or retain authentication tokens.
+         *
+         * The user should be redirected to /login.
+         */
+        set({
+          user: null,
+          token: null,
+          refreshToken: null,
+          error: null,
+        });
+
+        return { ok: true };
+      },
+
+      /* ────────────────────────────────────────────────────────────────
+         SEND EMAIL VERIFICATION OTP
+         ──────────────────────────────────────────────────────────────── */
 
       async sendEmailVerificationOtp(email: string) {
-        const result = await authService.sendEmailVerificationOtp(email);
+        const result =
+          await authService.sendEmailVerificationOtp(email);
+
         if (!result.ok) {
           set({
             error: result.message,
           });
-          return { ok: false, message: result.message };
+
+          return {
+            ok: false,
+            message: result.message,
+          };
         }
+
+        set({
+          error: null,
+        });
+
         return { ok: true };
       },
 
+      /* ────────────────────────────────────────────────────────────────
+         SEND PHONE VERIFICATION OTP
+         ──────────────────────────────────────────────────────────────── */
+
       async sendPhoneVerificationOtp(phone: string) {
-        const result = await authService.sendPhoneVerificationOtp(phone);
+        const result =
+          await authService.sendPhoneVerificationOtp(phone);
+
         if (!result.ok) {
           set({
             error: result.message,
           });
-          return { ok: false, message: result.message };
+
+          return {
+            ok: false,
+            message: result.message,
+          };
         }
+
+        set({
+          error: null,
+        });
+
         return { ok: true };
       },
+
+      /* ────────────────────────────────────────────────────────────────
+         ERROR / HYDRATION
+         ──────────────────────────────────────────────────────────────── */
 
       clearError() {
         set({
@@ -347,14 +492,16 @@ const useAuthStore = create<AuthState>()(
 
       storage: createJSONStorage(() => localStorage),
 
-      /*
+      /**
        * Persist only durable authentication/session information.
        *
-       * Do not persist transient UI state such as:
-       *   loading
-       *   error
-       *   isAuthenticating
-       *   hasHydrated
+       * DO NOT persist:
+       *   - loading
+       *   - error
+       *   - isAuthenticating
+       *   - hasHydrated
+       *   - emailVerified
+       *   - phoneVerified
        */
       partialize: (state) => ({
         token: state.token,
@@ -362,7 +509,7 @@ const useAuthStore = create<AuthState>()(
         user: state.user,
       }),
 
-      /*
+      /**
        * Rehydration is triggered explicitly on the client through
        * AuthClientBootstrap.
        */

@@ -19,11 +19,8 @@ export default function CategoryBar() {
       sx={{
         bgcolor: "#fff",
         borderRadius: 3,
-        px: {
-          xs: 1.5,
-          sm: 2,
-        },
-        py: 2,
+        px: { xs: 1, sm: 2 },
+        py: { xs: 1, sm: 1.25 },
         boxShadow: 1,
         overflowX: "auto",
 
@@ -36,10 +33,7 @@ export default function CategoryBar() {
     >
       <Stack
         direction="row"
-        spacing={{
-          xs: 1.5,
-          sm: 2,
-        }}
+        spacing={{ xs: 1, sm: 1.5 }}
         sx={{
           minWidth: "max-content",
           justifyContent: {
@@ -61,10 +55,7 @@ export default function CategoryBar() {
             <Card
               elevation={0}
               sx={{
-                width: {
-                  xs: 100,
-                  sm: 110,
-                },
+                width: { xs: 84, sm: 110 },
                 borderRadius: 3,
                 backgroundColor: "transparent",
                 transition: "0.25s",
@@ -80,36 +71,30 @@ export default function CategoryBar() {
                   spacing={1}
                   sx={{
                     alignItems: "center",
-                    py: {
-                      xs: 1.5,
-                      sm: 2,
-                    },
+                    py: { xs: 0.75, sm: 1.25 },
                     px: 1,
                   }}
                 >
-                  <Image
-                    src={category.image}
-                    alt={category.title}
-                    width={60}
-                    height={60}
-                    style={{
-                      objectFit: "contain",
-                    }}
-                  />
+<Image
+                      src={category.image}
+                      alt={category.title}
+                      width={52}
+                      height={52}
+                      style={{
+                        objectFit: "contain",
+                      }}
+                    />
 
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      fontWeight: 600,
-                      color: "#212121",
-                      textAlign: "center",
-                      fontSize: {
-                        xs: "0.8rem",
-                        sm: "0.85rem",
-                      },
-                      lineHeight: 1.2,
-                    }}
-                  >
+<Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 600,
+                        color: "#212121",
+                        textAlign: "center",
+                        fontSize: { xs: "0.75rem", sm: "0.85rem" },
+                        lineHeight: 1.2,
+                      }}
+                    >
                     {category.title}
                   </Typography>
                 </Stack>

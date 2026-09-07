@@ -117,20 +117,20 @@ export default async function HomePage() {
       <Box
         sx={{
           bgcolor: "#f5f5f5",
-          pb: 4,
+          pb: { xs: 2, sm: 3 },
           width: "100%",
           maxWidth: "100%",
           overflowX: "hidden",
         }}
       >
-        {/* Categories */}
-        <Box
-          sx={{
-            pt: 3,
-            width: "100%",
-            maxWidth: "100%",
-          }}
-        >
+{/* Categories */}
+          <Box
+            sx={{
+              pt: { xs: 1, sm: 1.5 },
+              width: "100%",
+              maxWidth: "100%",
+            }}
+          >
           <CategoryBar />
         </Box>
 
