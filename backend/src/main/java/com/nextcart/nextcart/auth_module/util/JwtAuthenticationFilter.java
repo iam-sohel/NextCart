@@ -1,7 +1,6 @@
 package com.nextcart.nextcart.auth_module.util;
 
 import com.nextcart.nextcart.auth_module.security.CustomUserDetails;
-import com.nextcart.nextcart.auth_module.util.JwtUtil;
 import com.nextcart.nextcart.user_module.entity.User;
 import com.nextcart.nextcart.user_module.repository.UserRepository;
 import jakarta.servlet.FilterChain;
@@ -34,7 +33,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String authorizationHeader =
                 request.getHeader("Authorization");
 
-        // No Authorization header
         if (authorizationHeader == null
                 || !authorizationHeader.startsWith("Bearer ")) {
 
@@ -44,14 +42,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = authorizationHeader.substring(7).trim();
 
-        // Empty token
         if (token.isBlank()) {
             filterChain.doFilter(request, response);
             return;
         }
 
         try {
-
             String email = jwtUtil.extractEmail(token);
 
             if (email != null
@@ -87,11 +83,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             }
 
-        } catch (Exception ignored) {
-            /*
-             * Invalid/expired JWT should not break the filter chain.
-             * Spring Security will handle the request as unauthenticated.
-             */
+        } catch (Exception ex) {
+
+            // Do not log the actual JWT token.
+            System.out.println(
+                    "JWT authentication failed: "
+                            + ex.getMessage()
+            );
         }
 
         filterChain.doFilter(request, response);

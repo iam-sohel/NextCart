@@ -32,7 +32,7 @@ public class AuthController {
 
     /**
      * Complete customer registration after
-     * both email and phone OTPs are verified.
+     * email OR phone verification.
      */
     @PostMapping("/register/complete")
     public ResponseEntity<RegisterResponse> completeRegistration(
@@ -121,23 +121,25 @@ public class AuthController {
     }
 
     // ============================================================
-    // PHONE OTP
+    // PHONE OTP - MSG91 WIDGET
     // ============================================================
 
-    @PostMapping("/phone/send-otp")
-    public ResponseEntity<Void> sendPhoneOtp(
-            @Valid @RequestBody SendPhoneOtpRequest request) {
+    /**
+     * Verify phone OTP using MSG91 Widget.
+     *
+     * The frontend completes OTP verification
+     * through MSG91 Widget and receives an access token.
+     *
+     * The access token is then sent to this endpoint.
+     */
+    @PostMapping("/phone/verify-widget")
+    public ResponseEntity<Void> verifyPhoneOtpWidget(
+            @Valid @RequestBody VerifyPhoneWidgetRequest request) {
 
-        authService.sendPhoneOtp(request);
-
-        return ResponseEntity.noContent().build();
-    }
-
-    @PostMapping("/phone/verify-otp")
-    public ResponseEntity<Void> verifyPhoneOtp(
-            @Valid @RequestBody VerifyPhoneOtpRequest request) {
-
-        authService.verifyPhoneOtp(request);
+        authService.verifyPhoneOtpWidget(
+                request.getPhone(),
+                request.getAccessToken()
+        );
 
         return ResponseEntity.noContent().build();
     }
