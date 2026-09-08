@@ -9,41 +9,79 @@ import com.nextcart.nextcart.auth_module.dto.RegisterResponse;
 import com.nextcart.nextcart.auth_module.dto.ResetPasswordRequest;
 import com.nextcart.nextcart.auth_module.dto.SellerRegisterRequest;
 import com.nextcart.nextcart.auth_module.dto.SendEmailOtpRequest;
-import com.nextcart.nextcart.auth_module.dto.SendPhoneOtpRequest;
 import com.nextcart.nextcart.auth_module.dto.TokenRefreshResponse;
 import com.nextcart.nextcart.auth_module.dto.VerifyEmailOtpRequest;
-import com.nextcart.nextcart.auth_module.dto.VerifyPhoneOtpRequest;
 import com.nextcart.nextcart.auth_module.dto.VerifyResetOtpRequest;
 
 public interface AuthService {
+
+    // =========================================================
+    // REGISTRATION
+    // =========================================================
 
     RegisterResponse register(RegisterRequest request);
 
     RegisterResponse registerSeller(SellerRegisterRequest request);
 
+    RegisterResponse completeRegistration(
+            String email,
+            String phone
+    );
+
+    // =========================================================
+    // LOGIN
+    // =========================================================
+
     LoginResponse login(LoginRequest request);
 
-    TokenRefreshResponse refreshAccessToken(RefreshTokenRequest request);
+    TokenRefreshResponse refreshAccessToken(
+            RefreshTokenRequest request
+    );
 
     void logout(String email);
 
-    void sendEmailOtp(SendEmailOtpRequest request);
+    // =========================================================
+    // EMAIL OTP
+    // =========================================================
 
-    void verifyEmailOtp(VerifyEmailOtpRequest request);
+    void sendEmailOtp(
+            SendEmailOtpRequest request
+    );
 
-    void sendPhoneOtp(SendPhoneOtpRequest request);
+    void verifyEmailOtp(
+            VerifyEmailOtpRequest request
+    );
 
-    void verifyPhoneOtp(VerifyPhoneOtpRequest request);
+    // =========================================================
+    // PHONE OTP - MSG91 WIDGET
+    // =========================================================
 
-    /*
-     * Complete customer registration only after
-     * email and phone OTP verification.
+    /**
+     * Verify phone registration using
+     * MSG91 Widget access token.
+     *
+     * The frontend completes OTP verification
+     * through MSG91 Widget and sends the resulting
+     * access token to the backend.
      */
-    RegisterResponse completeRegistration(String email, String phone);
+    void verifyPhoneOtpWidget(
+            String phone,
+            String accessToken
+    );
 
-    void forgotPassword(ForgotPasswordRequest request);
+    // =========================================================
+    // FORGOT PASSWORD
+    // =========================================================
 
-    String verifyResetOtp(VerifyResetOtpRequest request);
+    void forgotPassword(
+            ForgotPasswordRequest request
+    );
 
-    void resetPassword(ResetPasswordRequest request);
+    String verifyResetOtp(
+            VerifyResetOtpRequest request
+    );
+
+    void resetPassword(
+            ResetPasswordRequest request
+    );
 }

@@ -9,9 +9,18 @@ import java.time.LocalDateTime;
 @Table(
         name = "pending_registrations",
         indexes = {
-                @Index(name = "idx_pending_registration_email", columnList = "email"),
-                @Index(name = "idx_pending_registration_phone", columnList = "phone"),
-                @Index(name = "idx_pending_registration_expires_at", columnList = "expires_at")
+                @Index(
+                        name = "idx_pending_registration_email",
+                        columnList = "email"
+                ),
+                @Index(
+                        name = "idx_pending_registration_phone",
+                        columnList = "phone"
+                ),
+                @Index(
+                        name = "idx_pending_registration_expires_at",
+                        columnList = "expires_at"
+                )
         }
 )
 @Getter
@@ -31,10 +40,10 @@ public class PendingRegistration {
     @Column(name = "last_name", nullable = false, length = 100)
     private String lastName;
 
-    @Column(name = "email", nullable = false, length = 150)
+    @Column(name = "email", nullable = true, length = 150)
     private String email;
 
-    @Column(name = "phone", nullable = false, length = 20)
+    @Column(name = "phone", nullable = true, length = 20)
     private String phone;
 
     @Column(name = "password_hash", nullable = false, length = 255)
@@ -64,6 +73,7 @@ public class PendingRegistration {
 
     @PrePersist
     protected void onCreate() {
+
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
         }
@@ -78,12 +88,25 @@ public class PendingRegistration {
         updatedAt = LocalDateTime.now();
     }
 
+    /**
+     * Registration is complete when the identifier
+     * used for registration has been verified.
+     */
     public boolean isFullyVerified() {
-        return emailVerified && phoneVerified;
+
+        if (email != null && !email.isBlank()) {
+            return emailVerified;
+        }
+
+        if (phone != null && !phone.isBlank()) {
+            return phoneVerified;
+        }
+
+        return false;
     }
 
     public boolean isExpired() {
         return expiresAt == null
-                || expiresAt.isBefore(LocalDateTime.now());
+                || !expiresAt.isAfter(LocalDateTime.now());
     }
 }

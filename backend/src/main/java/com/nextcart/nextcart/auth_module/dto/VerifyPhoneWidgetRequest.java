@@ -1,6 +1,6 @@
 package com.nextcart.nextcart.auth_module.dto;
 
-import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.*;
 
@@ -9,14 +9,15 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CompleteRegistrationRequest {
+public class VerifyPhoneWidgetRequest {
 
-    @Email(message = "Invalid email address")
-    private String email;
-
+    @NotBlank(message = "Phone number is required")
     @Pattern(
             regexp = "^[6-9]\\d{9}$",
             message = "Invalid phone number"
     )
     private String phone;
+
+    @NotBlank(message = "MSG91 access token is required")
+    private String accessToken;
 }

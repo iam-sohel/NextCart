@@ -26,16 +26,16 @@ public class RegisterRequest {
     private String email;
 
     @Pattern(
-        regexp = "^[6-9]\\d{9}$",
-        message = "Invalid phone number"
+            regexp = "^[6-9]\\d{9}$",
+            message = "Invalid phone number"
     )
     private String phone;
 
     @NotBlank(message = "Password is required")
     @Size(
-        min = 8,
-        max = 100,
-        message = "Password must be between 8 and 100 characters"
+            min = 8,
+            max = 100,
+            message = "Password must be between 8 and 100 characters"
     )
     private String password;
 }
