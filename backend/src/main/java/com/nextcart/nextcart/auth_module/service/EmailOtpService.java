@@ -74,7 +74,7 @@ public class EmailOtpService {
         String normalizedEmail = email.trim().toLowerCase();
 
         EmailOtp emailOtp = emailOtpRepository
-                .findTopByEmailAndVerifiedFalseOrderByCreatedAtDesc(normalizedEmail)
+                .findTopByEmailIgnoreCaseAndVerifiedFalseOrderByCreatedAtDesc(normalizedEmail)
                 .orElseThrow(() ->
                         new IllegalArgumentException("Invalid or expired OTP"));
 

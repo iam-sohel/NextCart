@@ -9,7 +9,9 @@ public interface EmailOtpRepository extends JpaRepository<EmailOtp, Long> {
 
     Optional<EmailOtp> findTopByEmailOrderByCreatedAtDesc(String email);
 
-    Optional<EmailOtp> findTopByEmailAndVerifiedFalseOrderByCreatedAtDesc(String email);
+    Optional<EmailOtp> findTopByEmailIgnoreCaseAndVerifiedFalseOrderByCreatedAtDesc(
+            String email
+    );
 
     void deleteByEmail(String email);
 }
