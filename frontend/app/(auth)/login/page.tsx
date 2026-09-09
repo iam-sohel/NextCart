@@ -9,7 +9,10 @@ import {
   Alert,
   Box,
   Button,
-  Link as MuiLink,
+  FormControl,
+  FormControlLabel,
+  Radio,
+  RadioGroup,
   Stack,
   TextField,
   Typography,
@@ -19,220 +22,472 @@ import AuthCard from "@/components/auth/AuthCard";
 import OrDivider from "@/components/auth/OrDivider";
 import PasswordField from "@/components/auth/PasswordField";
 import SocialAuthButton from "@/components/auth/SocialAuthButton";
+
 import {
   validateLoginEmail,
   validateLoginPassword,
+  validatePhone,
 } from "@/components/auth/validation";
 
 import useAuthStore from "@/store/authStore";
 
-/**
- * NEXTCART — /login
- *
- * Mobile-first responsive login. Validation runs on submit (and on blur when
- * a field has been touched) so the user sees feedback without us yelling at
- * them while they type.
- *
- * Architectural notes:
- *   - We delegate the HTTP call to `useAuthStore.login`. The store talks to
- *     `services/authService`, which talks to Spring Boot `POST /api/v1/auth/login`.
- *     The same `authService` will be reused by the React Native mobile app,
- *     so any future tweak to the backend wire format happens in one place.
- *   - On success we `router.push("/")` — the home page. There is intentionally
- *     no onboarding, no shipping setup, and no email verification step.
- *   - The "Forgot password?" link points to `/forgot-password`, which is a
- *     polite placeholder for now (it shares the same auth layout).
- */
+type LoginMethod = "email" | "phone";
+
 export default function LoginPage() {
   const router = useRouter();
-  const { login, loading, error, clearError } = useAuthStore();
+
+  const {
+    login,
+    loading,
+    error,
+    clearError,
+  } = useAuthStore();
+
+  const [loginMethod, setLoginMethod] =
+      useState<LoginMethod>("email");
 
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
 
-  // Field-level errors (rendered inline next to each field).
-  const [emailError, setEmailError] = useState<string | null>(null);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [emailError, setEmailError] =
+      useState<string | null>(null);
 
-  // Touched tracking lets us validate on blur only after the user actually
-  // interacted with the field, avoiding a wall of red on first render.
-  const [emailTouched, setEmailTouched] = useState(false);
-  const [passwordTouched, setPasswordTouched] = useState(false);
+  const [phoneError, setPhoneError] =
+      useState<string | null>(null);
 
-  // A non-error notice derived from the URL query: account just created
-  // (?registered=1), session expired, or "please sign in to continue"
-  // (?reason=…). We read it from the URL inside an effect (client-only)
-  // rather than via `useSearchParams`, which would force this page to be
-  // wrapped in a Suspense boundary for the production build.
+  const [passwordError, setPasswordError] =
+      useState<string | null>(null);
+
+  const [emailTouched, setEmailTouched] =
+      useState(false);
+
+  const [phoneTouched, setPhoneTouched] =
+      useState(false);
+
+  const [passwordTouched, setPasswordTouched] =
+      useState(false);
+
   const [notice, setNotice] = useState<{
     severity: "success" | "info";
     text: string;
   } | null>(null);
 
-  // Reset any stale store error when the user lands on the page (e.g. after
-  // a failed signup that bounced to /login with an error still in memory),
-  // and surface any informational notice carried in the query string.
+  /*
+   * Read signup redirect parameters.
+   *
+   * Email:
+   * /login?registered=1&method=email&identifier=test@gmail.com
+   *
+   * Phone:
+   * /login?registered=1&method=phone&identifier=9876543210
+   */
   useEffect(() => {
     clearError();
 
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
+    if (typeof window === "undefined") {
+      return;
+    }
 
-    let next: { severity: "success" | "info"; text: string } | null = null;
+    const params = new URLSearchParams(
+        window.location.search,
+    );
+
+    const method = params.get("method");
+    const identifier = params.get("identifier");
+
+    if (method === "email") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLoginMethod("email");
+
+      if (identifier) {
+        setEmail(identifier);
+      }
+    }
+
+    if (method === "phone") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLoginMethod("phone");
+
+      if (identifier) {
+        setPhone(identifier);
+      }
+    }
+
+    let nextNotice:
+        | {
+      severity: "success" | "info";
+      text: string;
+    }
+        | null = null;
+
     if (params.get("registered") === "1") {
-      next = {
+      nextNotice = {
         severity: "success",
-        text: "Account created successfully. Please sign in to continue.",
+        text:
+            "Account created successfully. Please sign in to continue.",
       };
-    } else if (params.get("reason") === "session-expired") {
-      next = {
+    } else if (
+        params.get("reason") === "session-expired"
+    ) {
+      nextNotice = {
         severity: "info",
-        text: "Your session has expired. Please sign in again.",
+        text:
+            "Your session has expired. Please sign in again.",
       };
-    } else if (params.get("reason") === "login-required") {
-      next = {
+    } else if (
+        params.get("reason") === "login-required"
+    ) {
+      nextNotice = {
         severity: "info",
         text: "Please sign in to continue.",
       };
     }
 
-    if (next) {
+    if (nextNotice) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setNotice(next);
+      setNotice(nextNotice);
     }
   }, [clearError]);
 
+  const handleMethodChange = (
+      event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const method = event.target.value as LoginMethod;
+
+    setLoginMethod(method);
+
+    setEmailError(null);
+    setPhoneError(null);
+    setPasswordError(null);
+
+    setEmailTouched(false);
+    setPhoneTouched(false);
+    setPasswordTouched(false);
+
+    clearError();
+  };
+
   const handleEmailBlur = () => {
+    if (loginMethod !== "email") {
+      return;
+    }
+
     setEmailTouched(true);
     setEmailError(validateLoginEmail(email));
   };
 
-  const handlePasswordBlur = () => {
-    setPasswordTouched(true);
-    setPasswordError(validateLoginPassword(password));
+  const handlePhoneBlur = () => {
+    if (loginMethod !== "phone") {
+      return;
+    }
+
+    setPhoneTouched(true);
+    setPhoneError(validatePhone(phone));
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handlePasswordBlur = () => {
+    setPasswordTouched(true);
+    setPasswordError(
+        validateLoginPassword(password),
+    );
+  };
+
+  const handleSubmit = async (
+      event: React.FormEvent<HTMLFormElement>,
+  ) => {
     event.preventDefault();
 
-    const e = validateLoginEmail(email);
-    const p = validateLoginPassword(password);
-    setEmailError(e);
-    setPasswordError(p);
-    setEmailTouched(true);
-    setPasswordTouched(true);
-    if (e || p) return;
+    clearError();
 
-    const result = await login(email.trim(), password);
+    let identifier = "";
+
+    if (loginMethod === "email") {
+      const emailValidationError =
+          validateLoginEmail(email);
+
+      const passwordValidationError =
+          validateLoginPassword(password);
+
+      setEmailError(emailValidationError);
+      setPasswordError(passwordValidationError);
+
+      setEmailTouched(true);
+      setPasswordTouched(true);
+
+      if (
+          emailValidationError ||
+          passwordValidationError
+      ) {
+        return;
+      }
+
+      identifier = email.trim();
+    } else {
+      const phoneValidationError =
+          validatePhone(phone);
+
+      const passwordValidationError =
+          validateLoginPassword(password);
+
+      setPhoneError(phoneValidationError);
+      setPasswordError(passwordValidationError);
+
+      setPhoneTouched(true);
+      setPasswordTouched(true);
+
+      if (
+          phoneValidationError ||
+          passwordValidationError
+      ) {
+        return;
+      }
+
+      identifier = phone.replace(/\D/g, "");
+    }
+
+    const result = await login(
+        identifier,
+        password,
+    );
+
     if (result.ok) {
       router.push("/");
     }
-    // On failure the store has populated `error`, which we render in <Alert/>.
   };
 
-  const formIsIncomplete = !email.trim() || !password;
+  const formIsIncomplete =
+      loginMethod === "email"
+          ? !email.trim() || !password
+          : !phone.trim() || !password;
 
   return (
-    <AuthCard
-      title="Welcome back"
-      subtitle="Sign in to continue shopping smarter."
-      footer={
-        <Typography variant="body2" color="text.secondary">
-          Don&apos;t have an account?{" "}
-          <MuiLink
-            component={Link}
-            href="/signup"
-            sx={{ fontWeight: 600 }}
-          >
-            Create account
-          </MuiLink>
-        </Typography>
-      }
-    >
-      <Box component="form" onSubmit={handleSubmit} noValidate>
-        <Stack spacing={2}>
-          {notice ? (
-            <Alert severity={notice.severity} variant="outlined">
-              {notice.text}
-            </Alert>
-          ) : null}
+      <AuthCard
+          title="Welcome back"
+          subtitle="Sign in to your NextCart account"
+      >
+        <Stack spacing={3}>
+          {notice && (
+              <Alert severity={notice.severity}>
+                {notice.text}
+              </Alert>
+          )}
 
-          {error ? (
-            <Alert severity="error" variant="outlined" role="alert">
-              {error}
-            </Alert>
-          ) : null}
-
-          <TextField
-            name="email"
-            label="Email"
-            placeholder="you@example.com"
-            type="email"
-            autoComplete="username"
-            inputMode="email"
-            fullWidth
-            size="small"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              if (emailTouched) setEmailError(validateLoginEmail(e.target.value));
-              if (error) clearError();
-            }}
-            onBlur={handleEmailBlur}
-            error={Boolean(emailError)}
-            helperText={emailTouched ? emailError ?? " " : " "}
-          />
+          {error && (
+              <Alert severity="error">
+                {error}
+              </Alert>
+          )}
 
           <Box>
-            <PasswordField
-              name="password"
-              label="Password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                if (passwordTouched)
-                  setPasswordError(validateLoginPassword(e.target.value));
-                if (error) clearError();
-              }}
-              onBlur={handlePasswordBlur}
-              error={Boolean(passwordError)}
-              helperText={passwordTouched ? passwordError ?? " " : " "}
-            />
+            <Typography
+                variant="body2"
+                sx={{
+                  mb: 1,
+                  fontWeight: 600,
+                }}
+            >
+              Sign in with
+            </Typography>
 
-            <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 0.5 }}>
-              <MuiLink
-                component={Link}
-                href="/forgot-password"
-                variant="caption"
-                sx={{ fontWeight: 600 }}
+            <FormControl component="fieldset">
+              <RadioGroup
+                  row
+                  value={loginMethod}
+                  onChange={handleMethodChange}
               >
-                Forgot Password?
-              </MuiLink>
-            </Box>
+                <FormControlLabel
+                    value="email"
+                    control={<Radio />}
+                    label="Email"
+                />
+
+                <FormControlLabel
+                    value="phone"
+                    control={<Radio />}
+                    label="Phone"
+                />
+              </RadioGroup>
+            </FormControl>
           </Box>
 
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            size="large"
-            disabled={loading || formIsIncomplete}
-            sx={{
-              py: 1.125,
-              fontWeight: 700,
-              fontSize: "0.9rem",
-              borderRadius: 1,
-            }}
+          <Box
+              component="form"
+              onSubmit={handleSubmit}
+              noValidate
           >
-            {loading ? "Signing in…" : "Sign In"}
-          </Button>
+            <Stack spacing={2.5}>
+              {loginMethod === "email" ? (
+                  <TextField
+                      fullWidth
+                      name="email"
+                      type="email"
+                      label="Email"
+                      placeholder="Enter your email"
+                      value={email}
+                      onChange={(event) => {
+                        setEmail(event.target.value);
+
+                        if (emailTouched) {
+                          setEmailError(
+                              validateLoginEmail(
+                                  event.target.value,
+                              ),
+                          );
+                        }
+
+                        clearError();
+                      }}
+                      onBlur={handleEmailBlur}
+                      error={
+                          emailTouched &&
+                          Boolean(emailError)
+                      }
+                      helperText={
+                        emailTouched && emailError
+                            ? emailError
+                            : " "
+                      }
+                      autoComplete="email"
+                      disabled={loading}
+                  />
+              ) : (
+                  <TextField
+                      fullWidth
+                      name="phone"
+                      type="tel"
+                      label="Mobile number"
+                      placeholder="Enter 10-digit mobile number"
+                      value={phone}
+                      onChange={(event) => {
+                        const value =
+                            event.target.value.replace(
+                                /\D/g,
+                                "",
+                            );
+
+                        setPhone(value);
+
+                        if (phoneTouched) {
+                          setPhoneError(
+                              validatePhone(value),
+                          );
+                        }
+
+                        clearError();
+                      }}
+                      onBlur={handlePhoneBlur}
+                      error={
+                          phoneTouched &&
+                          Boolean(phoneError)
+                      }
+                      helperText={
+                        phoneTouched && phoneError
+                            ? phoneError
+                            : " "
+                      }
+                      autoComplete="tel"
+                      slotProps={{
+                        htmlInput: {
+                          inputMode: "numeric",
+                          maxLength: 10,
+                        },
+                      }}
+                      disabled={loading}
+                  />
+              )}
+
+              <PasswordField
+                  label="Password"
+                  name="password"
+                  value={password}
+                  onChange={(event) => {
+                    setPassword(event.target.value);
+
+                    if (passwordTouched) {
+                      setPasswordError(
+                          validateLoginPassword(
+                              event.target.value,
+                          ),
+                      );
+                    }
+
+                    clearError();
+                  }}
+                  onBlur={handlePasswordBlur}
+                  error={
+                      passwordTouched &&
+                      Boolean(passwordError)
+                  }
+                  helperText={
+                    passwordTouched && passwordError
+                        ? passwordError
+                        : " "
+                  }
+                  autoComplete="current-password"
+                  disabled={loading}
+              />
+
+              <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    mt: -1,
+                  }}
+              >
+                <Link
+                    href="/forgot-password"
+                    style={{
+                      textDecoration: "none",
+                      fontSize: "0.875rem",
+                    }}
+                >
+                  Forgot password?
+                </Link>
+              </Box>
+
+              <Button
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  size="large"
+                  disabled={
+                      loading ||
+                      formIsIncomplete
+                  }
+              >
+                {loading
+                    ? "Signing in..."
+                    : "Sign In"}
+              </Button>
+            </Stack>
+          </Box>
 
           <OrDivider />
 
-          <SocialAuthButton />
+          <Stack spacing={1.5}>
+            <SocialAuthButton />
+          </Stack>
+
+          <Typography
+              variant="body2"
+              sx={{
+                textAlign: "center",
+              }}
+              color="text.secondary"
+          >
+            Don&apos;t have an account?{" "}
+            <Link
+                href="/signup"
+                style={{
+                  textDecoration: "none",
+                  fontWeight: 600,
+                }}
+            >
+              Create account
+            </Link>
+          </Typography>
         </Stack>
-      </Box>
-    </AuthCard>
+      </AuthCard>
   );
 }

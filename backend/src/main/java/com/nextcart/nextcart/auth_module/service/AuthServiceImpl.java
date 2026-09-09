@@ -816,7 +816,7 @@ public class AuthServiceImpl implements AuthService {
 
         EmailOtp emailOtp =
                 emailOtpRepository
-                        .findTopByEmailAndVerifiedFalseOrderByCreatedAtDesc(
+                        .findTopByEmailIgnoreCaseAndVerifiedFalseOrderByCreatedAtDesc(
                                 email
                         )
                         .orElseThrow(() ->

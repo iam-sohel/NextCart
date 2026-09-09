@@ -34,7 +34,7 @@ export interface AuthUser {
   id?: number;
   firstName: string;
   lastName: string;
-  email: string;
+  email?: string;
   phone?: string;
 }
 
@@ -43,15 +43,16 @@ export interface AuthUser {
    ────────────────────────────────────────────────────────────────────── */
 
 export interface LoginCredentials {
-  email: string;
+  email?: string;
+  phone?: string;
   password: string;
 }
 
 export interface SignupDetails {
   firstName: string;
   lastName: string;
-  email: string;
-  phone: string;
+  email?: string;
+  phone?: string;
   password: string;
 }
 
@@ -62,8 +63,8 @@ export interface SignupDetails {
 interface BackendRegisterRequest {
   firstName: string;
   lastName: string;
-  email: string;
-  phone: string;
+  email?: string;
+  phone?: string;
   password: string;
 }
 
@@ -73,30 +74,27 @@ interface BackendRegisterResponse {
   lastName?: string;
   email?: string;
   phone?: string;
+  role?: string;
+  emailOtpSent?: boolean;
+  phoneOtpSent?: boolean;
   message?: string;
 }
 
-interface BackendLoginUser {
-  id?: number;
+
+
+interface BackendLoginResponse {
+  accessToken?: string;
+  refreshToken?: string;
+  tokenType?: string;
+  userId?: number;
   firstName?: string;
   lastName?: string;
   email?: string;
   phone?: string;
-}
-
-interface BackendLoginResponse {
-  token?: string;
-  refreshToken?: string;
+  role?: string;
   message?: string;
-  user?: BackendLoginUser;
 }
 
-/**
- * Response from `POST /api/v1/auth/refresh` (Spring `TokenRefreshResponse`).
- * NOTE the field-name mismatch with login, confirmed against the backend:
- * login returns the access token as `token`, whereas refresh returns it as
- * `accessToken`. Both also return a rotated `refreshToken`.
- */
 interface BackendTokenRefreshResponse {
   accessToken?: string;
   refreshToken?: string;
@@ -116,18 +114,14 @@ interface BackendVerifyEmailOtpRequest {
   otp: string;
 }
 
-interface BackendSendPhoneOtpRequest {
+interface BackendVerifyPhoneWidgetRequest {
   phone: string;
-}
-
-interface BackendVerifyPhoneOtpRequest {
-  phone: string;
-  otp: string;
+  accessToken: string;
 }
 
 interface BackendCompleteRegistrationRequest {
-  email: string;
-  phone: string;
+  email?: string;
+  phone?: string;
 }
 
 /* ──────────────────────────────────────────────────────────────────────
@@ -145,57 +139,70 @@ function isLikelyBadCredentials(status: number): boolean {
 export const authService = {
   /**
    * POST /api/v1/auth/login
-   * Returns the JWT `token`, a `refreshToken`, plus the backend's confirmation
-   * message. Persistence of both tokens is handled by the auth store
-   * (localStorage via Zustand `persist`); the backend is bearer-only and
-   * issues no cookie. `skipAuthRefresh` keeps this call out of the automatic
-   * refresh-on-401 machinery — a failed login is a credentials problem, not an
-   * expired session.
+   *
+   * Login using either email OR phone.
+   *
+   * Backend returns:
+   *   accessToken
+   *   refreshToken
+   *   tokenType
+   *   userId
+   *   firstName
+   *   lastName
+   *   email
+   *   phone
+   *   role
+   *   message
    */
   async login(
-    credentials: LoginCredentials,
-    signal?: AbortSignal,
+      credentials: LoginCredentials,
+      signal?: AbortSignal,
   ): Promise<
-    ApiResult<{
-      token: string;
-      refreshToken: string;
-      message: string;
-      user?: AuthUser;
-    }>
-  >{
-    const res = await apiRequest<BackendLoginResponse>("/api/v1/auth/login", {
-      method: "POST",
-      body: {
-        email: credentials.email,
-        password: credentials.password,
-      },
-      skipAuthRefresh: true,
-      signal,
-    });
+      ApiResult<{
+        token: string;
+        refreshToken: string;
+        message: string;
+        user?: AuthUser;
+      }>
+  > {
+    const res = await apiRequest<BackendLoginResponse>(
+        "/api/v1/auth/login",
+        {
+          method: "POST",
+          body: {
+            email: credentials.email,
+            phone: credentials.phone,
+            password: credentials.password,
+          },
+          skipAuthRefresh: true,
+          signal,
+        },
+    );
 
     if (!res.ok) {
       if (isLikelyBadCredentials(res.status)) {
         return {
           ...res,
-          message: "Invalid email or password. Please try again.",
+          message:
+              "Invalid email/phone or password. Please try again.",
         };
       }
+
       return res;
     }
 
-    const token = res.data?.token ?? "";
+    const token = res.data?.accessToken ?? "";
     const refreshToken = res.data?.refreshToken ?? "";
-    const message = res.data?.message ?? "Login successful";
+    const message =
+        res.data?.message ?? "Login successful";
 
-    const user: AuthUser | undefined = res.data?.user
-      ? {
-          id: res.data.user.id,
-          firstName: res.data.user.firstName ?? "",
-          lastName: res.data.user.lastName ?? "",
-          email: res.data.user.email ?? "",
-          phone: res.data.user.phone ?? "",
-        }
-      : undefined;
+    const user: AuthUser = {
+      id: res.data?.userId,
+      firstName: res.data?.firstName ?? "",
+      lastName: res.data?.lastName ?? "",
+      email: res.data?.email ?? "",
+      phone: res.data?.phone ?? "",
+    };
 
     return {
       ok: true,
@@ -211,12 +218,12 @@ export const authService = {
 
   /**
    * POST /api/v1/auth/register
-   * The backend requires firstName + lastName + phone — we now accept them
-   * directly from the form, no splitting needed.
+   *
+   * Registration supports either email OR phone.
    */
   async register(
-    details: SignupDetails,
-    signal?: AbortSignal,
+      details: SignupDetails,
+      signal?: AbortSignal,
   ): Promise<ApiResult<{ user: AuthUser; message: string }>> {
     const body: BackendRegisterRequest = {
       firstName: details.firstName,
@@ -226,279 +233,324 @@ export const authService = {
       password: details.password,
     };
 
-    const res = await apiRequest<BackendRegisterResponse>("/api/v1/auth/register", {
-      method: "POST",
-      body,
-      skipAuthRefresh: true,
-      signal,
-    });
+    const res = await apiRequest<BackendRegisterResponse>(
+        "/api/v1/auth/register",
+        {
+          method: "POST",
+          body,
+          skipAuthRefresh: true,
+          signal,
+        },
+    );
 
     if (!res.ok) {
-      // The backend throws a raw RuntimeException (→ HTTP 500) when the email
-      // or phone is already registered, with no usable message. Surface an
-      // honest, hedged explanation. Network errors (status 0) are preserved.
       if (res.status >= 500) {
         return {
           ...res,
           message:
-            "We couldn't create your account. This email or mobile number may already be registered.",
+              "We couldn't create your account. This email or mobile number may already be registered.",
         };
       }
+
       return res;
     }
 
     const user: AuthUser = {
       id: res.data?.id,
-      firstName: res.data?.firstName ?? details.firstName,
-      lastName: res.data?.lastName ?? details.lastName,
-      email: res.data?.email ?? details.email,
+      firstName:
+          res.data?.firstName ?? details.firstName,
+      lastName:
+          res.data?.lastName ?? details.lastName,
+      email:
+          res.data?.email ?? details.email,
+      phone:
+          res.data?.phone ?? details.phone,
     };
-    const message = res.data?.message ?? "Registration successful";
 
-    return { ok: true, status: res.status, data: { user, message } };
+    const message =
+        res.data?.message ?? "Registration successful";
+
+    return {
+      ok: true,
+      status: res.status,
+      data: {
+        user,
+        message,
+      },
+    };
   },
 
   /**
    * POST /api/v1/auth/refresh
    *
-   * Exchanges a still-valid refresh token for a NEW access token AND a NEW
-   * refresh token (the backend rotates the refresh token on every call and
-   * deletes the previous one, so only one refresh token per user is ever
-   * live). The request carries the refresh token in the BODY — never as a
-   * Bearer header — so we pass `token: null` to suppress attaching the
-   * (possibly expired) access token, and `skipAuthRefresh: true` so a failed
-   * refresh can never recursively try to refresh itself.
-   *
-   * Returns the mapped `{ accessToken, refreshToken }`. A non-ok result is
-   * passed through so the caller can distinguish an invalid/expired refresh
-   * token (status ≥ 400 → session over) from a network failure (status 0 →
-   * transient, keep the session).
+   * Exchanges a valid refresh token for a NEW access token
+   * and a NEW refresh token.
    */
   async refreshSession(
-    refreshToken: string,
-    signal?: AbortSignal,
-  ): Promise<ApiResult<{ accessToken: string; refreshToken: string }>> {
-    const res = await apiRequest<BackendTokenRefreshResponse>("/api/v1/auth/refresh", {
-      method: "POST",
-      body: { refreshToken },
-      token: null,
-      skipAuthRefresh: true,
-      signal,
-    });
+      refreshToken: string,
+      signal?: AbortSignal,
+  ): Promise<
+      ApiResult<{
+        accessToken: string;
+        refreshToken: string;
+      }>
+  > {
+    const res =
+        await apiRequest<BackendTokenRefreshResponse>(
+            "/api/v1/auth/refresh",
+            {
+              method: "POST",
+              body: { refreshToken },
+              token: null,
+              skipAuthRefresh: true,
+              signal,
+            },
+        );
 
     if (!res.ok) return res;
 
-    const accessToken = res.data?.accessToken ?? "";
-    const rotatedRefreshToken = res.data?.refreshToken ?? "";
+    const accessToken =
+        res.data?.accessToken ?? "";
 
-    // A 2xx that is missing either token is not a usable session — treat it as
-    // a failed refresh rather than storing empty credentials.
+    const rotatedRefreshToken =
+        res.data?.refreshToken ?? "";
+
     if (!accessToken || !rotatedRefreshToken) {
       return {
         ok: false,
         status: res.status,
-        message: "Refresh response did not contain the expected tokens.",
+        message:
+            "Refresh response did not contain the expected tokens.",
       };
     }
 
     return {
       ok: true,
       status: res.status,
-      data: { accessToken, refreshToken: rotatedRefreshToken },
+      data: {
+        accessToken,
+        refreshToken: rotatedRefreshToken,
+      },
     };
   },
 
   /**
    * POST /api/v1/auth/logout
-   *
-   * The backend now deletes the user's refresh token(s) server-side, so this
-   * call genuinely ends the refreshable session — but the 24h access JWT is
-   * still stateless and cannot be revoked, so the authoritative client-side
-   * logout remains dropping the tokens from the store. We call the endpoint
-   * best-effort to honor the contract, mark it `skipAuthRefresh` so a 401/500
-   * during logout never triggers a refresh, and deliberately swallow any
-   * error: a failed logout call must never block the user from ending their
-   * session locally.
    */
-  async logout(signal?: AbortSignal): Promise<void> {
+  async logout(
+      signal?: AbortSignal,
+  ): Promise<void> {
     try {
-      await apiRequest("/api/v1/auth/logout", {
-        method: "POST",
-        skipAuthRefresh: true,
-        signal,
-      });
+      await apiRequest(
+          "/api/v1/auth/logout",
+          {
+            method: "POST",
+            skipAuthRefresh: true,
+            signal,
+          },
+      );
     } catch {
-      // Intentionally ignored — client-side token removal is authoritative.
+      // Client-side token removal is authoritative.
     }
   },
 
   /* ──────────────────────────────────────────────────────────────────────
-   OTP verification & complete registration
-   ────────────────────────────────────────────────────────────────────── */
+     OTP verification & complete registration
+     ────────────────────────────────────────────────────────────────────── */
 
   /**
    * POST /api/v1/auth/email/send-otp
-   * Sends a 6-digit verification code to the given email address.
-   * The backend stores the OTP hash and associates it with a pending
-   * registration (or creates one if none exists for this email).
    *
-   * OTP expiry: 5 minutes. Max attempts: 5.
+   * Sends email OTP.
    */
   async sendEmailVerificationOtp(
-    email: string,
-    signal?: AbortSignal,
+      email: string,
+      signal?: AbortSignal,
   ): Promise<ApiResult<void>> {
-    const res = await apiRequest<BackendSendEmailOtpRequest>("/api/v1/auth/email/send-otp", {
-      method: "POST",
-      body: { email },
-      skipAuthRefresh: true,
-      signal,
-    });
+    const res =
+        await apiRequest<BackendSendEmailOtpRequest>(
+            "/api/v1/auth/email/send-otp",
+            {
+              method: "POST",
+              body: { email },
+              skipAuthRefresh: true,
+              signal,
+            },
+        );
 
     if (!res.ok) {
       if (res.status >= 500) {
         return {
           ...res,
-          message: "We couldn't send the email verification code. Please try again.",
+          message:
+              "We couldn't send the email verification code. Please try again.",
         };
       }
+
       return res;
     }
 
-    return { ok: true, status: res.status, data: undefined };
+    return {
+      ok: true,
+      status: res.status,
+      data: undefined,
+    };
   },
 
   /**
    * POST /api/v1/auth/email/verify-otp
-   * Verifies a 6-digit OTP for the given email.
-   * On success, marks the email as verified on the pending registration.
    *
-   * OTP expiry: 5 minutes. Max attempts: 5.
+   * Verifies email OTP.
    */
   async verifyEmailOtp(
-    email: string,
-    otp: string,
-    signal?: AbortSignal,
+      email: string,
+      otp: string,
+      signal?: AbortSignal,
   ): Promise<ApiResult<void>> {
-    const res = await apiRequest<BackendVerifyEmailOtpRequest>("/api/v1/auth/email/verify-otp", {
-      method: "POST",
-      body: { email, otp },
-      skipAuthRefresh: true,
-      signal,
-    });
+    const res =
+        await apiRequest<BackendVerifyEmailOtpRequest>(
+            "/api/v1/auth/email/verify-otp",
+            {
+              method: "POST",
+              body: { email, otp },
+              skipAuthRefresh: true,
+              signal,
+            },
+        );
 
     if (!res.ok) {
       if (res.status >= 500) {
         return {
           ...res,
-          message: "We couldn't verify the email code. Please try again.",
+          message:
+              "We couldn't verify the email code. Please try again.",
         };
       }
+
       return res;
     }
 
-    return { ok: true, status: res.status, data: undefined };
+    return {
+      ok: true,
+      status: res.status,
+      data: undefined,
+    };
   },
 
   /**
-   * POST /api/v1/auth/phone/send-otp
-   * Sends a 6-digit verification code to the given phone number via SMS.
-   * Note: The SMS service is currently a stub that only logs the request.
-   * In production, integrate with Twilio/MSG91/AWS SNS.
+   * PHONE OTP
    *
-   * OTP expiry: 5 minutes. Max attempts: 5.
-   */
-  async sendPhoneVerificationOtp(
-    phone: string,
-    signal?: AbortSignal,
-  ): Promise<ApiResult<void>> {
-    const res = await apiRequest<BackendSendPhoneOtpRequest>("/api/v1/auth/phone/send-otp", {
-      method: "POST",
-      body: { phone },
-      skipAuthRefresh: true,
-      signal,
-    });
-
-    if (!res.ok) {
-      if (res.status >= 500) {
-        return {
-          ...res,
-          message: "We couldn't send the phone verification code. Please try again.",
-        };
-      }
-      return res;
-    }
-
-    return { ok: true, status: res.status, data: undefined };
-  },
-
-  /**
-   * POST /api/v1/auth/phone/verify-otp
-   * Verifies a 6-digit OTP for the given phone number.
-   * On success, marks the phone as verified on the pending registration.
+   * MSG91 Widget handles:
+   *   - Sending OTP
+   *   - OTP verification
    *
-   * OTP expiry: 5 minutes. Max attempts: 5.
+   * Frontend receives the MSG91 access token after successful
+   * widget verification.
+   *
+   * Backend then verifies that access token through:
+   *
+   * POST /api/v1/auth/phone/verify-widget
+   *
+   * IMPORTANT:
+   * This method name is kept as `verifyPhoneOtp` so existing
+   * Zustand/frontend code can continue using the same method.
+   *
+   * The second parameter is now MSG91 `accessToken`,
+   * NOT the OTP itself.
    */
   async verifyPhoneOtp(
-    phone: string,
-    otp: string,
-    signal?: AbortSignal,
+      phone: string,
+      accessToken: string,
+      signal?: AbortSignal,
   ): Promise<ApiResult<void>> {
-    const res = await apiRequest<BackendVerifyPhoneOtpRequest>("/api/v1/auth/phone/verify-otp", {
-      method: "POST",
-      body: { phone, otp },
-      skipAuthRefresh: true,
-      signal,
-    });
+    const body: BackendVerifyPhoneWidgetRequest = {
+      phone,
+      accessToken,
+    };
+
+    const res =
+        await apiRequest<void>(
+            "/api/v1/auth/phone/verify-widget",
+            {
+              method: "POST",
+              body,
+              skipAuthRefresh: true,
+              signal,
+            },
+        );
 
     if (!res.ok) {
       if (res.status >= 500) {
         return {
           ...res,
-          message: "We couldn't verify the phone code. Please try again.",
+          message:
+              "We couldn't verify your phone number. Please try again.",
         };
       }
+
       return res;
     }
 
-    return { ok: true, status: res.status, data: undefined };
+    return {
+      ok: true,
+      status: res.status,
+      data: undefined,
+    };
   },
 
   /**
    * POST /api/v1/auth/register/complete
-   * Finalizes customer registration after both email and phone OTPs are verified.
-   * Looks up the pending registration by email+phone, checks that both
-   * verifications succeeded, then creates the real user account.
    *
-   * Do NOT send password or OTPs in this request — the backend already has
-   * the password hash from the initial /register call.
+   * Finalizes customer registration after the selected
+   * identifier has been verified.
+   *
+   * Supported:
+   *
+   * Email registration:
+   *   email = verified email
+   *   phone = undefined
+   *
+   * Phone registration:
+   *   email = undefined
+   *   phone = verified phone
+   *
+   * Do NOT send password or OTP in this request.
    */
   async completeRegistration(
-    email: string,
-    phone: string,
-    signal?: AbortSignal,
-  ): Promise<ApiResult<{ user: AuthUser; message: string }>> {
+      email?: string,
+      phone?: string,
+      signal?: AbortSignal,
+  ): Promise<
+      ApiResult<{
+        user: AuthUser;
+        message: string;
+      }>
+  > {
     const body: BackendCompleteRegistrationRequest = {
       email,
       phone,
     };
 
-    const res = await apiRequest<BackendRegisterResponse>("/api/v1/auth/register/complete", {
-      method: "POST",
-      body,
-      skipAuthRefresh: true,
-      signal,
-    });
+    const res =
+        await apiRequest<BackendRegisterResponse>(
+            "/api/v1/auth/register/complete",
+            {
+              method: "POST",
+              body,
+              skipAuthRefresh: true,
+              signal,
+            },
+        );
 
     if (!res.ok) {
-      // Handle specific backend errors
       if (res.status >= 500) {
         return {
           ...res,
           message:
-            "We couldn't complete your registration. Please try again or create a new account.",
+              "We couldn't complete your registration. Please try again or create a new account.",
         };
       }
+
       return res;
     }
 
@@ -510,9 +562,17 @@ export const authService = {
       phone: res.data?.phone ?? phone,
     };
 
-    const message = res.data?.message ?? "Registration complete";
+    const message =
+        res.data?.message ?? "Registration complete";
 
-    return { ok: true, status: res.status, data: { user, message } };
+    return {
+      ok: true,
+      status: res.status,
+      data: {
+        user,
+        message,
+      },
+    };
   },
 };
 
