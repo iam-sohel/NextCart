@@ -6,23 +6,23 @@ import com.nextcart.nextcart.cart_module.dto.CartResponseDTO;
 
 public interface CartService {
 
-    CartResponseDTO getCart(String userEmail);
+    CartResponseDTO getCart(String userIdentifier);
 
     CartResponseDTO addItem(
-            String userEmail,
+            String userIdentifier,
             CartItemAddRequestDTO request
     );
 
     CartResponseDTO updateItem(
-            String userEmail,
+            String userIdentifier,
             Long itemId,
             CartItemUpdateRequestDTO request
     );
 
     void removeItem(
-            String userEmail,
+            String userIdentifier,
             Long itemId
     );
 
-    void clearCart(String userEmail);
+    void clearCart(String userIdentifier);
 }

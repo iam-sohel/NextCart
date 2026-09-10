@@ -47,16 +47,15 @@ public class CartServiceImpl implements CartService {
     private final ProductVariantDiscountRepository productVariantDiscountRepository;
     private final CartMapper cartMapper;
 
-
     // =========================================================
     // GET CART
     // =========================================================
 
     @Override
     @Transactional(readOnly = true)
-    public CartResponseDTO getCart(String userEmail) {
+    public CartResponseDTO getCart(String userIdentifier) {
 
-        User user = getUser(userEmail);
+        User user = getUser(userIdentifier);
 
         Cart cart = cartRepository
                 .findByUserId(user.getId())
@@ -69,14 +68,13 @@ public class CartServiceImpl implements CartService {
         return buildCartResponse(cart);
     }
 
-
     // =========================================================
     // ADD ITEM
     // =========================================================
 
     @Override
     public CartResponseDTO addItem(
-            String userEmail,
+            String userIdentifier,
             CartItemAddRequestDTO request) {
 
         if (request == null) {
@@ -87,7 +85,7 @@ public class CartServiceImpl implements CartService {
 
         validateQuantity(request.getQuantity());
 
-        User user = getUser(userEmail);
+        User user = getUser(userIdentifier);
 
         ProductVariantEntity productVariant =
                 getActiveProductVariant(
@@ -139,14 +137,13 @@ public class CartServiceImpl implements CartService {
         return buildCartResponse(cart);
     }
 
-
     // =========================================================
     // UPDATE ITEM
     // =========================================================
 
     @Override
     public CartResponseDTO updateItem(
-            String userEmail,
+            String userIdentifier,
             Long itemId,
             CartItemUpdateRequestDTO request) {
 
@@ -160,7 +157,7 @@ public class CartServiceImpl implements CartService {
 
         validateQuantity(request.getQuantity());
 
-        User user = getUser(userEmail);
+        User user = getUser(userIdentifier);
 
         Cart cart = getCart(user);
 
@@ -197,19 +194,18 @@ public class CartServiceImpl implements CartService {
         return buildCartResponse(cart);
     }
 
-
     // =========================================================
     // REMOVE ITEM
     // =========================================================
 
     @Override
     public void removeItem(
-            String userEmail,
+            String userIdentifier,
             Long itemId) {
 
         validateItemId(itemId);
 
-        User user = getUser(userEmail);
+        User user = getUser(userIdentifier);
 
         Cart cart = getCart(user);
 
@@ -231,15 +227,14 @@ public class CartServiceImpl implements CartService {
         cartItemRepository.delete(cartItem);
     }
 
-
     // =========================================================
     // CLEAR CART
     // =========================================================
 
     @Override
-    public void clearCart(String userEmail) {
+    public void clearCart(String userIdentifier) {
 
-        User user = getUser(userEmail);
+        User user = getUser(userIdentifier);
 
         Cart cart = cartRepository
                 .findByUserId(user.getId())
@@ -254,32 +249,48 @@ public class CartServiceImpl implements CartService {
         cartRepository.save(cart);
     }
 
-
     // =========================================================
     // USER
     // =========================================================
 
-    private User getUser(String userEmail) {
+    private User getUser(String userIdentifier) {
 
-        if (userEmail == null ||
-                userEmail.isBlank()) {
+        if (userIdentifier == null ||
+                userIdentifier.isBlank()) {
 
             throw new CartUserNotFoundException(
                     "Authenticated user is required"
             );
         }
 
-        return userRepository
-                .findByEmailIgnoreCase(
-                        userEmail.trim()
-                )
-                .orElseThrow(() ->
-                        new CartUserNotFoundException(
-                                "User not found"
-                        )
-                );
-    }
+        String identifier = userIdentifier.trim();
 
+        // Try USER ID first
+        try {
+
+            Long userId = Long.valueOf(identifier);
+
+            return userRepository
+                    .findById(userId)
+                    .orElseThrow(() ->
+                            new CartUserNotFoundException(
+                                    "User not found with id: "
+                                            + userId
+                            )
+                    );
+
+        } catch (NumberFormatException ignored) {
+
+            // Fallback to EMAIL
+            return userRepository
+                    .findByEmailIgnoreCase(identifier)
+                    .orElseThrow(() ->
+                            new CartUserNotFoundException(
+                                    "User not found"
+                            )
+                    );
+        }
+    }
 
     // =========================================================
     // CART
@@ -296,7 +307,6 @@ public class CartServiceImpl implements CartService {
                 );
     }
 
-
     private Cart getOrCreateCart(User user) {
 
         return cartRepository
@@ -308,7 +318,6 @@ public class CartServiceImpl implements CartService {
                     return cartRepository.save(cart);
                 });
     }
-
 
     // =========================================================
     // PRODUCT VARIANT
@@ -337,7 +346,6 @@ public class CartServiceImpl implements CartService {
                         )
                 );
     }
-
 
     // =========================================================
     // QUANTITY
@@ -368,7 +376,6 @@ public class CartServiceImpl implements CartService {
         }
     }
 
-
     private void validateItemId(Long itemId) {
 
         if (itemId == null ||
@@ -379,7 +386,6 @@ public class CartServiceImpl implements CartService {
             );
         }
     }
-
 
     // =========================================================
     // RESPONSE
@@ -579,7 +585,6 @@ public class CartServiceImpl implements CartService {
         );
     }
 
-
     // =========================================================
     // EMPTY CART
     // =========================================================
@@ -602,7 +607,6 @@ public class CartServiceImpl implements CartService {
                 .currency(DEFAULT_CURRENCY)
                 .build();
     }
-
 
     // =========================================================
     // DISCOUNT
@@ -676,7 +680,6 @@ public class CartServiceImpl implements CartService {
 
         return money(discountAmount);
     }
-
 
     // =========================================================
     // MONEY

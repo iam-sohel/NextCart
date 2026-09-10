@@ -1,19 +1,19 @@
 package com.nextcart.nextcart.checkout_module;
 
 import com.nextcart.nextcart.adcommon.dto.ApiResponse;
-import com.nextcart.nextcart.checkout_module.CheckoutRequestDTO;
-import com.nextcart.nextcart.checkout_module.CheckoutResponseDTO;
-import com.nextcart.nextcart.checkout_module.CheckoutService;
+import com.nextcart.nextcart.auth_module.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/checkout")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('CUSTOMER')")
 public class CheckoutController {
 
     private final CheckoutService checkoutService;
@@ -35,12 +35,46 @@ public class CheckoutController {
             @Valid @RequestBody CheckoutRequestDTO request
     ) {
 
-        String userEmail =
-                authentication.getName();
+        // -----------------------------------------------------
+        // GET AUTHENTICATED CUSTOMER
+        // -----------------------------------------------------
+
+        if (authentication == null ||
+                !authentication.isAuthenticated()) {
+
+            throw new IllegalArgumentException(
+                    "Authenticated customer is required"
+            );
+        }
+
+        Object principal =
+                authentication.getPrincipal();
+
+        if (!(principal instanceof CustomUserDetails userDetails)) {
+
+            throw new IllegalArgumentException(
+                    "Authenticated customer details are unavailable"
+            );
+        }
+
+        Long userId =
+                userDetails.getUserId();
+
+        if (userId == null ||
+                userId <= 0) {
+
+            throw new IllegalArgumentException(
+                    "Authenticated customer ID is invalid"
+            );
+        }
+
+        // -----------------------------------------------------
+        // CHECKOUT
+        // -----------------------------------------------------
 
         CheckoutResponseDTO response =
                 checkoutService.checkout(
-                        userEmail,
+                        String.valueOf(userId),
                         request
                 );
 

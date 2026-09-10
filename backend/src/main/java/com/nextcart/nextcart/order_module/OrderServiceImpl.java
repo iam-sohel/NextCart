@@ -79,10 +79,10 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponseDTO createOrder(
-            String userEmail,
+            String userIdentifier,
             OrderCreateRequestDTO request) {
 
-        validateEmail(userEmail);
+        validateUserIdentifier(userIdentifier);
 
         if (request == null ||
                 request.getAddressId() == null) {
@@ -92,9 +92,16 @@ public class OrderServiceImpl implements OrderService {
             );
         }
 
+        if (request.getPaymentMethod() == null) {
+
+            throw new OrderValidationException(
+                    "Payment method is required"
+            );
+        }
+
         validateId(request.getAddressId());
 
-        User user = getUser(userEmail);
+        User user = getUser(userIdentifier);
 
         Address address =
                 addressRepository
@@ -140,10 +147,15 @@ public class OrderServiceImpl implements OrderService {
         LocalDateTime now =
                 LocalDateTime.now();
 
-        LocalDateTime paymentExpiresAt =
-                now.plusMinutes(
-                        PAYMENT_WINDOW_MINUTES
-                );
+        LocalDateTime paymentExpiresAt = null;
+
+        if (request.getPaymentMethod() == PaymentMethod.ONLINE) {
+
+            paymentExpiresAt =
+                    now.plusMinutes(
+                            PAYMENT_WINDOW_MINUTES
+                    );
+        }
 
         OrderEntity order =
                 OrderEntity.builder()
@@ -152,6 +164,17 @@ public class OrderServiceImpl implements OrderService {
                         )
                         .user(user)
                         .status(OrderStatus.PENDING)
+                        .paymentMethod(
+                                request.getPaymentMethod()
+                        )
+
+                        // =====================================
+                        // PAYMENT STATUS
+                        // =====================================
+
+                        .paymentStatus(
+                                PaymentStatus.PENDING
+                        )
 
                         // =====================================
                         // PAYMENT EXPIRY
@@ -230,6 +253,9 @@ public class OrderServiceImpl implements OrderService {
 
             OrderItemEntity orderItem =
                     OrderItemEntity.builder()
+                            .product(
+                                    cartItem.getProduct()
+                            )
                             .productVariant(variant)
                             .productName(
                                     getProductName(cartItem)
@@ -239,6 +265,9 @@ public class OrderServiceImpl implements OrderService {
                             )
                             .quantity(
                                     cartItem.getQuantity()
+                            )
+                            .price(
+                                    pricedItem.unitSellingPrice()
                             )
                             .unitMrp(
                                     pricedItem.unitMrp()
@@ -278,14 +307,14 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public OrderResponseDTO getOrderById(
-            String userEmail,
+            String userIdentifier,
             Long orderId) {
 
-        validateEmail(userEmail);
+        validateUserIdentifier(userIdentifier);
         validateId(orderId);
 
         User user =
-                getUser(userEmail);
+                getUser(userIdentifier);
 
         OrderEntity order =
                 orderRepository
@@ -309,10 +338,10 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public OrderResponseDTO getOrderByNumber(
-            String userEmail,
+            String userIdentifier,
             String orderNumber) {
 
-        validateEmail(userEmail);
+        validateUserIdentifier(userIdentifier);
 
         if (orderNumber == null ||
                 orderNumber.isBlank()) {
@@ -323,7 +352,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         User user =
-                getUser(userEmail);
+                getUser(userIdentifier);
 
         OrderEntity order =
                 orderRepository
@@ -358,13 +387,13 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Page<OrderResponseDTO> getMyOrders(
-            String userEmail,
+            String userIdentifier,
             Pageable pageable) {
 
-        validateEmail(userEmail);
+        validateUserIdentifier(userIdentifier);
 
         User user =
-                getUser(userEmail);
+                getUser(userIdentifier);
 
         return orderRepository
                 .findByUser(
@@ -381,11 +410,11 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Page<OrderResponseDTO> getMyOrdersByStatus(
-            String userEmail,
+            String userIdentifier,
             OrderStatus status,
             Pageable pageable) {
 
-        validateEmail(userEmail);
+        validateUserIdentifier(userIdentifier);
 
         if (status == null) {
 
@@ -395,7 +424,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         User user =
-                getUser(userEmail);
+                getUser(userIdentifier);
 
         return orderRepository
                 .findByUserAndStatus(
@@ -414,14 +443,14 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponseDTO cancelOrder(
-            String userEmail,
+            String userIdentifier,
             Long orderId) {
 
-        validateEmail(userEmail);
+        validateUserIdentifier(userIdentifier);
         validateId(orderId);
 
         User user =
-                getUser(userEmail);
+                getUser(userIdentifier);
 
         /*
          * Lock order before checking/changing its state.
@@ -1404,11 +1433,39 @@ public class OrderServiceImpl implements OrderService {
     // USER
     // =========================================================
 
+    /**
+     * Resolves the authenticated customer from the JWT subject.
+     *
+     * Current JWT configuration stores the user id as the subject,
+     * so phone-only customers work correctly even when email is null.
+     *
+     * For backward compatibility, an email identifier is also accepted.
+     */
     private User getUser(
-            String email) {
+            String userIdentifier) {
+
+        validateUserIdentifier(userIdentifier);
+
+        String identifier =
+                userIdentifier.trim();
+
+        // Current authentication flow: JWT subject = user id.
+        try {
+            Long userId = Long.valueOf(identifier);
+
+            return userRepository
+                    .findById(userId)
+                    .orElseThrow(
+                            () -> new OrderNotFoundException(
+                                    "User not found"
+                            )
+                    );
+        } catch (NumberFormatException ignored) {
+            // Backward-compatible email lookup.
+        }
 
         return userRepository
-                .findByEmailIgnoreCase(email)
+                .findByEmailIgnoreCase(identifier)
                 .orElseThrow(
                         () -> new OrderNotFoundException(
                                 "User not found"
@@ -1418,17 +1475,17 @@ public class OrderServiceImpl implements OrderService {
 
 
     // =========================================================
-    // EMAIL VALIDATION
+    // USER IDENTIFIER VALIDATION
     // =========================================================
 
-    private void validateEmail(
-            String email) {
+    private void validateUserIdentifier(
+            String userIdentifier) {
 
-        if (email == null ||
-                email.isBlank()) {
+        if (userIdentifier == null ||
+                userIdentifier.isBlank()) {
 
             throw new OrderValidationException(
-                    "User email is required"
+                    "Authenticated user is required"
             );
         }
     }
@@ -1531,6 +1588,8 @@ public class OrderServiceImpl implements OrderService {
                 .id(order.getId())
                 .orderNumber(order.getOrderNumber())
                 .status(order.getStatus())
+                .paymentMethod(order.getPaymentMethod())
+                .paymentStatus(order.getPaymentStatus())
 
                 // =====================================
                 // PAYMENT
@@ -1685,3 +1744,7 @@ public class OrderServiceImpl implements OrderService {
             BigDecimal lineTotal) {
     }
 }
+
+
+
+
