@@ -22,6 +22,7 @@ export default function ProductCarousel({ products }: Props) {
         "&::-webkit-scrollbar": {
           display: "none",
         },
+        scrollbarWidth: "none",
       }}
     >
       {products.map((product) => (

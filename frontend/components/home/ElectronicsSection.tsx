@@ -1,8 +1,9 @@
 "use client";
 
-import { Container, Typography } from "@mui/material";
+import { Box, Container } from "@mui/material";
 
 import ProductCarousel from "@/components/products/ProductCarousel";
+import SectionTitle from "./sectiontitle";
 import type { Product } from "@/types/product";
 
 interface Props {
@@ -11,8 +12,11 @@ interface Props {
 
 /**
  * Electronics strip — receives a pre-filtered subset of the backend
- * catalogue in electronics categories. The original visual is preserved
- * exactly.
+ * catalogue in electronics categories.
+ *
+ * Presentation only: same white-surface treatment as the other home
+ * sections, with the shared section heading. Filtering/data logic is
+ * untouched.
  */
 export default function ElectronicsSection({ products }: Props) {
   if (products.length === 0) {
@@ -20,18 +24,21 @@ export default function ElectronicsSection({ products }: Props) {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: { xs: 1.5, sm: 2.5, md: 5 } }}>
-<Typography
-          variant="h4"
-          sx={{
-            fontWeight: 700,
-            mb: { xs: 1.5, sm: 2, md: 3 },
-          }}
-        >
-        💻 Electronics
-      </Typography>
+    <Container maxWidth="xl" sx={{ py: { xs: 1, md: 1.5 } }}>
+      <Box
+        sx={{
+          bgcolor: "background.paper",
+          border: "1px solid",
+          borderColor: "divider",
+          borderRadius: 3,
+          p: { xs: 1.5, sm: 2, md: 3 },
+          boxShadow: 1,
+        }}
+      >
+        <SectionTitle title="💻 Electronics" />
 
-      <ProductCarousel products={products} />
+        <ProductCarousel products={products} />
+      </Box>
     </Container>
   );
 }

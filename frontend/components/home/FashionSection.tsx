@@ -23,9 +23,12 @@ export default function FashionSection({ products }: Props) {
     <Container maxWidth="xl" sx={{ mt: { xs: 1.5, sm: 2 } }}>
       <Box
         sx={{
-          bgcolor: "#fff",
-          borderRadius: 2,
+          bgcolor: "background.paper",
+          border: "1px solid",
+          borderColor: "divider",
+          borderRadius: 3,
           p: { xs: 1.5, sm: 2, md: 3 },
+          boxShadow: 1,
         }}
       >
         <SectionTitle title="👕 Fashion Picks" />

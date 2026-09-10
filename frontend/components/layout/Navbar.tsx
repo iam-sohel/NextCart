@@ -30,11 +30,59 @@ import PersonOutlineIcon from "@mui/icons-material/Person";
 import MenuIcon from "@mui/icons-material/Menu";
 import CloseIcon from "@mui/icons-material/Close";
 import LogoutIcon from "@mui/icons-material/Logout";
+import ShoppingBagIcon from "@mui/icons-material/ShoppingBag";
+import LocationOnIcon from "@mui/icons-material/LocationOn";
 
 import useCartStore from "@/store/cartStore";
 import useWishlistStore from "@/store/wishlistStore";
 import useAuthStore from "@/store/authStore";
 import useAddressStore from "@/store/addressStore";
+
+/**
+ * NEXTCART — Header / Navbar.
+ *
+ * Presentation layer only. All business logic is unchanged: cart/wishlist/auth
+ * stores, search navigation, logout flow, link targets, and the mobile
+ * hamburger drawer behave exactly as before.
+ *
+ * Desktop hierarchy: Logo → Search → Login/Account → Wishlist → Cart → Sign out.
+ * Mobile keeps the hamburger drawer with search stacked below the top row.
+ */
+
+/** Brand wordmark used in the app bar and the mobile drawer. */
+const BrandMark = ({ fontSize = "1.5rem" }: { fontSize?: string }) => (
+  <Typography
+    sx={{
+      fontSize,
+      fontWeight: 800,
+      letterSpacing: "-0.02em",
+      lineHeight: 1.1,
+      color: "secondary.main",
+      whiteSpace: "nowrap",
+    }}
+  >
+    Next
+    <Box component="span" sx={{ color: "primary.main" }}>
+      Cart
+    </Box>
+  </Typography>
+);
+
+/** Outlined icon-button treatment shared by the wishlist / cart / account icons. */
+const iconLinkSx = {
+  width: 42,
+  height: 42,
+  color: "text.primary",
+  bgcolor: "background.paper",
+  border: "1px solid",
+  borderColor: "divider",
+  borderRadius: 2,
+  "&:hover": {
+    borderColor: "primary.main",
+    bgcolor: "action.hover",
+    color: "primary.dark",
+  },
+} as const;
 
 export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -94,14 +142,75 @@ export default function Navbar() {
     setMobileMenuOpen(false);
   };
 
+  /* ------------------------------------------------------------------
+   * Shared search-field styling — one coherent search treatment for
+   * desktop and mobile: a light grey field that clarifies to white with
+   * an orange focus ring, plus an orange search action button.
+   * ------------------------------------------------------------------ */
+  const searchFieldSx = {
+    bgcolor: "grey.100",
+    borderRadius: 2,
+    "& .MuiOutlinedInput-root": {
+      color: "text.primary",
+      "& fieldset": {
+        borderColor: "transparent",
+      },
+      "&:hover": {
+        bgcolor: "grey.200",
+      },
+      "&:hover fieldset": {
+        borderColor: "grey.300",
+      },
+      "&.Mui-focused": {
+        bgcolor: "background.paper",
+      },
+      "&.Mui-focused fieldset": {
+        borderColor: "primary.main",
+      },
+    },
+    "& .MuiInputBase-input": {
+      py: { xs: 1.2, md: 1.5 },
+      fontSize: { xs: "0.875rem", md: "0.9375rem" },
+    },
+    "& .MuiInputBase-input::placeholder": {
+      color: "text.secondary",
+      opacity: 1,
+    },
+  } as const;
+
+  /* Orange action inside the search field — the header's primary affordance. */
+  const searchAdornment = (
+    <InputAdornment position="end" sx={{ pr: 0.75 }}>
+      <IconButton
+        onClick={navigateToSearch}
+        edge="end"
+        aria-label="Search"
+        sx={{
+          width: 32,
+          height: 32,
+          borderRadius: 1.5,
+          bgcolor: "primary.main",
+          color: "primary.contrastText",
+          "&:hover": {
+            bgcolor: "primary.dark",
+          },
+        }}
+      >
+        <SearchIcon sx={{ fontSize: 20 }} />
+      </IconButton>
+    </InputAdornment>
+  );
+
   return (
     <AppBar
       position="sticky"
       elevation={0}
       sx={{
         bgcolor: "background.paper",
+        color: "text.primary",
         borderBottom: "1px solid",
         borderColor: "divider",
+        boxShadow: 1,
       }}
     >
       {/* ============================================================
@@ -113,11 +222,14 @@ export default function Navbar() {
           maxWidth: "1400px",
           width: "100%",
           mx: "auto",
+          px: { md: 3 },
+          minHeight: { md: 72 },
+          alignItems: "center",
+          gap: 2.5,
           display: {
             xs: "none",
             md: "flex",
           },
-          gap: 2,
         }}
       >
         {/* Logo */}
@@ -128,19 +240,18 @@ export default function Navbar() {
             flexShrink: 0,
           }}
         >
-          <Typography
-            variant="h5"
-            sx={{
-              fontWeight: 800,
-              color: "secondary.main",
-            }}
-          >
-            NextCart
-          </Typography>
+          <BrandMark />
         </Link>
 
-        {/* Search */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
+        {/* Search — the primary interaction of the header */}
+        <Box
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            maxWidth: 760,
+            mx: "auto",
+          }}
+        >
           <TextField
             fullWidth
             size="small"
@@ -148,44 +259,10 @@ export default function Navbar() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyPress={handleSearchKey}
-            sx={{
-              bgcolor: "#1B2440",
-              borderRadius: 1,
-              "& .MuiOutlinedInput-root": {
-                color: "text.primary",
-                "& fieldset": {
-                  borderColor: "transparent",
-                },
-                "&:hover fieldset": {
-                  borderColor: "divider",
-                },
-                "&.Mui-focused fieldset": {
-                  borderColor: "primary.main",
-                },
-              },
-              "& .MuiInputBase-input::placeholder": {
-                color: "text.secondary",
-                opacity: 1,
-              },
-            }}
+            sx={searchFieldSx}
             slotProps={{
               input: {
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      size="small"
-                      onClick={navigateToSearch}
-                      edge="end"
-                      aria-label="Search"
-                    >
-                      <SearchIcon
-                        sx={{
-                          color: "text.secondary",
-                        }}
-                      />
-                    </IconButton>
-                  </InputAdornment>
-                ),
+                endAdornment: searchAdornment,
               },
             }}
           />
@@ -200,13 +277,19 @@ export default function Navbar() {
               : "/login"
           }
           variant="contained"
+          disableElevation
           sx={{
-            bgcolor: "secondary.main",
-            color: "secondary.contrastText",
+            bgcolor: "primary.main",
+            color: "primary.contrastText",
             fontWeight: 700,
+            borderRadius: 2,
+            minHeight: 42,
+            px: 2.5,
             flexShrink: 0,
+            boxShadow: "none",
             "&:hover": {
-              bgcolor: "secondary.dark",
+              bgcolor: "primary.dark",
+              boxShadow: "none",
             },
           }}
         >
@@ -221,15 +304,10 @@ export default function Navbar() {
             flexShrink: 0,
           }}
         >
-          <IconButton
-            sx={{
-              color: "text.primary",
-            }}
-            aria-label="Wishlist"
-          >
+          <IconButton sx={iconLinkSx} aria-label="Wishlist">
             <Badge
               badgeContent={wishlistCount}
-              color="error"
+              color="primary"
             >
               <FavoriteBorderIcon />
             </Badge>
@@ -244,15 +322,10 @@ export default function Navbar() {
             flexShrink: 0,
           }}
         >
-          <IconButton
-            sx={{
-              color: "text.primary",
-            }}
-            aria-label="Cart"
-          >
+          <IconButton sx={iconLinkSx} aria-label="Cart">
             <Badge
               badgeContent={cartCount}
-              color="error"
+              color="primary"
             >
               <ShoppingCartIcon />
             </Badge>
@@ -264,12 +337,18 @@ export default function Navbar() {
           <Button
             onClick={handleLogout}
             variant="text"
+            startIcon={<LogoutIcon />}
             sx={{
               color: "text.secondary",
               fontWeight: 600,
-              minHeight: 36,
-              px: 1.25,
+              minHeight: 42,
+              px: 1.5,
+              borderRadius: 2,
               flexShrink: 0,
+              "&:hover": {
+                color: "error.main",
+                bgcolor: "error.light",
+              },
             }}
             aria-label="Sign out"
           >
@@ -280,7 +359,7 @@ export default function Navbar() {
             component={Link}
             href="/login"
             sx={{
-              color: "text.primary",
+              ...iconLinkSx,
               flexShrink: 0,
             }}
             aria-label="Account"
@@ -310,7 +389,7 @@ export default function Navbar() {
             px: 1.5,
             display: "flex",
             alignItems: "center",
-            gap: 0.5,
+            gap: 0.75,
           }}
         >
           {/* Hamburger */}
@@ -319,7 +398,12 @@ export default function Navbar() {
             aria-label="Open navigation menu"
             sx={{
               color: "text.primary",
+              width: 44,
+              height: 44,
               flexShrink: 0,
+              "&:hover": {
+                bgcolor: "action.hover",
+              },
             }}
           >
             <MenuIcon />
@@ -334,16 +418,7 @@ export default function Navbar() {
               minWidth: 0,
             }}
           >
-            <Typography
-              variant="h6"
-              sx={{
-                fontWeight: 800,
-                color: "secondary.main",
-                whiteSpace: "nowrap",
-              }}
-            >
-              NextCart
-            </Typography>
+            <BrandMark fontSize="1.25rem" />
           </Link>
 
           {/* Wishlist */}
@@ -354,15 +429,10 @@ export default function Navbar() {
               flexShrink: 0,
             }}
           >
-            <IconButton
-              aria-label="Wishlist"
-              sx={{
-                color: "text.primary",
-              }}
-            >
+            <IconButton sx={iconLinkSx} aria-label="Wishlist">
               <Badge
                 badgeContent={wishlistCount}
-                color="error"
+                color="primary"
               >
                 <FavoriteBorderIcon />
               </Badge>
@@ -377,15 +447,10 @@ export default function Navbar() {
               flexShrink: 0,
             }}
           >
-            <IconButton
-              aria-label="Cart"
-              sx={{
-                color: "text.primary",
-              }}
-            >
+            <IconButton sx={iconLinkSx} aria-label="Cart">
               <Badge
                 badgeContent={cartCount}
-                color="error"
+                color="primary"
               >
                 <ShoppingCartIcon />
               </Badge>
@@ -409,49 +474,10 @@ export default function Navbar() {
               setSearchQuery(e.target.value)
             }
             onKeyPress={handleSearchKey}
-            sx={{
-              bgcolor: "#1B2440",
-              borderRadius: 1,
-
-              "& .MuiOutlinedInput-root": {
-                color: "text.primary",
-
-                "& fieldset": {
-                  borderColor: "transparent",
-                },
-
-                "&:hover fieldset": {
-                  borderColor: "divider",
-                },
-
-                "&.Mui-focused fieldset": {
-                  borderColor: "primary.main",
-                },
-              },
-
-              "& .MuiInputBase-input::placeholder": {
-                color: "text.secondary",
-                opacity: 1,
-              },
-            }}
+            sx={searchFieldSx}
             slotProps={{
               input: {
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      size="small"
-                      onClick={navigateToSearch}
-                      edge="end"
-                      aria-label="Search"
-                    >
-                      <SearchIcon
-                        sx={{
-                          color: "text.secondary",
-                        }}
-                      />
-                    </IconButton>
-                  </InputAdornment>
-                ),
+                endAdornment: searchAdornment,
               },
             }}
           />
@@ -469,25 +495,28 @@ export default function Navbar() {
           keepMounted: true,
         }}
         slotProps={{
-  paper: {
-    sx: {
-      width: {
-        xs: "82vw",
-        sm: 320,
-      },
-      maxWidth: 320,
-    },
-  },
-}}
+          paper: {
+            sx: {
+              width: {
+                xs: "84vw",
+                sm: 320,
+              },
+              maxWidth: 320,
+            },
+          },
+        }}
       >
         {/* Drawer Header */}
         <Box
           sx={{
             minHeight: 64,
-            px: 2,
+            px: 2.5,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            bgcolor: "grey.50",
+            borderBottom: "1px solid",
+            borderColor: "divider",
           }}
         >
           <Link
@@ -497,15 +526,7 @@ export default function Navbar() {
               textDecoration: "none",
             }}
           >
-            <Typography
-              variant="h6"
-              sx={{
-                fontWeight: 800,
-                color: "secondary.main",
-              }}
-            >
-              NextCart
-            </Typography>
+            <BrandMark fontSize="1.25rem" />
           </Link>
 
           <IconButton
@@ -516,13 +537,14 @@ export default function Navbar() {
           </IconButton>
         </Box>
 
-        <Divider />
-
         {/* Navigation */}
         <List
           sx={{
-            px: 1,
-            py: 1,
+            px: 1.5,
+            py: 2,
+            display: "flex",
+            flexDirection: "column",
+            gap: 0.5,
           }}
         >
           {/* Account / Login */}
@@ -536,7 +558,12 @@ export default function Navbar() {
               }
               onClick={closeMobileMenu}
               sx={{
-                borderRadius: 1,
+                borderRadius: 2,
+                minHeight: 48,
+                px: 1.5,
+                "&:hover": {
+                  bgcolor: "action.hover",
+                },
               }}
             >
               <ListItemIcon
@@ -565,7 +592,12 @@ export default function Navbar() {
               href="/wishlist"
               onClick={closeMobileMenu}
               sx={{
-                borderRadius: 1,
+                borderRadius: 2,
+                minHeight: 48,
+                px: 1.5,
+                "&:hover": {
+                  bgcolor: "action.hover",
+                },
               }}
             >
               <ListItemIcon
@@ -595,7 +627,12 @@ export default function Navbar() {
               href="/cart"
               onClick={closeMobileMenu}
               sx={{
-                borderRadius: 1,
+                borderRadius: 2,
+                minHeight: 48,
+                px: 1.5,
+                "&:hover": {
+                  bgcolor: "action.hover",
+                },
               }}
             >
               <ListItemIcon
@@ -629,9 +666,23 @@ export default function Navbar() {
                   href="/account/orders"
                   onClick={closeMobileMenu}
                   sx={{
-                    borderRadius: 1,
+                    borderRadius: 2,
+                    minHeight: 48,
+                    px: 1.5,
+                    "&:hover": {
+                      bgcolor: "action.hover",
+                    },
                   }}
                 >
+                  <ListItemIcon
+                    sx={{
+                      minWidth: 42,
+                      color: "text.secondary",
+                    }}
+                  >
+                    <ShoppingBagIcon />
+                  </ListItemIcon>
+
                   <ListItemText
                     primary="My Orders"
                   />
@@ -644,9 +695,23 @@ export default function Navbar() {
                   href="/account/addresses"
                   onClick={closeMobileMenu}
                   sx={{
-                    borderRadius: 1,
+                    borderRadius: 2,
+                    minHeight: 48,
+                    px: 1.5,
+                    "&:hover": {
+                      bgcolor: "action.hover",
+                    },
                   }}
                 >
+                  <ListItemIcon
+                    sx={{
+                      minWidth: 42,
+                      color: "text.secondary",
+                    }}
+                  >
+                    <LocationOnIcon />
+                  </ListItemIcon>
+
                   <ListItemText
                     primary="My Addresses"
                   />
@@ -660,7 +725,12 @@ export default function Navbar() {
                 <ListItemButton
                   onClick={handleLogout}
                   sx={{
-                    borderRadius: 1,
+                    borderRadius: 2,
+                    minHeight: 48,
+                    px: 1.5,
+                    "&:hover": {
+                      bgcolor: "error.light",
+                    },
                   }}
                 >
                   <ListItemIcon

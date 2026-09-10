@@ -136,7 +136,7 @@ export default function ProductCard({
 
   return (
     <Card
-      elevation={1}
+      elevation={0}
       sx={{
         borderRadius: 3,
         overflow: "hidden",
@@ -148,8 +148,9 @@ export default function ProductCard({
         flexDirection: "column",
 
         "&:hover": {
-          transform: "translateY(-6px)",
-          boxShadow: 3,
+          transform: "translateY(-4px)",
+          boxShadow: 4,
+          borderColor: "grey.300",
         },
 
         "&:hover .product-card-image": {
@@ -168,11 +169,11 @@ export default function ProductCard({
           {/* Product photo stage */}
 <Box
               sx={{
-                height: { xs: 145, sm: 200, md: 220 },
+                height: { xs: 150, sm: 200, md: 220 },
                 display: "flex",
                 justifyContent: "center",
                 alignItems: "center",
-                bgcolor: "#F3F1EC",
+                bgcolor: "grey.100",
                 overflow: "hidden",
               }}
             >
@@ -266,13 +267,16 @@ export default function ProductCard({
             position: "absolute",
             top: 8,
             right: 8,
-            bgcolor: "#F3F1EC",
+            bgcolor: "background.paper",
+            border: "1px solid",
+            borderColor: "divider",
             boxShadow: 1,
             width: 34,
             height: 34,
 
             "&:hover": {
-              bgcolor: "#F3F1EC",
+              bgcolor: "error.light",
+              borderColor: "error.main",
             },
           }}
         >
@@ -287,7 +291,7 @@ export default function ProductCard({
             <FavoriteBorderIcon
               sx={{
                 fontSize: 18,
-                color: "#0B1120",
+                color: "text.primary",
               }}
             />
           )}
@@ -346,25 +350,35 @@ export default function ProductCard({
             sx={{
               display: "flex",
               alignItems: "center",
-              gap: 0.5,
+              gap: 0.75,
               my: { xs: 0.5, sm: 1 },
             }}
           >
-            <StarIcon
+            <Box
               sx={{
-                fontSize: 16,
-                color: "secondary.main",
-              }}
-            />
-
-            <Typography
-              variant="body2"
-              sx={{
-                fontWeight: 700,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 0.25,
+                bgcolor: "success.light",
+                color: "success.main",
+                borderRadius: 1,
+                px: 0.6,
+                py: 0.1,
               }}
             >
-              {rating.toFixed(1)}
-            </Typography>
+              <Typography
+                sx={{
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  lineHeight: 1.6,
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                {rating.toFixed(1)}
+              </Typography>
+
+              <StarIcon sx={{ fontSize: 12 }} />
+            </Box>
 
             <Typography
               variant="caption"
@@ -379,42 +393,25 @@ export default function ProductCard({
         <Box
           sx={{
             display: "flex",
-            alignItems: "center",
-            gap: { xs: 0.75, sm: 1.25 },
+            alignItems: "baseline",
+            gap: { xs: 0.75, sm: 1 },
             mb: { xs: 0.75, sm: 1.5 },
             flexWrap: "wrap",
+            rowGap: 0.25,
           }}
         >
-          <Box
+          <Typography
             sx={{
-              position: "relative",
-              display: "inline-flex",
-              bgcolor: "rgba(245,166,35,0.12)",
-              color: "secondary.main",
-              fontWeight: 700,
+              fontSize: { xs: "1.0625rem", sm: "1.1875rem" },
+              fontWeight: 800,
+              color: "text.primary",
+              letterSpacing: "-0.01em",
               fontVariantNumeric: "tabular-nums",
-              borderRadius: "4px",
-              pl: { xs: 1.5, sm: 2 },
-              pr: { xs: 1, sm: 1.25 },
-              py: { xs: 0.35, sm: 0.5 },
-              fontSize: { xs: "0.95rem", sm: "1.1rem" },
-
-              "&::before": {
-                content: '""',
-                position: "absolute",
-                left: -4,
-                top: "50%",
-                transform: "translateY(-50%)",
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                bgcolor: "background.paper",
-                border: "1px solid rgba(255,255,255,0.08)",
-              },
+              lineHeight: 1.2,
             }}
           >
             ₹{formatPrice(price)}
-          </Box>
+          </Typography>
 
           {originalPrice !== undefined &&
             Number(originalPrice) > Number(price) && (
@@ -437,10 +434,17 @@ export default function ProductCard({
           fullWidth
           variant="contained"
           size="small"
+          disableElevation
           sx={{
             borderRadius: 2,
             mt: "auto",
             py: { xs: 0.75, sm: 1 },
+            fontWeight: 700,
+            textTransform: "none",
+            boxShadow: "none",
+            "&:hover": {
+              boxShadow: "none",
+            },
           }}
           onClick={handleAddToCart}
         >

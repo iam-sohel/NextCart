@@ -116,7 +116,7 @@ export default async function HomePage() {
 
       <Box
         sx={{
-          bgcolor: "#f5f5f5",
+          bgcolor: "background.default",
           pb: { xs: 2, sm: 3 },
           width: "100%",
           maxWidth: "100%",

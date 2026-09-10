@@ -51,10 +51,12 @@ export default function Hero({ product }: Props) {
       aria-label="Featured offer"
       sx={{
         width: "100%",
-        bgcolor: "#2A1F18",
+        bgcolor: "secondary.main",
+        backgroundImage:
+          "radial-gradient(120% 160% at 85% 0%, rgba(241, 90, 41, 0.28) 0%, rgba(241, 90, 41, 0) 55%)",
         color: "#F4EFE6",
         mt: { xs: 1, md: 2 },
-        borderRadius: 0,
+        borderRadius: { xs: 0, md: 4 },
         overflow: "hidden",
         position: "relative",
       }}
@@ -63,16 +65,15 @@ export default function Hero({ product }: Props) {
         sx={{
           maxWidth: "1400px",
           mx: "auto",
-          px: { xs: 1.5, md: 4 },
-          py: { xs: 1.5, md: 3 },
+          px: { xs: 2, sm: 3, md: 5 },
+          py: { xs: 2.5, sm: 3, md: 4.5 },
           display: "grid",
           gridTemplateColumns: {
             xs: "1fr",
-            md: "1.1fr 1fr",
+            md: "1.05fr 1fr",
           },
           alignItems: "center",
-          gap: { xs: 1.5, md: 4 },
-          minHeight: { xs: 200, md: 280 },
+          gap: { xs: 2.5, md: 6 },
         }}
       >
         {/* Left — copy block */}
@@ -91,26 +92,31 @@ export default function Hero({ product }: Props) {
         >
           <Stack
             direction="row"
-            spacing={1}
+            spacing={0.75}
             sx={{
               alignItems: "center",
-              color: "#F4EFE6",
-              opacity: 0.85,
+              bgcolor: "rgba(241, 90, 41, 0.16)",
+              border: "1px solid rgba(241, 90, 41, 0.35)",
+              borderRadius: 100,
+              px: 1.25,
+              py: 0.4,
             }}
           >
             <LocalOfferIcon
               sx={{
-                fontSize: 18,
-                color: "#F15A29",
+                fontSize: 16,
+                color: "primary.main",
               }}
             />
 
             <Typography
-              variant="overline"
               sx={{
+                fontSize: "0.6875rem",
                 fontWeight: 700,
-                letterSpacing: "0.08em",
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
                 lineHeight: 1.2,
+                color: "#F8B5A0",
               }}
             >
               Limited-time offer
@@ -121,12 +127,18 @@ export default function Hero({ product }: Props) {
             component="h1"
             sx={{
               fontSize: {
-                xs: "1.25rem",
-                md: "1.65rem",
+                xs: "1.4rem",
+                sm: "1.65rem",
+                md: "2rem",
               },
               fontWeight: 800,
-              lineHeight: 1.15,
+              lineHeight: 1.18,
+              letterSpacing: "-0.02em",
               color: "#FFFFFF",
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
             }}
           >
             {product.title}
@@ -135,11 +147,16 @@ export default function Hero({ product }: Props) {
           <Typography
             sx={{
               fontSize: {
-                xs: "0.85rem",
-                md: "0.95rem",
+                xs: "0.8125rem",
+                md: "0.9375rem",
               },
-              color: "rgba(244, 239, 230, 0.78)",
-              maxWidth: 420,
+              lineHeight: 1.6,
+              color: "rgba(244, 239, 230, 0.75)",
+              maxWidth: 440,
+              display: "-webkit-box",
+              WebkitLineClamp: { xs: 2, md: 3 },
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
             }}
           >
             {product.description}
@@ -152,6 +169,7 @@ export default function Hero({ product }: Props) {
               alignItems: "baseline",
               pt: 0.5,
               flexWrap: "wrap",
+              rowGap: 0.75,
               justifyContent: {
                 xs: "center",
                 md: "flex-start",
@@ -161,10 +179,11 @@ export default function Hero({ product }: Props) {
             <Typography
               sx={{
                 fontSize: {
-                  xs: "1.35rem",
-                  md: "1.6rem",
+                  xs: "1.5rem",
+                  md: "1.875rem",
                 },
                 fontWeight: 800,
+                letterSpacing: "-0.02em",
                 color: "#FFFFFF",
               }}
             >
@@ -175,8 +194,8 @@ export default function Hero({ product }: Props) {
               product.originalPrice > product.price && (
                 <Typography
                   sx={{
-                    fontSize: "0.85rem",
-                    color: "rgba(244, 239, 230, 0.55)",
+                    fontSize: "0.875rem",
+                    color: "rgba(244, 239, 230, 0.5)",
                     textDecoration: "line-through",
                   }}
                 >
@@ -188,12 +207,13 @@ export default function Hero({ product }: Props) {
               <Typography
                 sx={{
                   fontSize: "0.75rem",
-                  fontWeight: 700,
-                  color: "#F15A29",
-                  bgcolor: "rgba(241, 90, 41, 0.15)",
+                  fontWeight: 800,
+                  color: "#FFFFFF",
+                  bgcolor: "primary.main",
                   px: 1,
-                  py: 0.25,
+                  py: 0.3,
                   borderRadius: 1,
+                  letterSpacing: "0.02em",
                 }}
               >
                 {discountPct}% OFF
@@ -222,17 +242,21 @@ export default function Hero({ product }: Props) {
               component={Link}
               href={`/products/${product.slug}`}
               variant="contained"
-              size="medium"
+              size="large"
+              disableElevation
               sx={{
-                bgcolor: "#F15A29",
-                color: "#FFFFFF",
+                bgcolor: "primary.main",
+                color: "primary.contrastText",
                 fontWeight: 700,
-                px: 2.5,
-                py: 0.75,
-                fontSize: "0.85rem",
+                px: 3,
+                minHeight: 44,
+                borderRadius: 2,
+                fontSize: "0.875rem",
                 textTransform: "none",
+                boxShadow: "none",
                 "&:hover": {
-                  bgcolor: "#C8421B",
+                  bgcolor: "primary.dark",
+                  boxShadow: "none",
                 },
               }}
             >
@@ -243,14 +267,17 @@ export default function Hero({ product }: Props) {
               component={Link}
               href="/products"
               variant="text"
-              size="medium"
+              size="large"
               sx={{
                 color: "#F4EFE6",
                 fontWeight: 600,
-                fontSize: "0.85rem",
+                minHeight: 44,
+                borderRadius: 2,
+                px: 2,
+                fontSize: "0.875rem",
                 textTransform: "none",
                 "&:hover": {
-                  bgcolor: "rgba(244, 239, 230, 0.08)",
+                  bgcolor: "rgba(244, 239, 230, 0.1)",
                 },
               }}
             >
@@ -263,13 +290,16 @@ export default function Hero({ product }: Props) {
         <Box
           sx={{
             position: "relative",
-            height: { xs: 145, md: 220 },
-            borderRadius: 2,
-            bgcolor: "#F4EFE6",
+            height: { xs: 190, sm: 230, md: 260 },
+            borderRadius: { xs: 2, md: 3 },
+            bgcolor: "background.paper",
+            backgroundImage:
+              "radial-gradient(80% 80% at 50% 30%, rgba(241, 90, 41, 0.08) 0%, rgba(241, 90, 41, 0) 70%)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             overflow: "hidden",
+            boxShadow: 3,
           }}
         >
           <Image
@@ -280,7 +310,7 @@ export default function Hero({ product }: Props) {
             sizes="(max-width: 900px) 100vw, 540px"
             style={{
               objectFit: "contain",
-              padding: "12px",
+              padding: "20px",
             }}
           />
         </Box>

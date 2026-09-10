@@ -11,16 +11,20 @@ import {
 
 export default function Newsletter() {
   return (
-    <Container maxWidth="lg" sx={{ py: 6 }}>
+    <Container maxWidth="lg" sx={{ py: { xs: 4, md: 6 } }}>
       <Paper
-        elevation={3}
+        elevation={0}
         sx={{
-          p: 5,
+          p: { xs: 3.5, md: 5 },
           borderRadius: 4,
           textAlign: "center",
+          bgcolor: "background.paper",
+          border: "1px solid",
+          borderColor: "divider",
+          boxShadow: 1,
         }}
       >
-        <Typography variant="h4" sx={{ fontWeight: 700 }}>
+        <Typography variant="h4" sx={{ fontWeight: 700, letterSpacing: "-0.01em" }}>
           Stay Updated
         </Typography>
 
@@ -55,6 +59,19 @@ export default function Newsletter() {
           <Button
             variant="contained"
             size="large"
+            disableElevation
+            sx={{
+              bgcolor: "primary.main",
+              color: "primary.contrastText",
+              fontWeight: 700,
+              textTransform: "none",
+              px: 4,
+              boxShadow: "none",
+              "&:hover": {
+                bgcolor: "primary.dark",
+                boxShadow: "none",
+              },
+            }}
           >
             Subscribe
           </Button>
