@@ -1,5 +1,6 @@
 package com.nextcart.nextcart.order_module;
 
+import com.nextcart.nextcart.product_module.product_base.ProductEntity;
 import com.nextcart.nextcart.product_module.productVariant.ProductVariantEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -14,6 +15,10 @@ import java.time.LocalDateTime;
                 @Index(
                         name = "idx_order_items_order_id",
                         columnList = "order_id"
+                ),
+                @Index(
+                        name = "idx_order_items_product_id",
+                        columnList = "product_id"
                 ),
                 @Index(
                         name = "idx_order_items_variant_id",
@@ -42,6 +47,17 @@ public class OrderItemEntity {
             nullable = false
     )
     private OrderEntity order;
+
+    // =========================================================
+    // PRODUCT REFERENCE
+    // =========================================================
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(
+            name = "product_id",
+            nullable = false
+    )
+    private ProductEntity product;
 
     // =========================================================
     // PRODUCT VARIANT REFERENCE
@@ -85,6 +101,14 @@ public class OrderItemEntity {
     // =========================================================
     // PRICE SNAPSHOT
     // =========================================================
+
+    @Column(
+            name = "price",
+            nullable = false,
+            precision = 19,
+            scale = 2
+    )
+    private BigDecimal price;
 
     @Column(
             name = "unit_mrp",
@@ -147,6 +171,10 @@ public class OrderItemEntity {
 
         createdAt = now;
         updatedAt = now;
+
+        if (price == null && unitSellingPrice != null) {
+            price = unitSellingPrice;
+        }
 
         if (discountAmount == null) {
             discountAmount = BigDecimal.ZERO;

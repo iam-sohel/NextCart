@@ -33,6 +33,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String authorizationHeader =
                 request.getHeader("Authorization");
 
+        /*
+         * No Authorization header.
+         * Continue as anonymous.
+         */
         if (authorizationHeader == null
                 || !authorizationHeader.startsWith("Bearer ")) {
 
@@ -40,7 +44,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        String token = authorizationHeader.substring(7).trim();
+        /*
+         * Remove "Bearer " prefix and whitespace.
+         */
+        String token =
+                authorizationHeader
+                        .substring(7)
+                        .trim();
 
         if (token.isBlank()) {
             filterChain.doFilter(request, response);
@@ -48,19 +58,33 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         try {
-            String email = jwtUtil.extractEmail(token);
 
-            if (email != null
-                    && SecurityContextHolder.getContext()
+            /*
+             * Authenticate using USER ID.
+             *
+             * This supports:
+             * - Email users
+             * - Phone-only users
+             */
+            Long userId =
+                    jwtUtil.extractUserId(token);
+
+            if (userId != null
+                    && SecurityContextHolder
+                    .getContext()
                     .getAuthentication() == null) {
 
-                User user = userRepository
-                        .findByEmailIgnoreCase(email)
-                        .orElse(null);
+                User user =
+                        userRepository
+                                .findById(userId)
+                                .orElse(null);
 
                 if (user != null
                         && user.isEnabled()
-                        && jwtUtil.isTokenValid(token, email)) {
+                        && jwtUtil.isTokenValid(
+                        token,
+                        userId
+                )) {
 
                     CustomUserDetails userDetails =
                             new CustomUserDetails(user);
@@ -79,13 +103,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                     SecurityContextHolder
                             .getContext()
-                            .setAuthentication(authentication);
+                            .setAuthentication(
+                                    authentication
+                            );
                 }
             }
 
         } catch (Exception ex) {
 
-            // Do not log the actual JWT token.
+            /*
+             * Never log the JWT itself.
+             */
             System.out.println(
                     "JWT authentication failed: "
                             + ex.getMessage()

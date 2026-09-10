@@ -33,6 +33,10 @@ public class JwtUtil {
         this.expirationMillis = expirationMillis;
     }
 
+    // =========================================================
+    // GENERATE ACCESS TOKEN
+    // =========================================================
+
     public String generateAccessToken(
             Long userId,
             String email,
@@ -40,19 +44,46 @@ public class JwtUtil {
     ) {
 
         Date now = new Date();
+
         Date expiry = new Date(
                 now.getTime() + expirationMillis
         );
 
         return Jwts.builder()
-                .subject(email)
+                /*
+                 * Use userId as JWT subject.
+                 *
+                 * This works for both:
+                 * - email users
+                 * - phone-only users
+                 */
+                .subject(String.valueOf(userId))
+
                 .claim("userId", userId)
                 .claim("role", role)
+
+                /*
+                 * Keep email as an optional claim.
+                 *
+                 * Phone-only users may have email = null,
+                 * so do not put a null claim into the JWT.
+                 */
+                .claim(
+                        "email",
+                        email != null && !email.isBlank()
+                                ? email
+                                : ""
+                )
+
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(secretKey)
                 .compact();
     }
+
+    // =========================================================
+    // EXTRACT ALL CLAIMS
+    // =========================================================
 
     public Claims extractAllClaims(String token) {
 
@@ -63,39 +94,81 @@ public class JwtUtil {
                 .getPayload();
     }
 
+    // =========================================================
+    // EXTRACT EMAIL
+    // =========================================================
+
     public String extractEmail(String token) {
-        return extractAllClaims(token).getSubject();
+
+        return extractAllClaims(token)
+                .get("email", String.class);
     }
+
+    // =========================================================
+    // EXTRACT USER ID
+    // =========================================================
 
     public Long extractUserId(String token) {
-        Number userId = extractAllClaims(token)
-                .get("userId", Number.class);
 
-        return userId != null ? userId.longValue() : null;
+        Number userId =
+                extractAllClaims(token)
+                        .get("userId", Number.class);
+
+        return userId != null
+                ? userId.longValue()
+                : null;
     }
 
+    // =========================================================
+    // EXTRACT ROLE
+    // =========================================================
+
     public String extractRole(String token) {
+
         return extractAllClaims(token)
                 .get("role", String.class);
     }
 
+    // =========================================================
+    // EXTRACT EXPIRATION
+    // =========================================================
+
     public Date extractExpiration(String token) {
-        return extractAllClaims(token).getExpiration();
+
+        return extractAllClaims(token)
+                .getExpiration();
     }
+
+    // =========================================================
+    // CHECK EXPIRATION
+    // =========================================================
 
     public boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
+
+        return extractExpiration(token)
+                .before(new Date());
     }
 
-    public boolean isTokenValid(String token, String email) {
+    // =========================================================
+    // VALIDATE TOKEN BY USER ID
+    // =========================================================
+
+    public boolean isTokenValid(
+            String token,
+            Long userId
+    ) {
 
         try {
-            String tokenEmail = extractEmail(token);
 
-            return tokenEmail.equalsIgnoreCase(email)
+            Long tokenUserId =
+                    extractUserId(token);
+
+            return tokenUserId != null
+                    && tokenUserId.equals(userId)
                     && !isTokenExpired(token);
 
         } catch (Exception ex) {
+
             return false;
         }
     }

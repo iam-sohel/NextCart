@@ -1,8 +1,10 @@
 package com.nextcart.nextcart.order_module;
 
 import com.nextcart.nextcart.adcommon.dto.ApiResponse;
+import com.nextcart.nextcart.auth_module.security.CustomUserDetails;
 import com.nextcart.nextcart.order_module.dto.OrderCreateRequestDTO;
 import com.nextcart.nextcart.order_module.dto.OrderResponseDTO;
+import com.nextcart.nextcart.order_module.exceptions.OrderValidationException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -32,11 +34,11 @@ public class OrderController {
             Authentication authentication,
             @Valid @RequestBody OrderCreateRequestDTO request) {
 
-        String userEmail = authentication.getName();
+        String userIdentifier = getAuthenticatedUserIdentifier(authentication);
 
         OrderResponseDTO response =
                 orderService.createOrder(
-                        userEmail,
+                        userIdentifier,
                         request
                 );
 
@@ -61,11 +63,11 @@ public class OrderController {
             Authentication authentication,
             @PathVariable Long orderId) {
 
-        String userEmail = authentication.getName();
+        String userIdentifier = getAuthenticatedUserIdentifier(authentication);
 
         OrderResponseDTO response =
                 orderService.getOrderById(
-                        userEmail,
+                        userIdentifier,
                         orderId
                 );
 
@@ -88,11 +90,11 @@ public class OrderController {
             Authentication authentication,
             @PathVariable String orderNumber) {
 
-        String userEmail = authentication.getName();
+        String userIdentifier = getAuthenticatedUserIdentifier(authentication);
 
         OrderResponseDTO response =
                 orderService.getOrderByNumber(
-                        userEmail,
+                        userIdentifier,
                         orderNumber
                 );
 
@@ -120,11 +122,11 @@ public class OrderController {
             )
             Pageable pageable) {
 
-        String userEmail = authentication.getName();
+        String userIdentifier = getAuthenticatedUserIdentifier(authentication);
 
         Page<OrderResponseDTO> response =
                 orderService.getMyOrders(
-                        userEmail,
+                        userIdentifier,
                         pageable
                 );
 
@@ -154,11 +156,11 @@ public class OrderController {
             )
             Pageable pageable) {
 
-        String userEmail = authentication.getName();
+        String userIdentifier = getAuthenticatedUserIdentifier(authentication);
 
         Page<OrderResponseDTO> response =
                 orderService.getMyOrdersByStatus(
-                        userEmail,
+                        userIdentifier,
                         status,
                         pageable
                 );
@@ -182,11 +184,11 @@ public class OrderController {
             Authentication authentication,
             @PathVariable Long orderId) {
 
-        String userEmail = authentication.getName();
+        String userIdentifier = getAuthenticatedUserIdentifier(authentication);
 
         OrderResponseDTO response =
                 orderService.cancelOrder(
-                        userEmail,
+                        userIdentifier,
                         orderId
                 );
 
@@ -307,5 +309,60 @@ public class OrderController {
                         response
                 )
         );
+    }
+
+    // =========================================================
+    // AUTHENTICATED USER IDENTIFIER
+    // =========================================================
+
+    /**
+     * The JWT filter creates CustomUserDetails from the authenticated User.
+     * We pass the user id as a String because OrderService resolves numeric
+     * identifiers as user ids and keeps email lookup as a backward-compatible
+     * fallback.
+     */
+    private String getAuthenticatedUserIdentifier(
+            Authentication authentication) {
+
+        if (authentication == null ||
+                !authentication.isAuthenticated()) {
+
+            throw new OrderValidationException(
+                    "Authenticated user is required"
+            );
+        }
+
+        Object principal = authentication.getPrincipal();
+
+        if (principal instanceof CustomUserDetails userDetails) {
+
+            if (userDetails.getUser() == null ||
+                    userDetails.getUser().getId() == null ||
+                    userDetails.getUser().getId() <= 0) {
+
+                throw new OrderValidationException(
+                        "Authenticated user ID is required"
+                );
+            }
+
+            return String.valueOf(
+                    userDetails.getUser().getId()
+            );
+        }
+
+        /*
+         * Fallback for an authentication implementation whose
+         * principal is represented as a String.
+         */
+        String name = authentication.getName();
+
+        if (name == null || name.isBlank()) {
+
+            throw new OrderValidationException(
+                    "Authenticated user is required"
+            );
+        }
+
+        return name.trim();
     }
 }

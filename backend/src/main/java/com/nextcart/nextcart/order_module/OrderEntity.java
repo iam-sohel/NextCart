@@ -87,24 +87,20 @@ public class OrderEntity {
 
 
     // =========================================================
-    // PAYMENT EXPIRY
+    // PAYMENT METHOD
     // =========================================================
-    //
-    // When the order is created:
-    //
-    // paymentExpiresAt = now + 15 minutes
-    //
-    // If payment is not completed before this time:
-    //
-    // PENDING
-    //    ↓
-    // CANCELLED
-    //    ↓
-    // release reserved inventory
-    //
-    // IMPORTANT:
-    // This timestamp is persisted in DB.
-    // Do NOT depend on frontend timer.
+
+    @Enumerated(EnumType.STRING)
+    @Column(
+            name = "payment_method",
+            nullable = false,
+            length = 20
+    )
+    private PaymentMethod paymentMethod;
+
+
+    // =========================================================
+    // PAYMENT EXPIRY
     // =========================================================
 
     @Column(
@@ -251,6 +247,15 @@ public class OrderEntity {
             nullable = false
     )
     private LocalDateTime updatedAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(
+            name = "payment_status",
+            nullable = false,
+            length = 20
+    )
+    @Builder.Default
+    private PaymentStatus paymentStatus = PaymentStatus.PENDING;
 
 
     // =========================================================

@@ -1,6 +1,8 @@
 package com.nextcart.nextcart.order_module.dto;
 
 import com.nextcart.nextcart.order_module.OrderStatus;
+import com.nextcart.nextcart.order_module.PaymentMethod;
+import com.nextcart.nextcart.order_module.PaymentStatus;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -20,19 +22,14 @@ public class OrderResponseDTO {
 
     private OrderStatus status;
 
+
     // =========================================================
     // PAYMENT
     // =========================================================
-    //
-    // Payment must be completed before this timestamp.
-    //
-    // Example:
-    // Order created      : 10:00 AM
-    // Payment expires at : 10:15 AM
-    //
-    // Frontend can use this value to display the countdown.
-    // Backend remains the source of truth.
-    // =========================================================
+
+    private PaymentMethod paymentMethod;
+
+    private PaymentStatus paymentStatus;
 
     private LocalDateTime paymentExpiresAt;
 
