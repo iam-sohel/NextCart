@@ -32,7 +32,14 @@ export default function ProductBreadcrumb({ product }: ProductBreadcrumbProps) {
   return (
     <Breadcrumbs
       separator={<NavigateNextIcon fontSize="small" />}
-      sx={{ mb: 3 }}
+      sx={{
+        mb: 3,
+        // Long product titles must wrap inside the crumbs rather than
+        // push the page wider on small screens.
+        minWidth: 0,
+        "& .MuiBreadcrumbs-li": { minWidth: 0 },
+        "& .MuiBreadcrumbs-separator": { mx: 0.5 },
+      }}
       aria-label="Breadcrumb"
     >
       <Link
@@ -74,7 +81,15 @@ export default function ProductBreadcrumb({ product }: ProductBreadcrumbProps) {
         </Typography>
       </Link>
 
-      <Typography color="text.primary">{product.title}</Typography>
+      <Typography
+        color="text.primary"
+        sx={{
+          fontWeight: 500,
+          overflowWrap: "anywhere",
+        }}
+      >
+        {product.title}
+      </Typography>
     </Breadcrumbs>
   );
 }

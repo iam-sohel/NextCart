@@ -18,7 +18,11 @@ interface ProductPriceBlockProps {
  *
  * Single visual block used on the product details page. Always renders
  * the active price; conditionally renders the strike-through original
- * price and the discount chip. Never duplicates formatter logic.
+ * price, the discount chip, and an explicit "You save" line (Flipkart
+ * pattern — makes the deal legible at a glance).
+ *
+ * Never duplicates formatter logic: all amounts go through the shared
+ * formatters in `utils/formatPrice`.
  */
 export default function ProductPriceBlock({
   price,
@@ -30,48 +34,71 @@ export default function ProductPriceBlock({
     Number.isFinite(originalPrice) &&
     originalPrice > price;
 
-  return (
-    <Stack
-      direction="row"
-      spacing={1.5}
-      useFlexGap
-      sx={{ alignItems: "center", flexWrap: "wrap" }}
-    >
-      <Typography
-        variant="h4"
-        sx={{ fontWeight: 700, color: "text.primary" }}
-      >
-        {formatPrice(price)}
-      </Typography>
+  const savings =
+    showOriginal && typeof originalPrice === "number"
+      ? originalPrice - price
+      : 0;
 
-      {showOriginal && (
+  return (
+    <Box>
+      <Stack
+        direction="row"
+        spacing={1.5}
+        useFlexGap
+        sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 0.5 }}
+      >
         <Typography
-          variant="body1"
           sx={{
-            textDecoration: "line-through",
-            color: "text.secondary",
+            fontSize: { xs: "1.5rem", sm: "1.625rem", md: "1.75rem" },
+            fontWeight: 700,
+            color: "text.primary",
+            letterSpacing: "-0.01em",
+            lineHeight: 1.15,
+            fontVariantNumeric: "tabular-nums",
           }}
-          aria-label={`Original price ${formatPrice(originalPrice)}`}
         >
-          {formatPrice(originalPrice)}
+          {formatPrice(price)}
+        </Typography>
+
+        {showOriginal && (
+          <Typography
+            variant="body1"
+            sx={{
+              textDecoration: "line-through",
+              color: "text.secondary",
+              fontVariantNumeric: "tabular-nums",
+              whiteSpace: "nowrap",
+            }}
+            aria-label={`Original price ${formatPrice(originalPrice)}`}
+          >
+            {formatPrice(originalPrice)}
+          </Typography>
+        )}
+
+        {discountPct > 0 && (
+          <Chip
+            color="success"
+            variant="filled"
+            size="small"
+            label={formatDiscountPercent(discountPct)}
+            sx={{ fontWeight: 700 }}
+          />
+        )}
+      </Stack>
+
+      {savings > 0 && (
+        <Typography
+          variant="body2"
+          sx={{
+            mt: 0.5,
+            fontWeight: 600,
+            color: "success.main",
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          You save {formatPrice(savings)}
         </Typography>
       )}
-
-      {discountPct > 0 && (
-        <Chip
-          color="success"
-          variant="filled"
-          label={formatDiscountPercent(discountPct)}
-          sx={{ fontWeight: 700 }}
-        />
-      )}
-
-      {/* Save a bit of vertical space and aid screen readers */}
-      <Box component="span" sx={{ display: "none" }}>
-        {showOriginal
-          ? `Save ${formatPrice((originalPrice ?? 0) - price)}`
-          : ""}
-      </Box>
-    </Stack>
+    </Box>
   );
 }

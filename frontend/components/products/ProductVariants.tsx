@@ -61,6 +61,26 @@ export default function ProductVariants({
     [variants, selectedVariantId],
   );
 
+  // Derived before the early return below so hook order stays stable
+  // across renders (rules-of-hooks).
+  const selectedSummary = useMemo(() => {
+    if (!selectedVariant) return undefined;
+    const seen = new Set<string>();
+    const parts: string[] = [];
+    for (const axis of axes) {
+      const raw = readAxis(selectedVariant, axis);
+      if (raw === undefined || raw === null || raw === "") continue;
+      const value = String(raw);
+      // The backend may surface the same attribute through both the
+      // dynamic `attributes` map and a legacy typed field; show it once.
+      const dedupeKey = value.toLowerCase();
+      if (seen.has(dedupeKey)) continue;
+      seen.add(dedupeKey);
+      parts.push(value);
+    }
+    return parts.length > 0 ? parts.join(" · ") : undefined;
+  }, [axes, selectedVariant]);
+
   if (axes.length === 0) return null;
 
   const handleAxisClick = (axis: string, value: string) => {
@@ -98,6 +118,12 @@ export default function ProductVariants({
         Available variants
       </Typography>
 
+      {selectedSummary && (
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+          Selected: <Box component="span" sx={{ fontWeight: 700, color: "text.primary" }}>{selectedSummary}</Box>
+        </Typography>
+      )}
+
       <Stack spacing={2.5} sx={{ mt: 2 }}>
         {axes.map((axis) => {
           const values = uniqueValuesForAxis(variants, axis);
@@ -134,14 +160,31 @@ export default function ProductVariants({
                     borderColor: "divider !important",
                     px: 2,
                     py: 0.75,
+                    minHeight: 36,
                     textTransform: "none",
                     fontWeight: 600,
+                    fontSize: "0.8125rem",
                     color: "text.primary",
+                    transition: "border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease",
+                  },
+                  "& .MuiToggleButton-root:hover": {
+                    borderColor: "primary.main !important",
+                    bgcolor: "action.hover !important",
                   },
                   "& .Mui-selected": {
                     bgcolor: "primary.main !important",
                     color: "primary.contrastText !important",
                     borderColor: "primary.main !important",
+                    boxShadow: (theme) => `0 0 0 3px ${theme.palette.primary.main}22`,
+                  },
+                  "& .Mui-selected:hover": {
+                    bgcolor: "primary.dark !important",
+                    color: "primary.contrastText !important",
+                  },
+                  "& .Mui-disabled": {
+                    opacity: 0.45,
+                    borderStyle: "dashed !important",
+                    textDecoration: "line-through",
                   },
                 }}
               >

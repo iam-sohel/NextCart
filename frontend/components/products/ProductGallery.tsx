@@ -3,12 +3,9 @@
 import { useState, useCallback, useRef } from "react";
 import Image from "next/image";
 
-import {
-  Box,
-  IconButton,
-  Paper,
-  Stack,
-} from "@mui/material";
+import { Box, IconButton, Stack } from "@mui/material";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 
 import type { ProductImage } from "@/types/product";
 
@@ -20,21 +17,22 @@ interface ProductGalleryProps {
 /**
  * NEXTCART — Product gallery
  *
- * A reusable image gallery for product detail pages.
+ * A polished image viewer for the product details page.
  *
  * Features:
- *   - One main image with optional prev/next arrows (auto-hidden when
- *     there is only one image).
- *   - Vertical thumbnails on desktop, horizontal scroll on mobile.
+ *   - Large contained stage: products are always shown whole
+ *     (object-fit: contain) on a clean neutral surface — never stretched.
+ *   - Subtle zoom-on-hover on desktop for a closer look at the product.
+ *   - Circular prev/next arrows (auto-hidden when there is only one image).
+ *   - Thumbnail rail: horizontal on mobile, wrapping row on desktop.
  *   - Keyboard navigation (←/→) when the gallery has focus.
  *   - Graceful fallback when images is empty or every image fails to load.
- *   - next/image with explicit width/height for predictable layout, and
- *     objectFit: contain so products never stretch.
+ *   - next/image with explicit sizes for predictable layout.
  *
  * Accessibility:
  *   - Each thumbnail is a button with aria-label and aria-current.
- *   - The main image is wrapped in a region with role="region" and
- *     aria-roledescription="image gallery".
+ *   - The stage is a region with aria-roledescription="image gallery".
+ *   - Arrows have descriptive aria-labels and remain keyboard-focusable.
  */
 export default function ProductGallery({
   title,
@@ -72,7 +70,8 @@ function GalleryInner({
     (img) => !failedIds.has(img.id),
   );
   const hasMultiple = visibleImages.length > 1;
-  const current = visibleImages[Math.min(selectedIndex, visibleImages.length - 1)];
+  const currentIndex = Math.min(selectedIndex, visibleImages.length - 1);
+  const current = visibleImages[currentIndex];
 
   const goPrev = useCallback(() => {
     if (!hasMultiple) return;
@@ -105,17 +104,16 @@ function GalleryInner({
 
   if (visibleImages.length === 0) {
     return (
-      <Paper
-        elevation={0}
+      <Box
         sx={{
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          bgcolor: "background.default",
-          borderRadius: 2,
+          bgcolor: "grey.50",
+          borderRadius: { xs: 2, md: 3 },
           border: "1px solid",
           borderColor: "divider",
-          height: { xs: 320, sm: 420, md: 520 },
+          height: { xs: 340, sm: 440, md: 520 },
         }}
       >
         <Box
@@ -127,13 +125,13 @@ function GalleryInner({
         >
           Image coming soon
         </Box>
-      </Paper>
+      </Box>
     );
   }
 
   return (
     <Box>
-      {/* Main image viewport. */}
+      {/* Main image stage. */}
       <Box
         ref={regionRef}
         role="region"
@@ -143,15 +141,23 @@ function GalleryInner({
         onKeyDown={handleKeyDown}
         sx={{
           position: "relative",
-          bgcolor: "background.default",
-          borderRadius: 2,
+          bgcolor: "grey.50",
+          borderRadius: { xs: 2, md: 3 },
           border: "1px solid",
           borderColor: "divider",
           overflow: "hidden",
-          height: { xs: 320, sm: 420, md: 520 },
+          height: { xs: 340, sm: 440, md: 520 },
           outline: "none",
+          cursor: "zoom-in",
           "&:focus-visible": {
             boxShadow: (theme) => `0 0 0 2px ${theme.palette.primary.main}`,
+          },
+          // Gentle zoom on hover — desktop affordance for a closer look.
+          "&:hover .gallery-zoom": {
+            transform: "scale(1.06)",
+          },
+          "&:hover .gallery-arrow": {
+            opacity: 1,
           },
         }}
       >
@@ -163,17 +169,28 @@ function GalleryInner({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            p: { xs: 1.5, md: 3 },
           }}
         >
-          <Image
-            src={current.url}
-            alt={current.alt ?? title}
-            fill
-            sizes="(max-width: 600px) 100vw, (max-width: 900px) 60vw, 520px"
-            style={{ objectFit: "contain" }}
-            priority
-            onError={() => handleThumbError(current.id)}
-          />
+          <Box
+            className="gallery-zoom"
+            sx={{
+              position: "relative",
+              width: "100%",
+              height: "100%",
+              transition: "transform 0.35s ease",
+            }}
+          >
+            <Image
+              src={current.url}
+              alt={current.alt ?? title}
+              fill
+              sizes="(max-width: 600px) 100vw, (max-width: 900px) 60vw, 560px"
+              style={{ objectFit: "contain" }}
+              priority
+              onError={() => handleThumbError(current.id)}
+            />
+          </Box>
         </Box>
 
         {hasMultiple && (
@@ -181,33 +198,77 @@ function GalleryInner({
             <IconButton
               aria-label="Previous image"
               onClick={goPrev}
+              className="gallery-arrow"
               sx={{
                 position: "absolute",
                 top: "50%",
-                left: 8,
+                left: { xs: 8, md: 12 },
                 transform: "translateY(-50%)",
                 bgcolor: "background.paper",
+                border: "1px solid",
+                borderColor: "divider",
                 boxShadow: 1,
-                "&:hover": { bgcolor: "background.paper" },
+                width: 36,
+                height: 36,
+                opacity: { xs: 1, md: 0 },
+                transition: "opacity 0.2s ease, background-color 0.2s ease",
+                "&:hover": {
+                  bgcolor: "background.paper",
+                  borderColor: "primary.main",
+                },
+                "&:focus-visible": { opacity: 1 },
               }}
             >
-              ‹
+              <ChevronLeftIcon fontSize="small" />
             </IconButton>
             <IconButton
               aria-label="Next image"
               onClick={goNext}
+              className="gallery-arrow"
               sx={{
                 position: "absolute",
                 top: "50%",
-                right: 8,
+                right: { xs: 8, md: 12 },
                 transform: "translateY(-50%)",
                 bgcolor: "background.paper",
+                border: "1px solid",
+                borderColor: "divider",
                 boxShadow: 1,
-                "&:hover": { bgcolor: "background.paper" },
+                width: 36,
+                height: 36,
+                opacity: { xs: 1, md: 0 },
+                transition: "opacity 0.2s ease, background-color 0.2s ease",
+                "&:hover": {
+                  bgcolor: "background.paper",
+                  borderColor: "primary.main",
+                },
+                "&:focus-visible": { opacity: 1 },
               }}
             >
-              ›
+              <ChevronRightIcon fontSize="small" />
             </IconButton>
+
+            {/* Image counter — reassures users there is more to browse. */}
+            <Box
+              aria-hidden
+              sx={{
+                position: "absolute",
+                bottom: 10,
+                right: 12,
+                px: 1.25,
+                py: 0.25,
+                borderRadius: 999,
+                bgcolor: "rgba(31, 27, 23, 0.55)",
+                color: "#FFFFFF",
+                fontSize: "0.6875rem",
+                fontWeight: 600,
+                fontVariantNumeric: "tabular-nums",
+                letterSpacing: "0.02em",
+                pointerEvents: "none",
+              }}
+            >
+              {currentIndex + 1} / {visibleImages.length}
+            </Box>
           </>
         )}
       </Box>
@@ -216,10 +277,10 @@ function GalleryInner({
       {hasMultiple && (
         <Box
           sx={{
-            mt: 2,
+            mt: 1.5,
             overflowX: "auto",
             overflowY: "hidden",
-            // Slimmer scrollbar that doesn't overpower the cream canvas.
+            // Slim scrollbar that doesn't overpower the surface.
             "&::-webkit-scrollbar": { height: 6 },
             "&::-webkit-scrollbar-thumb": {
               bgcolor: "divider",
@@ -229,50 +290,57 @@ function GalleryInner({
         >
           <Stack
             direction="row"
-            spacing={1.5}
+            spacing={1.25}
             sx={{
               pb: 1,
               flexWrap: { xs: "nowrap", md: "wrap" },
             }}
           >
             {visibleImages.map((img, index) => {
-              const isSelected = index === selectedIndex;
+              const isSelected = index === currentIndex;
               return (
                 <Box
                   key={img.id}
                   component="button"
                   type="button"
-                  aria-label={`Show image ${index + 1}`}
+                  aria-label={`Show image ${index + 1} of ${visibleImages.length}`}
                   aria-current={isSelected ? "true" : undefined}
                   onClick={() => setSelectedIndex(index)}
                   sx={{
                     position: "relative",
-                    width: { xs: 72, md: 88 },
-                    height: { xs: 72, md: 88 },
+                    width: { xs: 64, md: 76 },
+                    height: { xs: 64, md: 76 },
                     flexShrink: 0,
                     borderRadius: 1.5,
                     overflow: "hidden",
                     cursor: "pointer",
                     border: "2px solid",
                     borderColor: isSelected ? "primary.main" : "divider",
-                    bgcolor: "background.default",
+                    bgcolor: "background.paper",
                     padding: 0,
-                    transition: "border-color 0.18s ease",
+                    opacity: isSelected ? 1 : 0.85,
+                    transition:
+                      "border-color 0.18s ease, opacity 0.18s ease, box-shadow 0.18s ease",
                     "&:hover": {
-                      borderColor: isSelected ? "primary.main" : "text.secondary",
+                      borderColor: isSelected ? "primary.main" : "grey.400",
+                      opacity: 1,
                     },
                     "&:focus-visible": {
                       outline: "2px solid",
                       outlineColor: "primary.main",
                       outlineOffset: "2px",
                     },
+                    ...(isSelected && {
+                      boxShadow: (theme) =>
+                        `0 0 0 3px ${theme.palette.primary.main}22`,
+                    }),
                   }}
                 >
                   <Image
                     src={img.url}
                     alt={img.alt ?? `${title} thumbnail ${index + 1}`}
                     fill
-                    sizes="88px"
+                    sizes="76px"
                     style={{ objectFit: "contain" }}
                     onError={() => handleThumbError(img.id)}
                   />

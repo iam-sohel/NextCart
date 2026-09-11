@@ -33,15 +33,17 @@ interface ProductInfoProps {
  * derived state (selected variant, quantity, inventory) and lays it out
  * in the canonical order:
  *
+ *   Breadcrumb
  *   Brand
  *   Title
  *   Rating
  *   Price block
  *   Variant selector (if any)
- *   Stock indicator
+ *   Stock indicator (+ wishlist)
  *   Quantity selector
- *   Action buttons (Add to Cart / Buy Now / Wishlist)
+ *   Action buttons (Add to Cart / Buy Now)
  *   Delivery checker
+ *   Description & highlights
  *
  * The component does NOT own state for the actions — the parent
  * (ProductDetailsClient) is the single owner.
@@ -60,13 +62,6 @@ export default function ProductInfo({
   const activePrice = selectedVariant?.price ?? product.price;
   const canPurchase = inventory.status !== "out_of_stock";
 
-  const stockLabel =
-    inventory.status === "in_stock"
-      ? "In stock"
-      : inventory.status === "low_stock"
-        ? `Only ${inventory.available} left`
-        : "Out of stock";
-
   // Disable Add to Cart when the user hasn't chosen a variant
   // OR when there's no stock.
   const addDisabledReason = !canPurchase
@@ -76,7 +71,16 @@ export default function ProductInfo({
       : undefined;
 
   return (
-    <Box>
+    <Box
+      sx={{
+        // Desktop gutter between the two columns; mobile separation from
+        // the gallery above. minWidth: 0 lets long titles/labels shrink
+        // instead of forcing horizontal overflow.
+        pl: { md: 4 },
+        mt: { xs: 3, md: 0 },
+        minWidth: 0,
+      }}
+    >
       <ProductBreadcrumb product={product} />
 
       <Typography
@@ -91,9 +95,14 @@ export default function ProductInfo({
       </Typography>
 
       <Typography
-        variant="h4"
         component="h1"
-        sx={{ fontWeight: 700, mt: 0.5, lineHeight: 1.2 }}
+        sx={{
+          fontSize: { xs: "1.25rem", sm: "1.375rem", md: "1.5rem", lg: "1.625rem" },
+          fontWeight: 700,
+          lineHeight: 1.25,
+          mt: 0.5,
+          overflowWrap: "break-word",
+        }}
       >
         {product.title}
       </Typography>
@@ -103,14 +112,14 @@ export default function ProductInfo({
         reviewCount={product.reviewsCount ?? 0}
       />
 
-      <Box sx={{ mt: 3 }}>
+      <Box sx={{ mt: { xs: 2, md: 2.5 } }}>
         <ProductPriceBlock
           price={activePrice}
-          originalPrice={product.originalPrice}
+          originalPrice={selectedVariant?.originalPrice ?? product.originalPrice}
         />
       </Box>
 
-      <Divider sx={{ my: 3 }} />
+      <Divider sx={{ my: { xs: 2.5, md: 3 } }} />
 
       {variantExists && (
         <ProductVariants
@@ -120,14 +129,25 @@ export default function ProductInfo({
         />
       )}
 
-      <Box sx={{ mt: 3 }}>
+      <Stack
+        direction="row"
+        sx={{
+          mt: { xs: 2.5, md: 3 },
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 2,
+          flexWrap: "wrap",
+        }}
+      >
         <ProductStock
           inventory={inventory}
-          label={stockLabel}
+          indicator={inventory.status === "low_stock" ? "pulse" : "static"}
         />
-      </Box>
 
-      <Box sx={{ mt: 3 }}>
+        <WishlistButton productId={product.id} />
+      </Stack>
+
+      <Box sx={{ mt: 2 }}>
         <QuantitySelector
           value={quantity}
           onChange={onQuantityChange}
@@ -136,11 +156,7 @@ export default function ProductInfo({
         />
       </Box>
 
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        spacing={1.5}
-        sx={{ alignItems: "stretch", mt: 3 }}
-      >
+      <Box sx={{ mt: { xs: 2.5, md: 3 } }}>
         <ProductActions
           product={product}
           variantId={selectedVariant?.id}
@@ -152,9 +168,7 @@ export default function ProductInfo({
           }
           addDisabledReason={addDisabledReason}
         />
-
-        <WishlistButton productId={product.id} />
-      </Stack>
+      </Box>
 
       <DeliveryChecker productId={product.id} />
 

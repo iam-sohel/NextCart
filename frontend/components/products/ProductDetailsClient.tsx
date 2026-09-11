@@ -26,14 +26,20 @@ interface ProductDetailsClientProps {
  *
  * The interactive orchestrator for the product details page. Owns all
  * client-only state (selected variant, quantity) and composes the
- * section components in the canonical mobile-first order:
+ * section components.
  *
- *   Gallery
- *   Info (breadcrumb, brand, title, rating, price, variants, stock,
- *         quantity, actions, delivery, description)
- *   Specifications
- *   Reviews
- *   Related products
+ * Layout model (matches Amazon/Flipkart-style product pages):
+ *
+ *   Desktop (md+):                    Mobile (xs–sm):
+ *   ┌──────────────┬─────────────┐    ┌─────────────┐
+ *   │              │  Info card  │    │   Gallery    │
+ *   │   Gallery    │  (sticky,   │    ├─────────────┤
+ *   │   (sticky)   │   scrolls   │    │  Info card   │
+ *   │              │   with      │    ├─────────────┤
+ *   │              │   content)  │    │  Sections    │
+ *   └──────────────┴─────────────┘    └─────────────┘
+ *
+ *   Below the fold: Specifications → Reviews → Related products.
  *
  * Server / data responsibilities:
  *   - The parent server component (app/products/[slug]/page.tsx)
@@ -101,33 +107,66 @@ export default function ProductDetailsClient({
   const quantity = clampQuantityToInventory(requestedQuantity, inventory);
 
   return (
-    <Container maxWidth="lg" sx={{ py: { xs: 3, md: 5 } }}>
-      <Grid container spacing={{ xs: 3, md: 5 }}>
-        {/* Gallery column. On mobile the gallery stacks first per the
-            recommended mobile order. */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <ProductGallery title={product.title} images={product.images} />
-        </Grid>
+    <Box
+      component="main"
+      sx={{ bgcolor: "background.default", minHeight: "60vh" }}
+    >
+      <Container maxWidth="lg" disableGutters sx={{ px: { xs: 1.5, md: 3 } }}>
+        {/* ── Main product area ─────────────────────────────────── */}
+        <Box
+          sx={{
+            bgcolor: "background.paper",
+            border: "1px solid",
+            borderColor: "divider",
+            borderRadius: { xs: 2, md: 3 },
+            overflow: "hidden",
+            mt: { xs: 1.5, md: 3 },
+          }}
+        >
+          <Grid
+            container
+            spacing={0}
+            sx={{
+              alignItems: "flex-start",
+              px: { xs: 1.5, sm: 2.5, md: 4 },
+              py: { xs: 2, sm: 3, md: 4 },
+            }}
+          >
+            {/* Gallery column — sticky on desktop so the thumbnails
+                stay visible while the (long) info column scrolls. */}
+            <Grid
+              size={{ xs: 12, md: 6 }}
+              sx={{
+                minWidth: 0, // allows the grid child to shrink below content width (no overflow)
+              }}
+            >
+              <Box
+                sx={{
+                  position: { md: "sticky" },
+                  top: { md: 96 },
+                }}
+              >
+                <ProductGallery title={product.title} images={product.images} />
+              </Box>
+            </Grid>
 
-        {/* Info column. */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <ProductInfo
-            product={product}
-            inventory={inventory}
-            selectedVariant={selectedVariant}
-            quantity={quantity}
-            onQuantityChange={setQuantity}
-            onSelectVariant={setSelectedVariantId}
-          />
-        </Grid>
-      </Grid>
+            {/* Info column. */}
+            <Grid size={{ xs: 12, md: 6 }} sx={{ minWidth: 0 }}>
+              <ProductInfo
+                product={product}
+                inventory={inventory}
+                selectedVariant={selectedVariant}
+                quantity={quantity}
+                onQuantityChange={setQuantity}
+                onSelectVariant={setSelectedVariantId}
+              />
+            </Grid>
+          </Grid>
+        </Box>
 
-      {/* Below-the-fold sections span the full width. */}
-      <Box sx={{ mt: { xs: 2, md: 4 } }}>
+        {/* ── Below-the-fold sections span the full width ──────────── */}
         <ProductSpecifications specifications={product.specifications} />
-      </Box>
 
-      <Box>
         <ProductReviews
           reviews={product.reviewsList ?? []}
           summary={
@@ -137,12 +176,10 @@ export default function ProductDetailsClient({
             }
           }
         />
-      </Box>
 
-      <Box>
         <RelatedProducts related={related} />
-      </Box>
-    </Container>
+      </Container>
+    </Box>
   );
 }
 

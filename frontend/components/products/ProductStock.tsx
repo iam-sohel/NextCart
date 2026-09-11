@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Typography } from "@mui/material";
+import { Box, GlobalStyles, Typography } from "@mui/material";
 
 import type { InventoryState } from "@/utils/inventory";
 import { stockLabel } from "@/utils/inventory";
@@ -13,6 +13,11 @@ interface ProductStockProps {
    * status colour but allow custom text.
    */
   label?: string;
+  /**
+   * Visual style of the status dot. "pulse" gently animates the dot on
+   * low-stock ("Only N left") to draw the eye; "static" is the default.
+   */
+  indicator?: "static" | "pulse";
 }
 
 /**
@@ -25,6 +30,7 @@ interface ProductStockProps {
 export default function ProductStock({
   inventory,
   label,
+  indicator = "static",
 }: ProductStockProps) {
   const text = label ?? stockLabel(inventory);
 
@@ -35,12 +41,24 @@ export default function ProductStock({
         ? "warning.main"
         : "error.main";
 
+  const shouldPulse = indicator === "pulse" && inventory.status === "low_stock";
+
   return (
     <Box
       role="status"
       aria-live="polite"
       sx={{ display: "flex", alignItems: "center", gap: 1 }}
     >
+      {shouldPulse && (
+        <GlobalStyles
+          styles={{
+            "@keyframes nextcart-stock-pulse": {
+              "0%, 100%": { opacity: 1, transform: "scale(1)" },
+              "50%": { opacity: 0.45, transform: "scale(0.8)" },
+            },
+          }}
+        />
+      )}
       <Box
         aria-hidden
         sx={{
@@ -48,9 +66,14 @@ export default function ProductStock({
           height: 8,
           borderRadius: "50%",
           bgcolor: color,
+          ...(shouldPulse && {
+            animation: "nextcart-stock-pulse 1.6s ease-in-out infinite",
+          }),
         }}
       />
-      <Typography sx={{ fontWeight: 700, color }}>{text}</Typography>
+      <Typography sx={{ fontWeight: 700, color, fontSize: "0.9375rem" }}>
+        {text}
+      </Typography>
     </Box>
   );
 }

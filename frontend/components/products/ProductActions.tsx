@@ -9,8 +9,10 @@ import {
   Button,
   CircularProgress,
   Stack,
+  Typography,
 } from "@mui/material";
 import BoltIcon from "@mui/icons-material/Bolt";
+import ErrorOutlinedIcon from "@mui/icons-material/ErrorOutlined";
 
 import useCartStore from "@/store/cartStore";
 import useAuthStore from "@/store/authStore";
@@ -215,6 +217,8 @@ export function AddToCartButton({
         }
         sx={{
           fontWeight: 700,
+          borderRadius: 2,
+          minHeight: 44,
         }}
       >
         {label}
@@ -363,6 +367,8 @@ export function BuyNowButton({
         }
         sx={{
           fontWeight: 700,
+          borderRadius: 2,
+          minHeight: 44,
         }}
         fullWidth
       >
@@ -436,14 +442,22 @@ export default function ProductActions({
     >
       {addDisabledReason &&
         !canPurchase && (
-          <Alert
-            severity="warning"
-            sx={{
-              alignItems: "center",
-            }}
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{ alignItems: "center" }}
           >
-            {addDisabledReason}
-          </Alert>
+            <ErrorOutlinedIcon
+              aria-hidden
+              sx={{ fontSize: 18, color: "warning.main" }}
+            />
+            <Typography
+              variant="body2"
+              sx={{ color: "warning.dark", fontWeight: 600 }}
+            >
+              {addDisabledReason}
+            </Typography>
+          </Stack>
         )}
 
       <Stack

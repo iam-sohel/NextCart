@@ -7,6 +7,7 @@ import {
   Button,
   Grid,
   Paper,
+  Stack,
   Typography,
 } from "@mui/material";
 
@@ -67,14 +68,21 @@ export default function RelatedProducts({ related }: RelatedProductsProps) {
   }
 
   return (
-    <Box sx={{ mt: 5 }} aria-labelledby="related-products-heading">
-      <Typography
-        id="related-products-heading"
-        variant="h5"
-        sx={{ fontWeight: 700, mb: 3 }}
+    <Box sx={{ mt: { xs: 4, md: 6 } }} aria-labelledby="related-products-heading">
+      <Stack
+        direction="row"
+        spacing={2}
+        sx={{ alignItems: "center", mb: 3 }}
       >
-        You may also like
-      </Typography>
+        <Typography
+          id="related-products-heading"
+          variant="h5"
+          sx={{ fontWeight: 700, whiteSpace: "nowrap" }}
+        >
+          You may also like
+        </Typography>
+        <Box sx={{ flex: 1, height: 1, bgcolor: "divider" }} />
+      </Stack>
 
       <Grid container spacing={3}>
         {related.map((product) => (
