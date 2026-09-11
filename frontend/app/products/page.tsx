@@ -15,6 +15,7 @@ import {
 } from "@mui/material";
 import CategoryIcon from "@mui/icons-material/Category";
 import SortIcon from "@mui/icons-material/Sort";
+
 export default function ProductsPage() {
   return (
     <>
@@ -22,7 +23,7 @@ export default function ProductsPage() {
 
       {/* ============================================================
           PAGE CANVAS
-          Clean premium catalogue background consistent with the modernized
+          Warm cream page background consistent with the modernized
           NextCart homepage. ProductGrid itself is left untouched.
           ============================================================ */}
       <Box
@@ -34,12 +35,14 @@ export default function ProductsPage() {
       >
         {/* ============================================================
           LAYOUT CONTAINER
-          Responsive horizontal padding so narrow mobile widths stay clean.
+          Slightly wider than the homepage content columns on desktop so
+          the catalogue reads as a first-class page rather than a narrow
+          sub-section, while still keeping comfortable mobile padding.
           ============================================================ */}
         <Container maxWidth="xl" sx={{ px: { xs: 2, sm: 2.5, md: 3 } }}>
           {/* ----------------------------------------
                   BREADCRUMB
-                  Home / Products — semantic, no overflow on mobile.
+                  Home / Products — subtle, responsive, semantic.
                   ---------------------------------------- */}
           <Breadcrumbs
             separator="/"
@@ -80,7 +83,9 @@ export default function ProductsPage() {
 
           {/* ----------------------------------------
                   CATALOGUE HEADER
-                  Products / Discover products you'll love.
+                  Products / discover-subheading.
+                  Matches the homepage section-heading weight without
+                  importing the non-navigating SectionTitle component.
                   ---------------------------------------- */}
           <Box sx={{ mb: { xs: 3, md: 4 }, maxWidth: 720 }}>
             <Typography
@@ -119,9 +124,12 @@ export default function ProductsPage() {
           </Box>
 
           {/* ----------------------------------------
-                  CATALOGUE SURFACE + TOOLBAR
+                  PRODUCT GRID SURFACE + TOOLBAR
                   The grid stays exactly as ProductGrid renders it.
-                  The Sort control is visual/placeholder only — no fake sorting.
+                  We wrap it in a white surface card with a polished,
+                  non-functional toolbar: catalogue context on the left,
+                  a Sort control on the right. The Sort control is visual
+                  only — no fake sorting is implemented on this page.
                   ---------------------------------------- */}
           <Paper
             elevation={0}
@@ -178,7 +186,7 @@ export default function ProductsPage() {
                 </Typography>
               </Box>
 
-              {/* Right — presentational Sort control */}
+              {/* Right — sort control (visual only) */}
               <FormControl
                 size="small"
                 sx={{
