@@ -1,45 +1,25 @@
-interface ApiResponse<T> {
-  ok: boolean;
-  data: T;
-  message?: string;
-}
+/**
+ * NEXTCART — Payment service boundary.
+ *
+ * All payment API communication goes through the centralized authenticated
+ * client in `lib/api.ts`:
+ *
+ *   - Bearer access token attached automatically on every call,
+ *   - transparent 401/403/500 → refresh → retry handling,
+ *   - `NEXT_PUBLIC_API_BASE_URL`-aware absolute URLs,
+ *   - backend error envelopes surfaced as-is (never swallowed).
+ *
+ * Never call `fetch()` directly from here and never read tokens manually —
+ * the auth bootstrap (`lib/authInterceptor.ts`) already wires the token
+ * getter, the single-flight refresher and the terminal auth-failure handler
+ * into `apiRequest`.
+ */
 
-async function apiRequest<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<ApiResponse<T>> {
-  try {
-    const response = await fetch(endpoint, {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
-    });
-    const payload = (await response.json().catch(() => null)) as
-      | { data?: T; message?: string }
-      | T
-      | null;
-
-    return {
-      ok: response.ok,
-      data:
-        payload && typeof payload === "object" && "data" in payload
-          ? (payload.data as T)
-          : (payload as T),
-      message:
-        payload && typeof payload === "object" && "message" in payload
-          ? payload.message
-          : undefined,
-    };
-  } catch {
-    return {
-      ok: false,
-      data: {} as T,
-      message: "Unable to connect to the server.",
-    };
-  }
-}
+import {
+  apiRequest,
+  type ApiResult,
+  type ApiFailure,
+} from "@/lib/api";
 
 export interface CreatePaymentRequest {
   orderId: number;
@@ -74,6 +54,15 @@ export interface PaymentResponse {
   createdAt?: string | null;
 }
 
+/**
+ * Spring `ApiResponse<T>` envelope: `{ success, message, data }`.
+ */
+interface BackendEnvelope<T> {
+  success?: boolean;
+  message?: string;
+  data?: T;
+}
+
 const PAYMENT_ENDPOINTS = {
   create: "/api/v1/payments/create",
   verify: "/api/v1/payments/verify",
@@ -81,7 +70,7 @@ const PAYMENT_ENDPOINTS = {
   reconcile: (orderId: number) =>
     `/api/v1/payments/reconcile?orderId=${encodeURIComponent(orderId)}`,
   refund: (orderId: number) => `/api/v1/payments/order/${orderId}/refund`,
-};
+} as const;
 
 function toNumber(value: unknown, fallback = 0): number {
   const parsed =
@@ -122,6 +111,47 @@ function normalisePayment(data: PaymentResponse): PaymentResponse {
 }
 
 /**
+ * Unwraps the Spring `ApiResponse` envelope and normalises a payment DTO.
+ *
+ * Returns `null` when the payload does not carry the expected `data` object.
+ * A typed narrow failure (instead of `unknown` casting) keeps the invalid
+ * payload distinct from a transport failure while staying strict-safe.
+ */
+function unwrapEnvelope<T>(
+  payload: BackendEnvelope<T> | T | null,
+  normalise: (data: T) => T
+): T | null {
+  if (!payload || typeof payload !== "object" || !("data" in payload)) {
+    return null;
+  }
+
+  const data = (payload as BackendEnvelope<T>).data;
+
+  if (data === null || data === undefined) {
+    return null;
+  }
+
+  return normalise(data);
+}
+
+/**
+ * Builds a failure result from an `apiRequest` failure. The backend message
+ * (and error code, when present) is preserved verbatim — auth errors are
+ * never swallowed here.
+ */
+function failureFrom(
+  res: ApiFailure,
+  fallbackMessage: string
+): ApiResult<never> {
+  return {
+    ok: false,
+    status: res.status,
+    message: res.message || fallbackMessage,
+    ...(res.errorCode !== undefined ? { errorCode: res.errorCode } : {}),
+  };
+}
+
+/**
  * Creates the Razorpay order for an already-created NextCart order.
  *
  * IMPORTANT:
@@ -130,30 +160,33 @@ function normalisePayment(data: PaymentResponse): PaymentResponse {
  */
 export async function createPayment(
   request: CreatePaymentRequest
-): Promise<{
-  ok: boolean;
-  data: CreatePaymentResponse;
-  message?: string;
-}> {
-  const response = await apiRequest<CreatePaymentResponse>(
+): Promise<ApiResult<CreatePaymentResponse>> {
+  const res = await apiRequest<BackendEnvelope<CreatePaymentResponse>>(
     PAYMENT_ENDPOINTS.create,
     {
       method: "POST",
-      body: JSON.stringify(request),
+      body: request,
     }
   );
 
-  if (!response.ok) {
+  if (!res.ok) {
+    return failureFrom(res, "Unable to create payment.");
+  }
+
+  const data = unwrapEnvelope(res.data, normaliseCreatePayment);
+
+  if (!data) {
     return {
       ok: false,
-      data: {} as CreatePaymentResponse,
-      message: response.message || "Unable to create payment.",
+      status: res.status,
+      message: "The server returned an invalid payment response.",
     };
   }
 
   return {
     ok: true,
-    data: normaliseCreatePayment(response.data),
+    status: res.status,
+    data,
   };
 }
 
@@ -162,30 +195,33 @@ export async function createPayment(
  */
 export async function verifyPayment(
   request: VerifyPaymentRequest
-): Promise<{
-  ok: boolean;
-  data: PaymentResponse;
-  message?: string;
-}> {
-  const response = await apiRequest<PaymentResponse>(
+): Promise<ApiResult<PaymentResponse>> {
+  const res = await apiRequest<BackendEnvelope<PaymentResponse>>(
     PAYMENT_ENDPOINTS.verify,
     {
       method: "POST",
-      body: JSON.stringify(request),
+      body: request,
     }
   );
 
-  if (!response.ok) {
+  if (!res.ok) {
+    return failureFrom(res, "Payment verification failed.");
+  }
+
+  const data = unwrapEnvelope(res.data, normalisePayment);
+
+  if (!data) {
     return {
       ok: false,
-      data: {} as PaymentResponse,
-      message: response.message || "Payment verification failed.",
+      status: res.status,
+      message: "The server returned an invalid payment response.",
     };
   }
 
   return {
     ok: true,
-    data: normalisePayment(response.data),
+    status: res.status,
+    data,
   };
 }
 
@@ -194,29 +230,32 @@ export async function verifyPayment(
  */
 export async function getPaymentStatus(
   orderId: number
-): Promise<{
-  ok: boolean;
-  data: PaymentResponse;
-  message?: string;
-}> {
-  const response = await apiRequest<PaymentResponse>(
+): Promise<ApiResult<PaymentResponse>> {
+  const res = await apiRequest<BackendEnvelope<PaymentResponse>>(
     PAYMENT_ENDPOINTS.status(orderId),
     {
       method: "GET",
     }
   );
 
-  if (!response.ok) {
+  if (!res.ok) {
+    return failureFrom(res, "Unable to get payment status.");
+  }
+
+  const data = unwrapEnvelope(res.data, normalisePayment);
+
+  if (!data) {
     return {
       ok: false,
-      data: {} as PaymentResponse,
-      message: response.message || "Unable to get payment status.",
+      status: res.status,
+      message: "The server returned an invalid payment response.",
     };
   }
 
   return {
     ok: true,
-    data: normalisePayment(response.data),
+    status: res.status,
+    data,
   };
 }
 
@@ -225,29 +264,32 @@ export async function getPaymentStatus(
  */
 export async function reconcilePayment(
   orderId: number
-): Promise<{
-  ok: boolean;
-  data: PaymentResponse;
-  message?: string;
-}> {
-  const response = await apiRequest<PaymentResponse>(
+): Promise<ApiResult<PaymentResponse>> {
+  const res = await apiRequest<BackendEnvelope<PaymentResponse>>(
     PAYMENT_ENDPOINTS.reconcile(orderId),
     {
       method: "POST",
     }
   );
 
-  if (!response.ok) {
+  if (!res.ok) {
+    return failureFrom(res, "Unable to reconcile payment.");
+  }
+
+  const data = unwrapEnvelope(res.data, normalisePayment);
+
+  if (!data) {
     return {
       ok: false,
-      data: {} as PaymentResponse,
-      message: response.message || "Unable to reconcile payment.",
+      status: res.status,
+      message: "The server returned an invalid payment response.",
     };
   }
 
   return {
     ok: true,
-    data: normalisePayment(response.data),
+    status: res.status,
+    data,
   };
 }
 
@@ -256,28 +298,31 @@ export async function reconcilePayment(
  */
 export async function refundPayment(
   orderId: number
-): Promise<{
-  ok: boolean;
-  data: PaymentResponse;
-  message?: string;
-}> {
-  const response = await apiRequest<PaymentResponse>(
+): Promise<ApiResult<PaymentResponse>> {
+  const res = await apiRequest<BackendEnvelope<PaymentResponse>>(
     PAYMENT_ENDPOINTS.refund(orderId),
     {
       method: "POST",
     }
   );
 
-  if (!response.ok) {
+  if (!res.ok) {
+    return failureFrom(res, "Unable to process refund.");
+  }
+
+  const data = unwrapEnvelope(res.data, normalisePayment);
+
+  if (!data) {
     return {
       ok: false,
-      data: {} as PaymentResponse,
-      message: response.message || "Unable to process refund.",
+      status: res.status,
+      message: "The server returned an invalid payment response.",
     };
   }
 
   return {
     ok: true,
-    data: normalisePayment(response.data),
+    status: res.status,
+    data,
   };
 }
