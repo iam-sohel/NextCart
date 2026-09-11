@@ -133,13 +133,14 @@ const ENDPOINTS = {
  */
 export async function checkout(
   addressId: number,
+  paymentMethod: "COD" | "ONLINE",
   signal?: AbortSignal,
 ): Promise<ApiResult<OrderResponseWire>> {
   const res = await apiRequest<
     Envelope<OrderResponseWire> | OrderResponseWire
   >(ENDPOINTS.create, {
     method: "POST",
-    body: { addressId },
+    body: { addressId, paymentMethod },
     signal,
   });
 
