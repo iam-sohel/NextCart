@@ -1,71 +1,69 @@
 "use client";
 
-import Link from "next/link";
-import Image from "next/image";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import {
-  Container,
-  Typography,
-  Card,
-  CardContent,
-  Button,
-  Divider,
-  IconButton,
-  Paper,
-  Box,
   Alert,
+  Box,
+  Container,
+  Grid,
+  Typography,
 } from "@mui/material";
-
-import AddIcon from "@mui/icons-material/Add";
-import RemoveIcon from "@mui/icons-material/Remove";
-import DeleteIcon from "@mui/icons-material/Delete";
 
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 
+import CartItemRow from "@/components/cart/CartItemRow";
+import CartOrderSummary from "@/components/cart/CartOrderSummary";
+import CartSkeleton from "@/components/cart/CartSkeleton";
+import CartEmptyState from "@/components/cart/CartEmptyState";
+
 import useCartStore from "@/store/cartStore";
 import useAuthStore from "@/store/authStore";
 
+/**
+ * NEXTCART — Cart page
+ *
+ * Composition layer for the cart UI. All cart state and business logic
+ * lives in the existing Zustand store (store/cartStore.ts) and the
+ * authenticated cart service (services/cartService.ts → /api/v1/cart).
+ * This page only:
+ *
+ *   - triggers the existing fetchCart() on mount when authenticated,
+ *   - maps store state to the presentational components,
+ *   - forwards mutations to the existing store actions
+ *     (increase/decrease → updateQuantity, removeFromCart),
+ *   - keeps the existing /checkout navigation and auth behaviour.
+ *
+ * Amounts — the backend is authoritative (unchanged semantics):
+ *   orderTotal    → Subtotal / Total Payable
+ *   productPrice  → total MRP before discount
+ *   totalDiscount → total discount applied
+ * (productPrice/totalDiscount are now surfaced by the store additively
+ * instead of the page hardcoding ₹0.)
+ */
 export default function CartPage() {
   const items = useCartStore((s) => s.items);
-  const increaseQuantity = useCartStore(
-    (s) => s.increaseQuantity,
-  );
-  const decreaseQuantity = useCartStore(
-    (s) => s.decreaseQuantity,
-  );
-  const removeFromCart = useCartStore(
-    (s) => s.removeFromCart,
-  );
-  const fetchCart = useCartStore(
-    (s) => s.fetchCart,
-  );
+  const increaseQuantity = useCartStore((s) => s.increaseQuantity);
+  const decreaseQuantity = useCartStore((s) => s.decreaseQuantity);
+  const removeFromCart = useCartStore((s) => s.removeFromCart);
+  const fetchCart = useCartStore((s) => s.fetchCart);
 
-  const serverGrandTotal = useCartStore(
-    (s) => s.serverGrandTotal,
-  );
+  const serverGrandTotal = useCartStore((s) => s.serverGrandTotal);
+  // New additive exposures — the backend already sent these values.
+  const serverProductPrice = useCartStore((s) => s.serverProductPrice);
+  const serverTotalDiscount = useCartStore((s) => s.serverTotalDiscount);
 
-  const error = useCartStore(
-    (s) => s.error,
-  );
+  const error = useCartStore((s) => s.error);
+  const clearError = useCartStore((s) => s.clearError);
+  const loading = useCartStore((s) => s.loading);
 
-  const clearError = useCartStore(
-    (s) => s.clearError,
-  );
-
-  const loading = useCartStore(
-    (s) => s.loading,
-  );
-
-  const token = useAuthStore(
-    (s) => s.token,
-  );
+  const token = useAuthStore((s) => s.token);
 
   /*
    * Hydrate from the server when the page mounts.
    * The server cart is the source of truth for
-   * authenticated users.
+   * authenticated users. (Existing behaviour.)
    */
   useEffect(() => {
     if (token) {
@@ -74,497 +72,136 @@ export default function CartPage() {
   }, [token, fetchCart]);
 
   /*
-   * Backend is authoritative for the final
-   * payable cart amount.
+   * Track which row has a mutation in flight so only that row shows
+   * row-level "Updating…" feedback. The store keeps a single global
+   * `loading`; a row counts as busy only while loading is true AND it
+   * was the last row clicked. When loading settles the pair goes inert
+   * automatically (pure derivation — no effect-driven setState), and
+   * the next click simply overwrites the remembered row id.
    */
-  const total = serverGrandTotal;
+  const [lastClickedRowId, setLastClickedRowId] = useState<
+    number | string | null
+  >(null);
+  const isRowBusy = (rowId: number | string) =>
+    loading && lastClickedRowId === rowId;
 
   /*
-   * Until productPrice / totalDiscount are
-   * exposed through the Zustand store, keep
-   * subtotal aligned with the current backend
-   * final total.
-   *
-   * We will improve this in the next store
-   * update to use:
-   * productPrice - totalDiscount = orderTotal
+   * Backend totals (unchanged semantics):
+   *   orderTotal    → the final payable amount
+   *   productPrice  → total MRP before discount
+   *   totalDiscount → total discount applied
    */
-  const subtotal = serverGrandTotal;
+  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
-  /*
-   * Loading state
-   */
-  if (loading && items.length === 0) {
-    return (
-      <>
-        <Header />
-
-        <Container
-          maxWidth="md"
-          sx={{
-            py: 10,
-            textAlign: "center",
-          }}
-        >
-          <Typography
-            variant="h5"
-            sx={{ fontWeight: 600 }}
-          >
-            Loading your cart...
-          </Typography>
-        </Container>
-
-        <Footer />
-      </>
-    );
-  }
-
-  /*
-   * Empty cart state
-   */
-  if (items.length === 0) {
-    return (
-      <>
-        <Header />
-
-        <Container
-          maxWidth="md"
-          sx={{
-            py: 10,
-            textAlign: "center",
-          }}
-        >
-          {error && (
-            <Alert
-              severity="error"
-              onClose={clearError}
-              sx={{
-                mb: 4,
-                textAlign: "left",
-              }}
-            >
-              {error}
-            </Alert>
-          )}
-
-          <Typography
-            variant="h4"
-            sx={{ fontWeight: 700 }}
-          >
-            Your Cart is Empty
-          </Typography>
-
-          <Typography
-            sx={{
-              mt: 2,
-              color: "text.secondary",
-            }}
-          >
-            Looks like you haven&apos;t added any
-            products yet.
-          </Typography>
-
-          <Button
-            component={Link}
-            href="/"
-            variant="contained"
-            sx={{
-              mt: 4,
-              px: 4,
-              py: 1.5,
-              borderRadius: 2,
-            }}
-          >
-            Continue Shopping
-          </Button>
-        </Container>
-
-        <Footer />
-      </>
-    );
-  }
-
-  /*
-   * Cart with items
-   */
   return (
     <>
       <Header />
 
-      <Container
-        maxWidth="xl"
-        sx={{ py: 5 }}
-      >
-        <Typography
-          variant="h4"
-          sx={{
-            fontWeight: 700,
-            mb: 4,
-          }}
-        >
-          Shopping Cart ({items.length})
-        </Typography>
-
-        {error && (
-          <Alert
-            severity="error"
-            onClose={clearError}
+      {/*
+        Main states:
+          1. Loading (first fetch) → skeleton
+          2. Empty cart → empty state (errors surfaced)
+          3. Cart with items → list + summary
+      */}
+      {loading && items.length === 0 ? (
+        <Container maxWidth="lg" sx={{ py: { xs: 3, md: 5 } }}>
+          <CartSkeleton />
+        </Container>
+      ) : items.length === 0 ? (
+        <CartEmptyState
+          error={error}
+          onDismissError={clearError}
+          onRetry={token ? () => void fetchCart() : undefined}
+        />
+      ) : (
+        <Container maxWidth="lg" sx={{ py: { xs: 2.5, md: 4 } }}>
+          {/* Heading row. */}
+          <Box
             sx={{
-              mb: 3,
+              display: "flex",
+              alignItems: "baseline",
+              flexWrap: "wrap",
+              rowGap: 0.5,
+              mb: { xs: 2, md: 3 },
             }}
           >
-            {error}
-          </Alert>
-        )}
-
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: {
-              xs: "1fr",
-              md: "2fr 1fr",
-            },
-            gap: 4,
-          }}
-        >
-          {/* Left Side */}
-          <Box>
-            {items.map((item) => (
-              <Card
-                key={item.id}
-                sx={{
-                  mb: 2,
-                  borderRadius: 3,
-                }}
-              >
-                <CardContent>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      gap: 3,
-                      alignItems: "center",
-                      flexDirection: {
-                        xs: "column",
-                        sm: "row",
-                      },
-                    }}
-                  >
-                    {/* Product image */}
-                    <Box
-                      sx={{
-                        width: 120,
-                        height: 120,
-                        flexShrink: 0,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        overflow: "hidden",
-                      }}
-                    >
-                      {item.image?.trim() ? (
-                        <Link
-                          href={`/products/${item.slug}`}
-                        >
-                          <Image
-                            src={item.image}
-                            alt={item.title}
-                            width={120}
-                            height={120}
-                            style={{
-                              objectFit: "contain",
-                              cursor: "pointer",
-                            }}
-                          />
-                        </Link>
-                      ) : (
-                        <Box
-                          sx={{
-                            width: 120,
-                            height: 120,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            border: "1px solid",
-                            borderColor: "divider",
-                            borderRadius: 2,
-                            color: "text.secondary",
-                            fontSize: 13,
-                            textAlign: "center",
-                            px: 1,
-                          }}
-                        >
-                          Image unavailable
-                        </Box>
-                      )}
-                    </Box>
-
-                    {/* Product information */}
-                    <Box
-                      sx={{
-                        flex: 1,
-                        width: {
-                          xs: "100%",
-                          sm: "auto",
-                        },
-                      }}
-                    >
-                      <Link
-                        href={`/products/${item.slug}`}
-                        style={{
-                          textDecoration: "none",
-                          color: "inherit",
-                        }}
-                      >
-                        <Typography
-                          variant="h6"
-                          sx={{
-                            fontWeight: 700,
-                          }}
-                        >
-                          {item.title}
-                        </Typography>
-                      </Link>
-
-                      {item.variantLabel && (
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{ mt: 0.5 }}
-                        >
-                          {item.variantLabel}
-                        </Typography>
-                      )}
-
-                      <Typography
-                        color="primary"
-                        sx={{
-                          mt: 1,
-                          fontWeight: 700,
-                          fontSize: 24,
-                        }}
-                      >
-                        ₹
-                        {item.price.toLocaleString()}
-                      </Typography>
-
-                      <Typography
-                        color="text.secondary"
-                        sx={{ mt: 1 }}
-                      >
-                        Total: ₹
-                        {item.itemTotal.toLocaleString()}
-                      </Typography>
-
-                      {/* Quantity controls */}
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 1,
-                          mt: 3,
-                        }}
-                      >
-                        <IconButton
-                          disabled={loading}
-                          sx={{
-                            border: "1px solid #ddd",
-                          }}
-                          onClick={() =>
-                            decreaseQuantity(
-                              item.id,
-                              {
-                                variantId:
-                                  item.variantId,
-                              },
-                            )
-                          }
-                        >
-                          <RemoveIcon />
-                        </IconButton>
-
-                        <Paper
-                          elevation={0}
-                          sx={{
-                            width: 50,
-                            height: 38,
-                            display: "flex",
-                            justifyContent:
-                              "center",
-                            alignItems: "center",
-                            border:
-                              "1px solid #ddd",
-                          }}
-                        >
-                          {item.quantity}
-                        </Paper>
-
-                        <IconButton
-                          disabled={loading}
-                          sx={{
-                            border: "1px solid #ddd",
-                          }}
-                          onClick={() =>
-                            increaseQuantity(
-                              item.id,
-                              {
-                                variantId:
-                                  item.variantId,
-                              },
-                            )
-                          }
-                        >
-                          <AddIcon />
-                        </IconButton>
-
-                        <IconButton
-                          color="error"
-                          disabled={loading}
-                          onClick={() =>
-                            void removeFromCart(
-                              item.id,
-                            )
-                          }
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </Box>
-                    </Box>
-                  </Box>
-                </CardContent>
-              </Card>
-            ))}
+            <Typography
+              component="h1"
+              sx={{ fontWeight: 700, fontSize: { xs: "1.25rem", md: "1.5rem" } }}
+            >
+              Shopping Cart
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ ml: 1.5 }}>
+              ({itemCount} {itemCount === 1 ? "item" : "items"})
+            </Typography>
           </Box>
 
-          {/* Order Summary */}
-          <Card
-            sx={{
-              height: "fit-content",
-              borderRadius: 3,
-              position: "sticky",
-              top: 90,
-            }}
-          >
-            <CardContent>
-              <Typography
-                variant="h5"
-                sx={{ fontWeight: 700 }}
-              >
-                Order Summary
-              </Typography>
+          {/* Global cart errors — surfaced, never hidden. */}
+          {error && (
+            <Alert severity="error" onClose={clearError} sx={{ mb: 2.5 }}>
+              {error}
+            </Alert>
+          )}
 
-              <Divider sx={{ my: 3 }} />
-
+          <Grid container spacing={{ xs: 2.5, md: 4 }}>
+            {/* ── Item list ──────────────────────────────────────────── */}
+            <Grid size={{ xs: 12, md: 8 }}>
               <Box
                 sx={{
-                  display: "flex",
-                  justifyContent:
-                    "space-between",
-                  mb: 2,
+                  bgcolor: "background.paper",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: { xs: 2, md: 3 },
+                  px: { xs: 1.5, sm: 2.5, md: 3 },
+                  py: 1,
+                  minWidth: 0,
                 }}
               >
-                <Typography>
-                  Subtotal
-                </Typography>
-
-                <Typography
-                  sx={{ fontWeight: 600 }}
-                >
-                  ₹
-                  {subtotal.toLocaleString()}
-                </Typography>
+                {items.map((item, index) => (
+                  <Box
+                    key={item.id}
+                    sx={{
+                      borderBottom:
+                        index < items.length - 1 ? "1px solid" : "none",
+                      borderColor: "divider",
+                    }}
+                  >
+                    <CartItemRow
+                      item={item}
+                      busy={isRowBusy(item.id)}
+                      disabled={loading && !isRowBusy(item.id)}
+                      onIncrease={() => {
+                        setLastClickedRowId(item.id);
+                        increaseQuantity(item.id, {});
+                      }}
+                      onDecrease={() => {
+                        if (item.quantity <= 1) return; // store clamps at 1 anyway
+                        setLastClickedRowId(item.id);
+                        decreaseQuantity(item.id, {});
+                      }}
+                      onRemove={() => {
+                        setLastClickedRowId(item.id);
+                        void removeFromCart(item.id);
+                      }}
+                    />
+                  </Box>
+                ))}
               </Box>
+            </Grid>
 
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent:
-                    "space-between",
-                  mb: 2,
-                }}
-              >
-                <Typography>
-                  Discount
-                </Typography>
-
-                <Typography
-                  color="success.main"
-                >
-                  ₹0
-                </Typography>
-              </Box>
-
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent:
-                    "space-between",
-                  mb: 2,
-                }}
-              >
-                <Typography>
-                  Shipping
-                </Typography>
-
-                <Typography
-                  color="success.main"
-                >
-                  FREE
-                </Typography>
-              </Box>
-
-              <Divider sx={{ my: 3 }} />
-
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent:
-                    "space-between",
-                }}
-              >
-                <Typography
-                  variant="h6"
-                  sx={{ fontWeight: 700 }}
-                >
-                  Total
-                </Typography>
-
-                <Typography
-                  variant="h6"
-                  sx={{ fontWeight: 700 }}
-                >
-                  ₹
-                  {total.toLocaleString()}
-                </Typography>
-              </Box>
-
-              <Button
-                component={Link}
-                href="/checkout"
-                fullWidth
-                variant="contained"
-                size="large"
-                sx={{
-                  mt: 4,
-                  py: 1.5,
-                  borderRadius: 2,
-                }}
-              >
-                Proceed to Checkout
-              </Button>
-
-              <Button
-                component={Link}
-                href="/"
-                fullWidth
-                variant="outlined"
-                sx={{ mt: 2 }}
-              >
-                Continue Shopping
-              </Button>
-            </CardContent>
-          </Card>
-        </Box>
-      </Container>
+            {/* ── Order summary ──────────────────────────────────────── */}
+            <Grid size={{ xs: 12, md: 4 }}>
+              <CartOrderSummary
+                productPrice={serverProductPrice}
+                totalDiscount={serverTotalDiscount}
+                orderTotal={serverGrandTotal}
+                itemCount={itemCount}
+                updating={loading}
+              />
+            </Grid>
+          </Grid>
+        </Container>
+      )}
 
       <Footer />
     </>

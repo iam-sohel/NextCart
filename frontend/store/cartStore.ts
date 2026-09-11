@@ -67,6 +67,12 @@ interface CartStore {
   /** Backend totalItems */
   serverTotalItems: number;
 
+  /** Backend productPrice — total MRP value before discount. */
+  serverProductPrice: number;
+
+  /** Backend totalDiscount — total discount applied across the cart. */
+  serverTotalDiscount: number;
+
   addToCart: (input: AddToCartInput) => Promise<{
     ok: boolean;
     message?: string;
@@ -300,6 +306,10 @@ function apply(
     items,
     serverGrandTotal: grandTotal,
     serverTotalItems: totalItems,
+    serverProductPrice:
+      response.productPrice,
+    serverTotalDiscount:
+      response.totalDiscount,
     loading: false,
     error: null,
   });
@@ -326,6 +336,10 @@ const useCartStore =
     serverGrandTotal: 0,
 
     serverTotalItems: 0,
+
+    serverProductPrice: 0,
+
+    serverTotalDiscount: 0,
 
     /* ───────────────────────────────────────────────────────────────
        Fetch cart
@@ -745,6 +759,8 @@ const useCartStore =
           items: [],
           serverGrandTotal: 0,
           serverTotalItems: 0,
+          serverProductPrice: 0,
+          serverTotalDiscount: 0,
           loading: false,
           error: null,
         });
