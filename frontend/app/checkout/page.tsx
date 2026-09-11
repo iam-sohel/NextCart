@@ -34,6 +34,15 @@ import {
 
 import { checkout as apiCheckout } from "@/services/orderService";
 import { createAddress as apiCreateAddress } from "@/services/addressService";
+import {
+  createPayment,
+  verifyPayment,
+} from "@/services/paymentService";
+import {
+  loadRazorpay,
+  openRazorpay,
+  type RazorpayPaymentResponse,
+} from "@/lib/razorpay";
 import useRequireAuth from "@/hooks/useRequireAuth";
 
 /**
@@ -41,25 +50,22 @@ import useRequireAuth from "@/hooks/useRequireAuth";
  *
  * Backend-driven checkout flow:
  *
- * 1. Wait for authentication hydration.
- * 2. Load saved addresses and the server cart.
- * 3. Automatically select the default saved address.
- * 4. Allow the customer to select another saved address.
- * 5. Allow the customer to edit the selected address.
- * 6. Reuse the selected saved address when unchanged.
- * 7. Create a new address when the entered address is new/changed.
- * 8. Create the order:
+ * COD:
+ *   1. Validate authentication/address.
+ *   2. Create order.
+ *   3. Clear cart.
+ *   4. Redirect to order success.
  *
- *      POST /api/orders
- *      {
- *        addressId
- *      }
+ * ONLINE:
+ *   1. Validate authentication/address.
+ *   2. Create order.
+ *   3. Create Razorpay order from backend.
+ *   4. Open Razorpay Checkout.
+ *   5. Verify payment with backend.
+ *   6. Clear cart only after successful verification.
+ *   7. Redirect to order success.
  *
- * 9. Clear the local cart only after successful order creation.
- * 10. Refresh the server cart.
- * 11. Redirect using the server-generated order number.
- *
- * Online payment remains disabled until payment integration is implemented.
+ * The backend remains the source of truth for order/payment amounts.
  */
 export default function CheckoutPage() {
   const router = useRouter();
@@ -85,7 +91,9 @@ export default function CheckoutPage() {
   const [state, setState] = useState("");
   const [pincode, setPincode] = useState("");
 
-  const [paymentMethod] = useState<"COD">("COD");
+  const [paymentMethod, setPaymentMethod] = useState<
+    "COD" | "ONLINE"
+  >("COD");
 
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -103,8 +111,7 @@ export default function CheckoutPage() {
   }, [checking, authed, fetchAddresses, fetchCart]);
 
   /**
-   * Derive the automatic selection during render rather than updating state
-   * synchronously from an effect.
+   * Derive the selected address during render.
    */
   const effectiveSelectedAddressId = addresses.some(
     (address) => address.id === selectedAddressId
@@ -116,7 +123,6 @@ export default function CheckoutPage() {
 
   /**
    * Populate the checkout form from the selected saved address.
-   * Uses functional setState to avoid setState-in-effect lint rule.
    */
   useEffect(() => {
     if (effectiveSelectedAddressId === null) {
@@ -131,16 +137,13 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Address selection is intentionally synchronized into the controlled
-    // checkout fields. Keep this exception local rather than disabling the
-    // rule for the entire file.
     /* eslint-disable react-hooks/set-state-in-effect */
     setFullName(selectedAddress.fullName || "");
-setPhone(selectedAddress.phoneNumber || "");
-setAddressLine(selectedAddress.streetAddress || "");
-setCity(selectedAddress.city || "");
-setState(selectedAddress.state || "");
-setPincode(selectedAddress.postalCode || "");
+    setPhone(selectedAddress.phoneNumber || "");
+    setAddressLine(selectedAddress.streetAddress || "");
+    setCity(selectedAddress.city || "");
+    setState(selectedAddress.state || "");
+    setPincode(selectedAddress.postalCode || "");
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [effectiveSelectedAddressId, addresses]);
 
@@ -156,9 +159,175 @@ setPincode(selectedAddress.postalCode || "");
   );
 
   /**
-   * Backend remains the source of truth for the checkout total.
+   * Handle payment method selection.
+   */
+  const handlePaymentMethodChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
+
+      if (value === "COD" || value === "ONLINE") {
+        setError("");
+        setPaymentMethod(value);
+      }
+    },
+    []
+  );
+
+  /**
+   * Backend cart total used for the current checkout summary.
+   *
+   * The final online payment amount is still obtained from the backend
+   * Razorpay order creation response.
    */
   const total = serverGrandTotal;
+
+  /**
+   * Synchronize the cart after a successful order/payment.
+   */
+const finishSuccessfulOrder = useCallback(
+  async (orderId: number, orderNumber?: string) => {
+    await clearCart();
+    void fetchCart();
+
+    if (!Number.isInteger(orderId) || orderId <= 0) {
+      setError(
+        "Order was created, but the order ID was not returned."
+      );
+      return;
+    }
+
+    const redirectUrl = orderNumber
+      ? `/order-success?orderNumber=${encodeURIComponent(orderNumber)}`
+      : `/order-success?orderId=${encodeURIComponent(String(orderId))}`;
+
+    router.push(redirectUrl);
+  },
+  [clearCart, fetchCart, router]
+);
+
+  /**
+   * Open Razorpay Checkout for an already-created NextCart order.
+   */
+  const startOnlinePayment = useCallback(
+    async (orderId: number, orderNumber: string) => {
+      /**
+       * Load Razorpay's browser SDK only when online payment is actually used.
+       */
+      const razorpayLoaded = await loadRazorpay();
+
+      if (!razorpayLoaded) {
+        throw new Error(
+          "Unable to load the payment gateway. Please check your internet connection and try again."
+        );
+      }
+
+      /**
+       * Ask our backend to create the Razorpay order.
+       *
+       * IMPORTANT:
+       * The backend calculates the amount.
+       * `amount` returned here is already in paise.
+       */
+      const paymentOrderResult = await createPayment({
+        orderId,
+      });
+
+      if (!paymentOrderResult.ok) {
+        throw new Error(
+          paymentOrderResult.message ||
+            "Unable to initialize online payment."
+        );
+      }
+
+      const paymentOrder = paymentOrderResult.data;
+
+      if (
+        !paymentOrder.razorpayOrderId ||
+        !paymentOrder.keyId ||
+        !paymentOrder.amount ||
+        !paymentOrder.currency
+      ) {
+        throw new Error(
+          "The payment gateway returned an incomplete payment configuration."
+        );
+      }
+
+      /**
+       * Open Razorpay.
+       *
+       * The backend amount is already in paise.
+       * Do NOT multiply by 100 here.
+       */
+      openRazorpay({
+        key: paymentOrder.keyId,
+        amount: paymentOrder.amount,
+        currency: paymentOrder.currency,
+        name: "NextCart",
+        description: `Payment for order ${orderNumber}`,
+        order_id: paymentOrder.razorpayOrderId,
+
+        handler: async (
+          response: RazorpayPaymentResponse
+        ) => {
+          try {
+            setError("");
+
+            /**
+             * Verify the payment on our backend.
+             *
+             * Never trust the browser as the final payment authority.
+             */
+            const verificationResult = await verifyPayment({
+              orderId,
+              razorpayOrderId: response.razorpay_order_id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature,
+            });
+
+            if (!verificationResult.ok) {
+              setSubmitting(false);
+              setError(
+                verificationResult.message ||
+                  "Payment verification failed. Your order has not been confirmed."
+              );
+              return;
+            }
+
+            /**
+             * Backend has confirmed the payment.
+             * Only now is it safe to clear the cart.
+             */
+            await finishSuccessfulOrder(orderId, orderNumber);
+          } catch (verificationError) {
+            setSubmitting(false);
+
+            const message =
+              verificationError instanceof Error
+                ? verificationError.message
+                : "Payment verification failed. Please check your order status.";
+
+            setError(message);
+          }
+        },
+
+        modal: {
+          /**
+           * Razorpay was closed without completing payment.
+           *
+           * The order remains pending on the backend.
+           * We deliberately do NOT clear the cart or redirect to success.
+           */
+          ondismiss: () => {
+            setSubmitting(false);
+            setError(
+              "Payment was cancelled or the payment window was closed. Your order is still pending."
+            );
+          },
+        },
+      });
+    },
+    [finishSuccessfulOrder]
+  );
 
   /**
    * Place the order.
@@ -194,13 +363,6 @@ setPincode(selectedAddress.postalCode || "");
       return;
     }
 
-    if (paymentMethod !== "COD") {
-      setError(
-        "Online payment is not available yet. Please select Cash on Delivery."
-      );
-      return;
-    }
-
     if (checking || !authed) {
       setError("Please wait while your account is being verified.");
       return;
@@ -215,8 +377,6 @@ setPincode(selectedAddress.postalCode || "");
       /**
        * Check whether the selected saved address still exactly matches
        * the values currently entered in the form.
-       *
-       * If yes, reuse the existing address.
        */
       const selectedAddress =
         selectedAddressId !== null
@@ -236,15 +396,13 @@ setPincode(selectedAddress.postalCode || "");
 
       if (matchesSelectedAddress && selectedAddress) {
         /**
-         * Existing saved address.
+         * Reuse existing saved address.
          */
         addressId = selectedAddress.id;
       } else {
         /**
-         * The customer changed the selected address or entered a
-         * completely new address.
-         *
-         * Create a new saved address first.
+         * Customer entered a new/changed address.
+         * Save it before creating the order.
          */
         const createRes = await apiCreateAddress({
           fullName: fullName.trim(),
@@ -266,67 +424,66 @@ setPincode(selectedAddress.postalCode || "");
         }
 
         addressId = createRes.data.id;
-
-        /**
-         * Keep the newly created address selected locally.
-         */
         setSelectedAddressId(addressId);
       }
 
       /**
-       * Create the order.
+       * Create the NextCart order.
        *
        * Backend contract:
        *
        * POST /api/orders
        * {
-       *   addressId
+       *   addressId,
+       *   paymentMethod
        * }
+       *
+       * The backend calculates the authoritative order total.
        */
-      const result = await apiCheckout(addressId);
+      const result = await apiCheckout(addressId, paymentMethod);
 
       if (!result.ok) {
         setError(result.message || "Unable to place the order.");
         return;
       }
 
-      /**
-       * Only clear the cart after the backend confirms
-       * successful order creation.
-       */
-      await clearCart();
-
-      /**
-       * Keep the local cart synchronized with the backend.
-       */
-      void fetchCart();
-
-      /**
-       * Backend-generated order number is the source of truth.
-       */
       const orderNumber = result.data.orderNumber;
+      const orderId = Number(result.data.id);
 
-      if (!orderNumber) {
+      if (!orderNumber || !Number.isFinite(orderId)) {
         setError(
-          "Order was created, but the order number was not returned."
+          "The order was created, but required order information was not returned."
         );
         return;
       }
 
-      router.push(
-        "/order-success?orderId=" +
-          encodeURIComponent(orderNumber)
-      );
-    } catch (err) {
-      console.error("Checkout failed:", err);
+      /**
+       * COD:
+       *
+       * Order creation is sufficient because there is no online payment
+       * to verify.
+       */
+      if (paymentMethod === "COD") {
+  await finishSuccessfulOrder(orderId, orderNumber);
+  return;
+}
 
+      /**
+       * ONLINE:
+       *
+       * Create Razorpay order and open the payment gateway.
+       *
+       * Cart is NOT cleared here.
+       * It is cleared only after backend payment verification succeeds.
+       */
+      await startOnlinePayment(orderId, orderNumber);
+    } catch (err) {
       const message =
         err instanceof Error
           ? err.message
           : "Checkout failed. Please try again.";
 
       setError(message);
-    } finally {
       setSubmitting(false);
     }
   }, [
@@ -337,14 +494,13 @@ setPincode(selectedAddress.postalCode || "");
     city,
     state,
     pincode,
-    paymentMethod,
     checking,
     authed,
     selectedAddressId,
     addresses,
-    clearCart,
-    fetchCart,
-    router,
+    paymentMethod,
+    finishSuccessfulOrder,
+    startOnlinePayment,
   ]);
 
   /**
@@ -703,7 +859,10 @@ setPincode(selectedAddress.postalCode || "");
                   Payment Method
                 </Typography>
 
-                <RadioGroup value={paymentMethod}>
+                <RadioGroup
+                  value={paymentMethod}
+                  onChange={handlePaymentMethodChange}
+                >
                   <FormControlLabel
                     value="COD"
                     control={<Radio />}
@@ -713,10 +872,22 @@ setPincode(selectedAddress.postalCode || "");
                   <FormControlLabel
                     value="ONLINE"
                     control={<Radio />}
-                    label="Card / UPI (Coming Soon)"
-                    disabled
+                    label="Card / UPI"
                   />
                 </RadioGroup>
+
+                {paymentMethod === "ONLINE" && (
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
+                      mt: 1,
+                    }}
+                  >
+                    Pay securely using Razorpay with Card, UPI,
+                    Net Banking or supported payment methods.
+                  </Typography>
+                )}
               </CardContent>
             </Card>
           </Box>
@@ -914,8 +1085,12 @@ setPincode(selectedAddress.postalCode || "");
                 }
               >
                 {submitting
-                  ? "Placing Order..."
-                  : "Place Order"}
+                  ? paymentMethod === "ONLINE"
+                    ? "Processing Payment..."
+                    : "Placing Order..."
+                  : paymentMethod === "ONLINE"
+                    ? "Pay Now"
+                    : "Place Order"}
               </Button>
             </CardContent>
           </Card>

@@ -491,7 +491,7 @@ export default function SignupPage() {
             acceptedTerms,
         );
 
-    let identifierErr: string | null = null;
+    const identifierErr: string | null = null;
 
     setFirstNameError(firstErr);
     setLastNameError(lastErr);
