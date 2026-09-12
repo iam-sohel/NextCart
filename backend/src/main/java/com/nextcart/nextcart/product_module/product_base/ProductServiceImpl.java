@@ -3,60 +3,46 @@ package com.nextcart.nextcart.product_module.product_base;
 import com.nextcart.nextcart.brand_module.entity.Brand;
 import com.nextcart.nextcart.brand_module.entity.BrandStatus;
 import com.nextcart.nextcart.brand_module.repository.BrandRepository;
-
 import com.nextcart.nextcart.category_module.entity.Category;
 import com.nextcart.nextcart.category_module.entity.CategoryStatus;
 import com.nextcart.nextcart.category_module.repository.CategoryRepository;
-
-import com.nextcart.nextcart.inventory_module.InventoryEntity;
-import com.nextcart.nextcart.inventory_module.InventoryRepository;
-
 import com.nextcart.nextcart.product_module.exceptions.ProductAlreadyExistsException;
 import com.nextcart.nextcart.product_module.exceptions.ProductNotFoundException;
 import com.nextcart.nextcart.product_module.exceptions.ProductValidationException;
-
 import com.nextcart.nextcart.product_module.productImage.ProductImageEntity;
 import com.nextcart.nextcart.product_module.productImage.ProductImageRepository;
 import com.nextcart.nextcart.product_module.productImage.productImageDTO.ProductImageResponse;
-
 import com.nextcart.nextcart.product_module.productPrice.ProductVariantPriceEntity;
 import com.nextcart.nextcart.product_module.productPrice.ProductVariantPriceRepository;
 import com.nextcart.nextcart.product_module.productPrice.dto.ProductVariantPriceResponse;
-
 import com.nextcart.nextcart.product_module.productSpecification.ProductSpecification;
 import com.nextcart.nextcart.product_module.productSpecification.ProductSpecificationRepository;
 import com.nextcart.nextcart.product_module.productSpecification.productSpecification.ProductSpecificationResponse;
-
 import com.nextcart.nextcart.product_module.productVariant.ProductVariantEntity;
 import com.nextcart.nextcart.product_module.productVariant.ProductVariantRepository;
 import com.nextcart.nextcart.product_module.productVariant.ProductVariantStatus;
 import com.nextcart.nextcart.product_module.productVariant.dto.ProductVariantResponse;
-
 import com.nextcart.nextcart.product_module.product_base.dto.ProductCreateRequest;
 import com.nextcart.nextcart.product_module.product_base.dto.ProductDetailsResponse;
 import com.nextcart.nextcart.product_module.product_base.dto.ProductResponse;
 import com.nextcart.nextcart.product_module.product_base.dto.ProductUpdateRequest;
-
 import com.nextcart.nextcart.product_module.variantAttribute.VariantAttributeEntity;
 import com.nextcart.nextcart.product_module.variantAttribute.VariantAttributeRepository;
 import com.nextcart.nextcart.product_module.variantAttribute.dto.VariantAttributeResponse;
-
+import com.nextcart.nextcart.seller_module.inventory_module.entity.InventoryItem;
+import com.nextcart.nextcart.seller_module.inventory_module.repository.InventoryItemRepository;
 import com.nextcart.nextcart.subcategory_module.entity.SubCategory;
 import com.nextcart.nextcart.subcategory_module.entity.SubCategoryStatus;
 import com.nextcart.nextcart.subcategory_module.repository.SubCategoryRepository;
-
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -80,7 +66,7 @@ public class ProductServiceImpl implements ProductService {
 
     private final VariantAttributeRepository variantAttributeRepository;
 
-    private final InventoryRepository inventoryRepository;
+    private final InventoryItemRepository inventoryItemRepository;
 
     private final ProductSpecificationRepository productSpecificationRepository;
 
@@ -92,23 +78,30 @@ public class ProductServiceImpl implements ProductService {
     // =========================================================
 
     @Override
-    public ProductResponse createProduct(ProductCreateRequest request) {
+    public ProductResponse createProduct(
+            ProductCreateRequest request
+    ) {
 
         validateSlugForCreate(request.getSlug());
 
-        Category category = getActiveCategory(request.getCategoryId());
+        Category category =
+                getActiveCategory(request.getCategoryId());
 
         SubCategory subCategory =
-                getActiveSubCategory(request.getSubCategoryId());
+                getActiveSubCategory(
+                        request.getSubCategoryId()
+                );
 
         validateSubCategoryBelongsToCategory(
                 subCategory,
                 category
         );
 
-        Brand brand = getActiveBrand(request.getBrandId());
+        Brand brand =
+                getActiveBrand(request.getBrandId());
 
-        ProductEntity product = productMapper.toEntity(request);
+        ProductEntity product =
+                productMapper.toEntity(request);
 
         product.setCategory(category);
         product.setSubCategory(subCategory);
@@ -157,7 +150,9 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
-    public ProductDetailsResponse getProductDetailsById(Long id) {
+    public ProductDetailsResponse getProductDetailsById(
+            Long id
+    ) {
 
         ProductEntity product =
                 getActiveProductById(id);
@@ -172,7 +167,9 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
-    public ProductDetailsResponse getProductDetailsBySlug(String slug) {
+    public ProductDetailsResponse getProductDetailsBySlug(
+            String slug
+    ) {
 
         ProductEntity product =
                 getActiveProductBySlug(slug);
@@ -325,12 +322,25 @@ public class ProductServiceImpl implements ProductService {
                             // INVENTORY
                             // ---------------------------------
 
-                            InventoryEntity inventory =
-                                    inventoryRepository
+                            List<InventoryItem> inventoryItems =
+                                    inventoryItemRepository
                                             .findByProductVariantId(
                                                     variantId
+                                            );
+
+
+                            // ---------------------------------
+                            // TOTAL AVAILABLE STOCK
+                            // ---------------------------------
+
+                            int totalAvailableStock =
+                                    inventoryItems.stream()
+                                            .mapToInt(item ->
+                                                    item.getAvailableStock() == null
+                                                            ? 0
+                                                            : item.getAvailableStock()
                                             )
-                                            .orElse(null);
+                                            .sum();
 
 
                             // ---------------------------------
@@ -339,7 +349,7 @@ public class ProductServiceImpl implements ProductService {
 
                             String stockStatus =
                                     calculateStockStatus(
-                                            inventory
+                                            totalAvailableStock
                                     );
 
 
@@ -348,9 +358,7 @@ public class ProductServiceImpl implements ProductService {
                             // ---------------------------------
 
                             boolean available =
-                                    isAvailable(
-                                            inventory
-                                    );
+                                    totalAvailableStock > 0;
 
 
                             // ---------------------------------
@@ -405,15 +413,8 @@ public class ProductServiceImpl implements ProductService {
     // =========================================================
 
     private String calculateStockStatus(
-            InventoryEntity inventory
+            Integer availableStock
     ) {
-
-        if (inventory == null) {
-            return "OUT_OF_STOCK";
-        }
-
-        Integer availableStock =
-                inventory.getAvailableStock();
 
         if (availableStock == null ||
                 availableStock <= 0) {
@@ -426,20 +427,6 @@ public class ProductServiceImpl implements ProductService {
         }
 
         return "IN_STOCK";
-    }
-
-
-    // =========================================================
-    // AVAILABLE
-    // =========================================================
-
-    private boolean isAvailable(
-            InventoryEntity inventory
-    ) {
-
-        return inventory != null
-                && inventory.getAvailableStock() != null
-                && inventory.getAvailableStock() > 0;
     }
 
 
@@ -563,7 +550,8 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(readOnly = true)
     public Page<ProductDetailsResponse> getAllProducts(
-            Pageable pageable) {
+            Pageable pageable
+    ) {
 
         return productRepository
                 .findAllByStatus(
@@ -663,53 +651,42 @@ public class ProductServiceImpl implements ProductService {
                                 )
                         );
 
-
         validateSlugForUpdate(
                 request.getSlug(),
                 id
         );
-
 
         Category category =
                 getActiveCategory(
                         request.getCategoryId()
                 );
 
-
         SubCategory subCategory =
                 getActiveSubCategory(
                         request.getSubCategoryId()
                 );
-
 
         validateSubCategoryBelongsToCategory(
                 subCategory,
                 category
         );
 
-
         Brand brand =
                 getActiveBrand(
                         request.getBrandId()
                 );
-
 
         productMapper.updateEntity(
                 request,
                 product
         );
 
-
         product.setCategory(category);
-
         product.setSubCategory(subCategory);
-
         product.setBrand(brand);
-
 
         ProductEntity updated =
                 productRepository.save(product);
-
 
         return productMapper.toResponse(updated);
     }
@@ -732,7 +709,6 @@ public class ProductServiceImpl implements ProductService {
                                 )
                         );
 
-
         if (product.getStatus() ==
                 ProductStatus.INACTIVE) {
 
@@ -740,7 +716,6 @@ public class ProductServiceImpl implements ProductService {
                     "Product is already inactive"
             );
         }
-
 
         product.setStatus(
                 ProductStatus.INACTIVE
@@ -765,7 +740,6 @@ public class ProductServiceImpl implements ProductService {
                                 )
                         );
 
-
         if (product.getStatus() ==
                 ProductStatus.ACTIVE) {
 
@@ -774,14 +748,11 @@ public class ProductServiceImpl implements ProductService {
             );
         }
 
-
         validateRestoreDependencies(product);
-
 
         product.setStatus(
                 ProductStatus.ACTIVE
         );
-
 
         return productMapper.toResponse(product);
     }
@@ -801,7 +772,6 @@ public class ProductServiceImpl implements ProductService {
                     "Product id is required"
             );
         }
-
 
         return productRepository
                 .findByIdAndStatus(
@@ -833,10 +803,8 @@ public class ProductServiceImpl implements ProductService {
             );
         }
 
-
         String normalizedSlug =
                 slug.trim();
-
 
         return productRepository
                 .findBySlugIgnoreCaseAndStatus(
@@ -868,10 +836,8 @@ public class ProductServiceImpl implements ProductService {
             );
         }
 
-
         String normalizedSlug =
                 slug.trim();
-
 
         if (productRepository
                 .existsBySlugIgnoreCase(
@@ -903,10 +869,8 @@ public class ProductServiceImpl implements ProductService {
             );
         }
 
-
         String normalizedSlug =
                 slug.trim();
-
 
         if (productRepository
                 .existsBySlugIgnoreCaseAndIdNot(
@@ -937,7 +901,6 @@ public class ProductServiceImpl implements ProductService {
             );
         }
 
-
         return categoryRepository
                 .findByIdAndStatus(
                         categoryId,
@@ -967,7 +930,6 @@ public class ProductServiceImpl implements ProductService {
             );
         }
 
-
         return subCategoryRepository
                 .findByIdAndStatus(
                         subCategoryId,
@@ -996,7 +958,6 @@ public class ProductServiceImpl implements ProductService {
                     "Brand id is required"
             );
         }
-
 
         return brandRepository
                 .findByIdAndStatus(
@@ -1029,7 +990,6 @@ public class ProductServiceImpl implements ProductService {
             );
         }
 
-
         if (subCategory.getCategory() == null ||
                 subCategory.getCategory().getId() == null ||
                 !subCategory.getCategory()
@@ -1058,14 +1018,12 @@ public class ProductServiceImpl implements ProductService {
             );
         }
 
-
         if (product.getSubCategory() == null) {
 
             throw new ProductValidationException(
                     "Product subcategory is missing"
             );
         }
-
 
         if (product.getBrand() == null) {
 
@@ -1074,21 +1032,17 @@ public class ProductServiceImpl implements ProductService {
             );
         }
 
-
         getActiveCategory(
                 product.getCategory().getId()
         );
-
 
         getActiveSubCategory(
                 product.getSubCategory().getId()
         );
 
-
         getActiveBrand(
                 product.getBrand().getId()
         );
-
 
         validateSubCategoryBelongsToCategory(
                 product.getSubCategory(),

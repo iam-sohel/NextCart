@@ -1,6 +1,7 @@
 package com.nextcart.nextcart.auth_module.service;
 
 import com.nextcart.nextcart.auth_module.entity.RefreshToken;
+import com.nextcart.nextcart.auth_module.exceptions.TokenException;
 import com.nextcart.nextcart.auth_module.repository.RefreshTokenRepository;
 import com.nextcart.nextcart.user_module.entity.User;
 import lombok.RequiredArgsConstructor;
@@ -25,73 +26,111 @@ public class RefreshTokenService {
 
     private final SecureRandom secureRandom = new SecureRandom();
 
+
+    // =========================================================
+    // CREATE REFRESH TOKEN
+    // =========================================================
+
     /**
-     * Creates and stores a refresh token.
+     * Creates a cryptographically secure refresh token.
      *
-     * The raw token is returned only once to the caller.
-     * Only its SHA-256 hash is stored in the database.
+     * The raw token is returned only to the caller.
+     * Only the SHA-256 hash is stored in the database.
      */
     @Transactional
     public String createRefreshToken(User user) {
 
+        if (user == null || user.getId() == null) {
+            throw new TokenException(
+                    "User is required to create a refresh token"
+            );
+        }
+
         String rawToken = generateSecureToken();
 
-        RefreshToken refreshToken = RefreshToken.builder()
-                .user(user)
-                .tokenHash(hashToken(rawToken))
-                .expiresAt(
-                        LocalDateTime.now()
-                                .plusDays(REFRESH_TOKEN_EXPIRY_DAYS)
-                )
-                .revoked(false)
-                .createdAt(LocalDateTime.now())
-                .build();
+        LocalDateTime now = LocalDateTime.now();
+
+        RefreshToken refreshToken =
+                RefreshToken.builder()
+                        .user(user)
+                        .tokenHash(hashToken(rawToken))
+                        .expiresAt(
+                                now.plusDays(
+                                        REFRESH_TOKEN_EXPIRY_DAYS
+                                )
+                        )
+                        .revoked(false)
+                        .createdAt(now)
+                        .build();
 
         refreshTokenRepository.save(refreshToken);
 
         return rawToken;
     }
 
+
+    // =========================================================
+    // VALIDATE REFRESH TOKEN
+    // =========================================================
+
     /**
-     * Validates a refresh token and returns its entity.
+     * Validates and locks the refresh-token row.
+     *
+     * The pessimistic lock prevents two concurrent refresh
+     * requests from successfully consuming the same token.
      */
-    @Transactional(readOnly = true)
-    public RefreshToken validateRefreshToken(String rawToken) {
+    @Transactional
+    public RefreshToken validateRefreshToken(
+            String rawToken) {
 
         if (rawToken == null || rawToken.isBlank()) {
-            throw new IllegalArgumentException(
+            throw new TokenException(
                     "Refresh token is required"
             );
         }
 
-        String tokenHash = hashToken(rawToken);
+        String tokenHash =
+                hashToken(rawToken.trim());
 
-        RefreshToken refreshToken = refreshTokenRepository
-                .findByTokenHash(tokenHash)
-                .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "Invalid refresh token"
-                        )
-                );
+        RefreshToken refreshToken =
+                refreshTokenRepository
+                        .findByTokenHashForUpdate(tokenHash)
+                        .orElseThrow(() ->
+                                new TokenException(
+                                        "Invalid refresh token"
+                                )
+                        );
 
         if (refreshToken.isRevoked()) {
-            throw new IllegalArgumentException(
+            throw new TokenException(
                     "Refresh token has been revoked"
             );
         }
 
-        if (refreshToken.getExpiresAt()
-                .isBefore(LocalDateTime.now())) {
+        LocalDateTime expiresAt =
+                refreshToken.getExpiresAt();
 
-            throw new IllegalArgumentException(
+        if (expiresAt == null ||
+                !expiresAt.isAfter(
+                        LocalDateTime.now()
+                )) {
+
+            throw new TokenException(
                     "Refresh token has expired"
             );
         }
 
-        if (refreshToken.getUser() == null
-                || !refreshToken.getUser().isEnabled()) {
+        User user =
+                refreshToken.getUser();
 
-            throw new IllegalArgumentException(
+        if (user == null) {
+            throw new TokenException(
+                    "User account not found"
+            );
+        }
+
+        if (!user.isEnabled()) {
+            throw new TokenException(
                     "User account is disabled"
             );
         }
@@ -99,45 +138,73 @@ public class RefreshTokenService {
         return refreshToken;
     }
 
+
+    // =========================================================
+    // ROTATE REFRESH TOKEN
+    // =========================================================
+
     /**
-     * Rotates a refresh token.
+     * Rotates a refresh token atomically.
      *
-     * The old token is revoked and a new token is generated.
+     * The existing token is first locked and validated,
+     * then revoked, and a new refresh token is created.
      */
     @Transactional
-    public String rotateRefreshToken(String rawToken) {
+    public String rotateRefreshToken(
+            String rawToken) {
 
         RefreshToken oldToken =
                 validateRefreshToken(rawToken);
 
+        User user =
+                oldToken.getUser();
+
         revokeToken(oldToken);
 
-        return createRefreshToken(oldToken.getUser());
+        return createRefreshToken(user);
     }
 
-    /**
-     * Revokes one refresh token.
-     */
-    @Transactional
-    public void revokeToken(RefreshToken refreshToken) {
 
-        if (refreshToken == null || refreshToken.isRevoked()) {
+    // =========================================================
+    // REVOKE ONE TOKEN
+    // =========================================================
+
+    @Transactional
+    public void revokeToken(
+            RefreshToken refreshToken) {
+
+        if (refreshToken == null ||
+                refreshToken.isRevoked()) {
+
             return;
         }
 
         refreshToken.setRevoked(true);
-        refreshToken.setRevokedAt(LocalDateTime.now());
+        refreshToken.setRevokedAt(
+                LocalDateTime.now()
+        );
 
-        refreshTokenRepository.save(refreshToken);
+        refreshTokenRepository.save(
+                refreshToken
+        );
     }
 
+
+    // =========================================================
+    // REVOKE ALL USER TOKENS
+    // =========================================================
+
     /**
-     * Revokes all refresh tokens belonging to a user.
+     * Revokes all active refresh tokens for a user.
      *
-     * Useful for logout-all-devices and password reset.
+     * Used for:
+     * - logout
+     * - logout from all devices
+     * - password reset
      */
     @Transactional
-    public void revokeAllUserTokens(Long userId) {
+    public void revokeAllUserTokens(
+            Long userId) {
 
         if (userId == null) {
             return;
@@ -148,12 +215,15 @@ public class RefreshTokenService {
                 .forEach(this::revokeToken);
     }
 
-    /**
-     * Generates a cryptographically secure random token.
-     */
+
+    // =========================================================
+    // GENERATE SECURE TOKEN
+    // =========================================================
+
     private String generateSecureToken() {
 
-        byte[] bytes = new byte[TOKEN_BYTES];
+        byte[] bytes =
+                new byte[TOKEN_BYTES];
 
         secureRandom.nextBytes(bytes);
 
@@ -162,29 +232,40 @@ public class RefreshTokenService {
                 .encodeToString(bytes);
     }
 
+
+    // =========================================================
+    // HASH TOKEN
+    // =========================================================
+
     /**
      * SHA-256 hash used for database storage.
      */
-    private String hashToken(String token) {
+    private String hashToken(
+            String token) {
 
         try {
 
             MessageDigest digest =
-                    MessageDigest.getInstance("SHA-256");
+                    MessageDigest.getInstance(
+                            "SHA-256"
+                    );
 
-            byte[] hash = digest.digest(
-                    token.getBytes(StandardCharsets.UTF_8)
-            );
+            byte[] hash =
+                    digest.digest(
+                            token.getBytes(
+                                    StandardCharsets.UTF_8
+                            )
+                    );
 
             return Base64.getUrlEncoder()
                     .withoutPadding()
                     .encodeToString(hash);
 
-        } catch (NoSuchAlgorithmException e) {
+        } catch (NoSuchAlgorithmException ex) {
 
             throw new IllegalStateException(
                     "SHA-256 algorithm is not available",
-                    e
+                    ex
             );
         }
     }

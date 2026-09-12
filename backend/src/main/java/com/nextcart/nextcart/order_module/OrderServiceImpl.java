@@ -2,13 +2,18 @@ package com.nextcart.nextcart.order_module;
 
 import com.nextcart.nextcart.address_module.entity.Address;
 import com.nextcart.nextcart.address_module.repository.AddressRepository;
+
 import com.nextcart.nextcart.cart_module.Cart;
 import com.nextcart.nextcart.cart_module.CartItem;
 import com.nextcart.nextcart.cart_module.CartRepository;
+
+import com.nextcart.nextcart.customer_module.entity.Customer;
+import com.nextcart.nextcart.customer_module.repository.CustomerRepository;
+
 import com.nextcart.nextcart.discount_module.DiscountType;
 import com.nextcart.nextcart.discount_module.ProductVariantDiscountEntity;
 import com.nextcart.nextcart.discount_module.ProductVariantDiscountRepository;
-import com.nextcart.nextcart.inventory_module.InventoryService;
+
 import com.nextcart.nextcart.order_module.dto.OrderCreateRequestDTO;
 import com.nextcart.nextcart.order_module.dto.OrderItemResponseDTO;
 import com.nextcart.nextcart.order_module.dto.OrderResponseDTO;
@@ -16,14 +21,20 @@ import com.nextcart.nextcart.order_module.exceptions.InvalidOrderStatusException
 import com.nextcart.nextcart.order_module.exceptions.OrderCancellationException;
 import com.nextcart.nextcart.order_module.exceptions.OrderNotFoundException;
 import com.nextcart.nextcart.order_module.exceptions.OrderValidationException;
+
 import com.nextcart.nextcart.product_module.productPrice.ProductVariantPriceEntity;
 import com.nextcart.nextcart.product_module.productPrice.ProductVariantPriceRepository;
+
 import com.nextcart.nextcart.product_module.productVariant.ProductVariantEntity;
 import com.nextcart.nextcart.product_module.productVariant.ProductVariantRepository;
 import com.nextcart.nextcart.product_module.productVariant.ProductVariantStatus;
+
+import com.nextcart.nextcart.seller_module.inventory_module.service.InventoryService;
 import com.nextcart.nextcart.user_module.entity.User;
 import com.nextcart.nextcart.user_module.repository.UserRepository;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -35,6 +46,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+
 
 @Service
 @RequiredArgsConstructor
@@ -55,11 +67,14 @@ public class OrderServiceImpl implements OrderService {
 
     private static final int PAYMENT_WINDOW_MINUTES = 15;
 
+
     private final OrderRepository orderRepository;
 
     private final CartRepository cartRepository;
 
     private final AddressRepository addressRepository;
+
+    private final CustomerRepository customerRepository;
 
     private final UserRepository userRepository;
 
@@ -80,12 +95,12 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderResponseDTO createOrder(
             String userIdentifier,
-            OrderCreateRequestDTO request) {
+            OrderCreateRequestDTO request
+    ) {
 
         validateUserIdentifier(userIdentifier);
 
-        if (request == null ||
-                request.getAddressId() == null) {
+        if (request == null || request.getAddressId() == null) {
 
             throw new OrderValidationException(
                     "Address ID is required"
@@ -101,30 +116,58 @@ public class OrderServiceImpl implements OrderService {
 
         validateId(request.getAddressId());
 
+
+        // =====================================================
+        // USER
+        // =====================================================
+
         User user = getUser(userIdentifier);
 
-        Address address =
-                addressRepository
-                        .findByIdAndUser(
-                                request.getAddressId(),
-                                user
-                        )
-                        .orElseThrow(
-                                () -> new OrderNotFoundException(
-                                        "Shipping address not found"
-                                )
-                        );
 
-        Cart cart =
-                cartRepository
-                        .findByUser(user)
-                        .orElseThrow(
-                                () -> new OrderNotFoundException(
-                                        "Cart not found"
-                                )
-                        );
+        // =====================================================
+        // CUSTOMER
+        // =====================================================
+
+        Customer customer = customerRepository
+                .findByUserId(user.getId())
+                .orElseThrow(() ->
+                        new OrderNotFoundException(
+                                "Customer profile not found"
+                        )
+                );
+
+
+        // =====================================================
+        // ADDRESS
+        // =====================================================
+
+        Address address = addressRepository
+                .findByIdAndCustomer(
+                        request.getAddressId(),
+                        customer
+                )
+                .orElseThrow(() ->
+                        new OrderNotFoundException(
+                                "Shipping address not found"
+                        )
+                );
+
+
+        // =====================================================
+        // CART
+        // =====================================================
+
+        Cart cart = cartRepository
+                .findByUser(user)
+                .orElseThrow(() ->
+                        new OrderNotFoundException(
+                                "Cart not found"
+                        )
+                );
+
 
         validateCart(cart);
+
 
         /*
          * Calculate pricing before reserving inventory.
@@ -132,24 +175,27 @@ public class OrderServiceImpl implements OrderService {
         PricingResult pricing =
                 calculatePricing(cart);
 
+
         /*
          * Reserve inventory only after all cart and
          * pricing validations have succeeded.
          */
         reserveInventory(cart);
 
+
         /*
-         * Payment window starts when the order is created.
+         * Payment expiry is required only for ONLINE orders.
          *
-         * PENDING order gets exactly 15 minutes to complete
-         * payment.
+         * COD orders do not have an online payment window.
          */
         LocalDateTime now =
                 LocalDateTime.now();
 
         LocalDateTime paymentExpiresAt = null;
 
-        if (request.getPaymentMethod() == PaymentMethod.ONLINE) {
+
+        if (request.getPaymentMethod()
+                == PaymentMethod.ONLINE) {
 
             paymentExpiresAt =
                     now.plusMinutes(
@@ -157,16 +203,62 @@ public class OrderServiceImpl implements OrderService {
                     );
         }
 
+
+        /*
+         * =====================================================
+         * ORDER INITIAL STATUS
+         * =====================================================
+         *
+         * COD:
+         *      CONFIRMED
+         *
+         * ONLINE:
+         *      PENDING
+         *
+         * ONLINE payment must succeed before the order
+         * becomes CONFIRMED.
+         */
+
+        OrderStatus initialOrderStatus =
+                request.getPaymentMethod()
+                        == PaymentMethod.COD
+                        ? OrderStatus.CONFIRMED
+                        : OrderStatus.PENDING;
+
+
+        /*
+         * =====================================================
+         * CREATE ORDER
+         * =====================================================
+         */
+
         OrderEntity order =
                 OrderEntity.builder()
+
                         .orderNumber(
                                 generateOrderNumber()
                         )
+
                         .user(user)
-                        .status(OrderStatus.PENDING)
+
+
+                        // =====================================
+                        // ORDER STATUS
+                        // =====================================
+
+                        .status(
+                                initialOrderStatus
+                        )
+
+
+                        // =====================================
+                        // PAYMENT METHOD
+                        // =====================================
+
                         .paymentMethod(
                                 request.getPaymentMethod()
                         )
+
 
                         // =====================================
                         // PAYMENT STATUS
@@ -176,6 +268,7 @@ public class OrderServiceImpl implements OrderService {
                                 PaymentStatus.PENDING
                         )
 
+
                         // =====================================
                         // PAYMENT EXPIRY
                         // =====================================
@@ -184,6 +277,7 @@ public class OrderServiceImpl implements OrderService {
                                 paymentExpiresAt
                         )
 
+
                         // =====================================
                         // ADDRESS SNAPSHOT
                         // =====================================
@@ -191,27 +285,35 @@ public class OrderServiceImpl implements OrderService {
                         .shippingFullName(
                                 address.getFullName()
                         )
+
                         .shippingPhoneNumber(
                                 address.getPhoneNumber()
                         )
+
                         .shippingStreetAddress(
                                 address.getStreetAddress()
                         )
+
                         .shippingLandmark(
                                 address.getLandmark()
                         )
+
                         .shippingCity(
                                 address.getCity()
                         )
+
                         .shippingState(
                                 address.getState()
                         )
+
                         .shippingPostalCode(
                                 address.getPostalCode()
                         )
+
                         .shippingCountry(
                                 address.getCountry()
                         )
+
 
                         // =====================================
                         // ORDER PRICING
@@ -220,28 +322,39 @@ public class OrderServiceImpl implements OrderService {
                         .subtotal(
                                 pricing.subtotal()
                         )
+
                         .discountAmount(
                                 pricing.discountAmount()
                         )
+
                         .shippingCharge(
                                 SHIPPING_CHARGE
                         )
+
                         .taxAmount(
                                 TAX_AMOUNT
                         )
+
                         .totalAmount(
                                 pricing.totalAmount()
                         )
+
                         .currency(
                                 pricing.currency()
                         )
 
-                        .items(new ArrayList<>())
+
+                        .items(
+                                new ArrayList<>()
+                        )
+
                         .build();
+
 
         /*
          * Create immutable order-item snapshots.
          */
+
         for (PricedCartItem pricedItem :
                 pricing.items()) {
 
@@ -251,51 +364,71 @@ public class OrderServiceImpl implements OrderService {
             ProductVariantEntity variant =
                     pricedItem.variant();
 
+
             OrderItemEntity orderItem =
                     OrderItemEntity.builder()
+
                             .product(
                                     cartItem.getProduct()
                             )
-                            .productVariant(variant)
+
+                            .productVariant(
+                                    variant
+                            )
+
                             .productName(
                                     getProductName(cartItem)
                             )
+
                             .sku(
                                     variant.getSku()
                             )
+
                             .quantity(
                                     cartItem.getQuantity()
                             )
+
                             .price(
                                     pricedItem.unitSellingPrice()
                             )
+
                             .unitMrp(
                                     pricedItem.unitMrp()
                             )
+
                             .unitSellingPrice(
                                     pricedItem.unitSellingPrice()
                             )
+
                             .discountAmount(
                                     pricedItem.discountAmount()
                             )
+
                             .lineTotal(
                                     pricedItem.lineTotal()
                             )
+
                             .build();
+
 
             order.addItem(orderItem);
         }
 
+
         /*
          * Save order.
          */
+
         OrderEntity savedOrder =
                 orderRepository.save(order);
 
+
         /*
-         * Clear cart only after order creation.
+         * Clear cart only after successful order creation.
          */
+
         cart.clearItems();
+
 
         return mapToResponse(savedOrder);
     }
@@ -308,13 +441,16 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public OrderResponseDTO getOrderById(
             String userIdentifier,
-            Long orderId) {
+            Long orderId
+    ) {
 
         validateUserIdentifier(userIdentifier);
+
         validateId(orderId);
 
         User user =
                 getUser(userIdentifier);
+
 
         OrderEntity order =
                 orderRepository
@@ -322,11 +458,12 @@ public class OrderServiceImpl implements OrderService {
                                 orderId,
                                 user
                         )
-                        .orElseThrow(
-                                () -> new OrderNotFoundException(
+                        .orElseThrow(() ->
+                                new OrderNotFoundException(
                                         "Order not found"
                                 )
                         );
+
 
         return mapToResponse(order);
     }
@@ -339,43 +476,50 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public OrderResponseDTO getOrderByNumber(
             String userIdentifier,
-            String orderNumber) {
+            String orderNumber
+    ) {
 
         validateUserIdentifier(userIdentifier);
 
-        if (orderNumber == null ||
-                orderNumber.isBlank()) {
+
+        if (orderNumber == null
+                || orderNumber.isBlank()) {
 
             throw new OrderValidationException(
                     "Order number is required"
             );
         }
 
+
         User user =
                 getUser(userIdentifier);
+
 
         OrderEntity order =
                 orderRepository
                         .findByOrderNumber(orderNumber)
-                        .orElseThrow(
-                                () -> new OrderNotFoundException(
+                        .orElseThrow(() ->
+                                new OrderNotFoundException(
                                         "Order not found"
                                 )
                         );
 
+
         /*
          * Prevent another user from accessing this order.
          */
-        if (order.getUser() == null ||
-                order.getUser().getId() == null ||
-                !order.getUser()
-                        .getId()
-                        .equals(user.getId())) {
+
+        if (order.getUser() == null
+                || order.getUser().getId() == null
+                || !order.getUser()
+                .getId()
+                .equals(user.getId())) {
 
             throw new OrderNotFoundException(
                     "Order not found"
             );
         }
+
 
         return mapToResponse(order);
     }
@@ -388,18 +532,18 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public Page<OrderResponseDTO> getMyOrders(
             String userIdentifier,
-            Pageable pageable) {
+            Pageable pageable
+    ) {
 
         validateUserIdentifier(userIdentifier);
+
 
         User user =
                 getUser(userIdentifier);
 
+
         return orderRepository
-                .findByUser(
-                        user,
-                        pageable
-                )
+                .findByUser(user, pageable)
                 .map(this::mapToResponse);
     }
 
@@ -412,9 +556,11 @@ public class OrderServiceImpl implements OrderService {
     public Page<OrderResponseDTO> getMyOrdersByStatus(
             String userIdentifier,
             OrderStatus status,
-            Pageable pageable) {
+            Pageable pageable
+    ) {
 
         validateUserIdentifier(userIdentifier);
+
 
         if (status == null) {
 
@@ -423,8 +569,10 @@ public class OrderServiceImpl implements OrderService {
             );
         }
 
+
         User user =
                 getUser(userIdentifier);
+
 
         return orderRepository
                 .findByUserAndStatus(
@@ -444,13 +592,17 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderResponseDTO cancelOrder(
             String userIdentifier,
-            Long orderId) {
+            Long orderId
+    ) {
 
         validateUserIdentifier(userIdentifier);
+
         validateId(orderId);
+
 
         User user =
                 getUser(userIdentifier);
+
 
         /*
          * Lock order before checking/changing its state.
@@ -458,29 +610,33 @@ public class OrderServiceImpl implements OrderService {
          * This protects against concurrent payment,
          * cancellation and expiry processing.
          */
+
         OrderEntity order =
                 orderRepository
                         .findByIdForUpdate(orderId)
-                        .orElseThrow(
-                                () -> new OrderNotFoundException(
+                        .orElseThrow(() ->
+                                new OrderNotFoundException(
                                         "Order not found"
                                 )
                         );
+
 
         /*
          * Prevent another user from cancelling
          * this order.
          */
-        if (order.getUser() == null ||
-                order.getUser().getId() == null ||
-                !order.getUser()
-                        .getId()
-                        .equals(user.getId())) {
+
+        if (order.getUser() == null
+                || order.getUser().getId() == null
+                || !order.getUser()
+                .getId()
+                .equals(user.getId())) {
 
             throw new OrderNotFoundException(
                     "Order not found"
             );
         }
+
 
         if (!isCancellable(order.getStatus())) {
 
@@ -490,16 +646,27 @@ public class OrderServiceImpl implements OrderService {
             );
         }
 
+
         /*
          * Release reserved inventory.
          *
          * If this fails, the transaction rolls back.
          */
+
         releaseReservedInventory(order);
+
 
         order.setStatus(
                 OrderStatus.CANCELLED
         );
+
+
+        /*
+         * If an online order is cancelled before payment,
+         * keep payment status as PENDING.
+         *
+         * A successful payment must never be assumed here.
+         */
 
         return mapToResponse(
                 orderRepository.save(order)
@@ -510,19 +677,6 @@ public class OrderServiceImpl implements OrderService {
     // =========================================================
     // SYSTEM - EXPIRE PENDING ORDERS
     // =========================================================
-    //
-    // This method is called by the scheduler.
-    //
-    // It finds:
-    //
-    // status = PENDING
-    // paymentExpiresAt < now
-    //
-    // Then locks every order individually.
-    //
-    // The second status/expiry check is mandatory because
-    // payment may have succeeded after the initial query.
-    // =========================================================
 
     @Override
     @Transactional
@@ -531,12 +685,14 @@ public class OrderServiceImpl implements OrderService {
         LocalDateTime now =
                 LocalDateTime.now();
 
+
         List<OrderEntity> expiredOrders =
                 orderRepository
                         .findByStatusAndPaymentExpiresAtBefore(
                                 OrderStatus.PENDING,
                                 now
                         );
+
 
         for (OrderEntity candidate :
                 expiredOrders) {
@@ -545,6 +701,7 @@ public class OrderServiceImpl implements OrderService {
                 continue;
             }
 
+
             OrderEntity order =
                     orderRepository
                             .findByIdForUpdate(
@@ -552,41 +709,60 @@ public class OrderServiceImpl implements OrderService {
                             )
                             .orElse(null);
 
+
             if (order == null) {
                 continue;
             }
+
 
             /*
              * Payment/cancellation may have changed the
              * order after the first query.
              */
-            if (order.getStatus() !=
-                    OrderStatus.PENDING) {
+
+            if (order.getStatus()
+                    != OrderStatus.PENDING) {
 
                 continue;
             }
+
 
             /*
              * Re-check expiry after acquiring the lock.
              */
-            if (order.getPaymentExpiresAt() == null ||
-                    order.getPaymentExpiresAt()
-                            .isAfter(now)) {
+
+            if (order.getPaymentExpiresAt() == null
+                    || order.getPaymentExpiresAt()
+                    .isAfter(now)) {
 
                 continue;
             }
 
+
             /*
              * Release reserved inventory.
              */
+
             releaseReservedInventory(order);
+
+
+            /*
+             * Mark payment as expired.
+             */
+
+            order.setPaymentStatus(
+                    PaymentStatus.FAILED
+            );
+
 
             /*
              * Expire the unpaid order.
              */
+
             order.setStatus(
                     OrderStatus.CANCELLED
             );
+
 
             orderRepository.save(order);
         }
@@ -599,18 +775,21 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public OrderResponseDTO getOrderByIdForAdmin(
-            Long orderId) {
+            Long orderId
+    ) {
 
         validateId(orderId);
+
 
         OrderEntity order =
                 orderRepository
                         .findById(orderId)
-                        .orElseThrow(
-                                () -> new OrderNotFoundException(
+                        .orElseThrow(() ->
+                                new OrderNotFoundException(
                                         "Order not found"
                                 )
                         );
+
 
         return mapToResponse(order);
     }
@@ -622,7 +801,8 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Page<OrderResponseDTO> getAllOrdersForAdmin(
-            Pageable pageable) {
+            Pageable pageable
+    ) {
 
         return orderRepository
                 .findAll(pageable)
@@ -637,7 +817,8 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public Page<OrderResponseDTO> getOrdersByStatusForAdmin(
             OrderStatus status,
-            Pageable pageable) {
+            Pageable pageable
+    ) {
 
         if (status == null) {
 
@@ -645,6 +826,7 @@ public class OrderServiceImpl implements OrderService {
                     "Order status is required"
             );
         }
+
 
         return orderRepository
                 .findByStatus(
@@ -663,9 +845,11 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderResponseDTO updateOrderStatus(
             Long orderId,
-            OrderStatus newStatus) {
+            OrderStatus newStatus
+    ) {
 
         validateId(orderId);
+
 
         if (newStatus == null) {
 
@@ -674,55 +858,95 @@ public class OrderServiceImpl implements OrderService {
             );
         }
 
+
         /*
          * Lock order before changing status.
          */
+
         OrderEntity order =
                 orderRepository
                         .findByIdForUpdate(orderId)
-                        .orElseThrow(
-                                () -> new OrderNotFoundException(
+                        .orElseThrow(() ->
+                                new OrderNotFoundException(
                                         "Order not found"
                                 )
                         );
 
+
         OrderStatus currentStatus =
                 order.getStatus();
+
 
         validateStatusTransition(
                 currentStatus,
                 newStatus
         );
 
+
         /*
          * Cancellation releases reserved stock.
          */
-        if (newStatus ==
-                OrderStatus.CANCELLED) {
+
+        if (newStatus == OrderStatus.CANCELLED) {
 
             releaseReservedInventory(order);
+
+
+            /*
+             * Only mark payment expired/failed when
+             * there is an unpaid online payment.
+             */
+
+            if (order.getPaymentMethod()
+                    == PaymentMethod.ONLINE
+                    && order.getPaymentStatus()
+                    == PaymentStatus.PENDING) {
+
+                order.setPaymentStatus(
+                        PaymentStatus.FAILED
+                );
+            }
         }
+
 
         /*
          * Delivered means the reserved stock becomes
          * finalized/sold stock.
          */
-        if (newStatus ==
-                OrderStatus.DELIVERED) {
+
+        if (newStatus == OrderStatus.DELIVERED) {
 
             deductReservedInventory(order);
+
+
+            /*
+             * COD payment is collected on delivery.
+             */
+
+            if (order.getPaymentMethod()
+                    == PaymentMethod.COD
+                    && order.getPaymentStatus()
+                    == PaymentStatus.PENDING) {
+
+                order.setPaymentStatus(
+                        PaymentStatus.PAID
+                );
+            }
         }
+
 
         /*
          * Returned stock becomes available again.
          */
-        if (newStatus ==
-                OrderStatus.RETURNED) {
+
+        if (newStatus == OrderStatus.RETURNED) {
 
             restoreReturnedInventory(order);
         }
 
+
         order.setStatus(newStatus);
+
 
         return mapToResponse(
                 orderRepository.save(order)
@@ -735,7 +959,8 @@ public class OrderServiceImpl implements OrderService {
     // =========================================================
 
     private PricingResult calculatePricing(
-            Cart cart) {
+            Cart cart
+    ) {
 
         List<PricedCartItem> pricedItems =
                 new ArrayList<>();
@@ -749,17 +974,21 @@ public class OrderServiceImpl implements OrderService {
         LocalDateTime now =
                 LocalDateTime.now();
 
+
         for (CartItem cartItem :
                 cart.getItems()) {
 
-            if (cartItem == null ||
-                    cartItem.getProductVariant() == null ||
-                    cartItem.getProductVariant().getId() == null) {
+            if (cartItem == null
+                    || cartItem.getProductVariant() == null
+                    || cartItem
+                    .getProductVariant()
+                    .getId() == null) {
 
                 throw new OrderValidationException(
                         "Cart contains invalid product variant"
                 );
             }
+
 
             ProductVariantEntity variant =
                     getActiveProductVariant(
@@ -768,34 +997,39 @@ public class OrderServiceImpl implements OrderService {
                                     .getId()
                     );
 
+
             Long variantId =
                     variant.getId();
+
 
             ProductVariantPriceEntity price =
                     productVariantPriceRepository
                             .findByProductVariantId(
                                     variantId
                             )
-                            .orElseThrow(
-                                    () -> new OrderValidationException(
+                            .orElseThrow(() ->
+                                    new OrderValidationException(
                                             "Price not found for product variant: "
                                                     + variantId
                                     )
                             );
 
+
             validatePrice(price);
+
 
             /*
              * All items in one order must use
              * the same currency.
              */
+
             if (currency == null) {
 
                 currency =
                         price.getCurrency();
 
-            } else if (
-                    !currency.equalsIgnoreCase(
+            } else if (!currency
+                    .equalsIgnoreCase(
                             price.getCurrency()
                     )) {
 
@@ -804,35 +1038,43 @@ public class OrderServiceImpl implements OrderService {
                 );
             }
 
+
             BigDecimal mrp =
                     money(price.getMrp());
+
 
             BigDecimal sellingPrice =
                     money(price.getSellingPrice());
 
+
             Integer quantity =
                     cartItem.getQuantity();
 
-            if (quantity == null ||
-                    quantity <= 0) {
+
+            if (quantity == null
+                    || quantity <= 0) {
 
                 throw new OrderValidationException(
                         "Cart item quantity must be greater than zero"
                 );
             }
 
+
             BigDecimal quantityDecimal =
                     BigDecimal.valueOf(quantity);
+
 
             /*
              * Subtotal before promotional discount.
              */
+
             BigDecimal lineSubtotal =
                     money(
                             sellingPrice.multiply(
                                     quantityDecimal
                             )
                     );
+
 
             BigDecimal discountPerUnit =
                     calculateDiscount(
@@ -841,12 +1083,14 @@ public class OrderServiceImpl implements OrderService {
                             now
                     );
 
+
             BigDecimal lineDiscount =
                     money(
                             discountPerUnit.multiply(
                                     quantityDecimal
                             )
                     );
+
 
             BigDecimal lineTotal =
                     money(
@@ -855,12 +1099,14 @@ public class OrderServiceImpl implements OrderService {
                             )
                     );
 
+
             if (lineTotal.compareTo(ZERO) < 0) {
 
                 throw new OrderValidationException(
                         "Calculated line total cannot be negative"
                 );
             }
+
 
             subtotal =
                     money(
@@ -869,12 +1115,14 @@ public class OrderServiceImpl implements OrderService {
                             )
                     );
 
+
             totalDiscount =
                     money(
                             totalDiscount.add(
                                     lineDiscount
                             )
                     );
+
 
             pricedItems.add(
                     new PricedCartItem(
@@ -888,13 +1136,15 @@ public class OrderServiceImpl implements OrderService {
             );
         }
 
-        if (currency == null ||
-                currency.isBlank()) {
+
+        if (currency == null
+                || currency.isBlank()) {
 
             throw new OrderValidationException(
                     "Order currency is missing"
             );
         }
+
 
         BigDecimal totalAmount =
                 money(
@@ -904,12 +1154,14 @@ public class OrderServiceImpl implements OrderService {
                                 .add(TAX_AMOUNT)
                 );
 
+
         if (totalAmount.compareTo(ZERO) <= 0) {
 
             throw new OrderValidationException(
                     "Order total must be greater than zero"
             );
         }
+
 
         return new PricingResult(
                 pricedItems,
@@ -928,7 +1180,8 @@ public class OrderServiceImpl implements OrderService {
     private BigDecimal calculateDiscount(
             Long productVariantId,
             BigDecimal sellingPrice,
-            LocalDateTime now) {
+            LocalDateTime now
+    ) {
 
         ProductVariantDiscountEntity discount =
                 productVariantDiscountRepository
@@ -938,9 +1191,12 @@ public class OrderServiceImpl implements OrderService {
                         )
                         .orElse(null);
 
+
         if (discount == null) {
+
             return ZERO;
         }
+
 
         if (discount.getDiscountValue() == null) {
 
@@ -949,15 +1205,18 @@ public class OrderServiceImpl implements OrderService {
             );
         }
 
+
         BigDecimal discountAmount;
 
-        if (discount.getDiscountType() ==
-                DiscountType.PERCENTAGE) {
+
+        if (discount.getDiscountType()
+                == DiscountType.PERCENTAGE) {
 
             discountAmount =
                     sellingPrice
                             .multiply(
-                                    discount.getDiscountValue()
+                                    discount
+                                            .getDiscountValue()
                             )
                             .divide(
                                     BigDecimal.valueOf(100),
@@ -965,9 +1224,8 @@ public class OrderServiceImpl implements OrderService {
                                     RoundingMode.HALF_UP
                             );
 
-        } else if (
-                discount.getDiscountType() ==
-                        DiscountType.FIXED_AMOUNT) {
+        } else if (discount.getDiscountType()
+                == DiscountType.FIXED_AMOUNT) {
 
             discountAmount =
                     discount.getDiscountValue();
@@ -979,12 +1237,15 @@ public class OrderServiceImpl implements OrderService {
             );
         }
 
+
         discountAmount =
                 money(discountAmount);
+
 
         /*
          * Discount cannot exceed selling price.
          */
+
         if (discountAmount.compareTo(
                 sellingPrice
         ) > 0) {
@@ -992,6 +1253,7 @@ public class OrderServiceImpl implements OrderService {
             discountAmount =
                     sellingPrice;
         }
+
 
         if (discountAmount.compareTo(
                 ZERO
@@ -1002,6 +1264,7 @@ public class OrderServiceImpl implements OrderService {
             );
         }
 
+
         return discountAmount;
     }
 
@@ -1011,7 +1274,8 @@ public class OrderServiceImpl implements OrderService {
     // =========================================================
 
     private void validatePrice(
-            ProductVariantPriceEntity price) {
+            ProductVariantPriceEntity price
+    ) {
 
         if (price == null) {
 
@@ -1020,43 +1284,47 @@ public class OrderServiceImpl implements OrderService {
             );
         }
 
-        if (price.getMrp() == null ||
-                price.getSellingPrice() == null) {
+
+        if (price.getMrp() == null
+                || price.getSellingPrice() == null) {
 
             throw new OrderValidationException(
                     "Product price is incomplete"
             );
         }
 
-        if (price.getMrp().compareTo(
-                ZERO
-        ) < 0) {
+
+        if (price.getMrp()
+                .compareTo(ZERO) < 0) {
 
             throw new OrderValidationException(
                     "MRP cannot be negative"
             );
         }
 
-        if (price.getSellingPrice().compareTo(
-                ZERO
-        ) < 0) {
+
+        if (price.getSellingPrice()
+                .compareTo(ZERO) < 0) {
 
             throw new OrderValidationException(
                     "Selling price cannot be negative"
             );
         }
 
-        if (price.getSellingPrice().compareTo(
-                price.getMrp()
-        ) > 0) {
+
+        if (price.getSellingPrice()
+                .compareTo(
+                        price.getMrp()
+                ) > 0) {
 
             throw new OrderValidationException(
                     "Selling price cannot be greater than MRP"
             );
         }
 
-        if (price.getCurrency() == null ||
-                price.getCurrency().isBlank()) {
+
+        if (price.getCurrency() == null
+                || price.getCurrency().isBlank()) {
 
             throw new OrderValidationException(
                     "Product currency is required"
@@ -1070,7 +1338,8 @@ public class OrderServiceImpl implements OrderService {
     // =========================================================
 
     private void reserveInventory(
-            Cart cart) {
+            Cart cart
+    ) {
 
         for (CartItem cartItem :
                 cart.getItems()) {
@@ -1082,24 +1351,28 @@ public class OrderServiceImpl implements OrderService {
                 );
             }
 
+
             ProductVariantEntity variant =
                     cartItem.getProductVariant();
 
-            if (variant == null ||
-                    variant.getId() == null) {
+
+            if (variant == null
+                    || variant.getId() == null) {
 
                 throw new OrderValidationException(
                         "Cart contains invalid product variant"
                 );
             }
 
-            if (cartItem.getQuantity() == null ||
-                    cartItem.getQuantity() <= 0) {
+
+            if (cartItem.getQuantity() == null
+                    || cartItem.getQuantity() <= 0) {
 
                 throw new OrderValidationException(
                         "Cart contains invalid quantity"
                 );
             }
+
 
             inventoryService.reserveStock(
                     variant.getId(),
@@ -1114,18 +1387,21 @@ public class OrderServiceImpl implements OrderService {
     // =========================================================
 
     private void releaseReservedInventory(
-            OrderEntity order) {
+            OrderEntity order
+    ) {
 
-        if (order.getItems() == null ||
-                order.getItems().isEmpty()) {
+        if (order.getItems() == null
+                || order.getItems().isEmpty()) {
 
             return;
         }
+
 
         for (OrderItemEntity item :
                 order.getItems()) {
 
             validateOrderItemForInventory(item);
+
 
             inventoryService.releaseStock(
                     item.getProductVariant().getId(),
@@ -1140,18 +1416,21 @@ public class OrderServiceImpl implements OrderService {
     // =========================================================
 
     private void deductReservedInventory(
-            OrderEntity order) {
+            OrderEntity order
+    ) {
 
-        if (order.getItems() == null ||
-                order.getItems().isEmpty()) {
+        if (order.getItems() == null
+                || order.getItems().isEmpty()) {
 
             return;
         }
+
 
         for (OrderItemEntity item :
                 order.getItems()) {
 
             validateOrderItemForInventory(item);
+
 
             inventoryService.deductStock(
                     item.getProductVariant().getId(),
@@ -1166,18 +1445,21 @@ public class OrderServiceImpl implements OrderService {
     // =========================================================
 
     private void restoreReturnedInventory(
-            OrderEntity order) {
+            OrderEntity order
+    ) {
 
-        if (order.getItems() == null ||
-                order.getItems().isEmpty()) {
+        if (order.getItems() == null
+                || order.getItems().isEmpty()) {
 
             return;
         }
+
 
         for (OrderItemEntity item :
                 order.getItems()) {
 
             validateOrderItemForInventory(item);
+
 
             inventoryService.addStock(
                     item.getProductVariant().getId(),
@@ -1192,7 +1474,8 @@ public class OrderServiceImpl implements OrderService {
     // =========================================================
 
     private void validateOrderItemForInventory(
-            OrderItemEntity item) {
+            OrderItemEntity item
+    ) {
 
         if (item == null) {
 
@@ -1201,16 +1484,18 @@ public class OrderServiceImpl implements OrderService {
             );
         }
 
-        if (item.getProductVariant() == null ||
-                item.getProductVariant().getId() == null) {
+
+        if (item.getProductVariant() == null
+                || item.getProductVariant().getId() == null) {
 
             throw new OrderValidationException(
                     "Order contains invalid product variant"
             );
         }
 
-        if (item.getQuantity() == null ||
-                item.getQuantity() <= 0) {
+
+        if (item.getQuantity() == null
+                || item.getQuantity() <= 0) {
 
             throw new OrderValidationException(
                     "Order contains invalid quantity"
@@ -1224,17 +1509,19 @@ public class OrderServiceImpl implements OrderService {
     // =========================================================
 
     private ProductVariantEntity getActiveProductVariant(
-            Long productVariantId) {
+            Long productVariantId
+    ) {
 
         validateId(productVariantId);
+
 
         return productVariantRepository
                 .findByIdAndStatus(
                         productVariantId,
                         ProductVariantStatus.ACTIVE
                 )
-                .orElseThrow(
-                        () -> new OrderValidationException(
+                .orElseThrow(() ->
+                        new OrderValidationException(
                                 "Active product variant not found: "
                                         + productVariantId
                         )
@@ -1247,7 +1534,8 @@ public class OrderServiceImpl implements OrderService {
     // =========================================================
 
     private void validateCart(
-            Cart cart) {
+            Cart cart
+    ) {
 
         if (cart == null) {
 
@@ -1256,13 +1544,15 @@ public class OrderServiceImpl implements OrderService {
             );
         }
 
-        if (cart.getItems() == null ||
-                cart.getItems().isEmpty()) {
+
+        if (cart.getItems() == null
+                || cart.getItems().isEmpty()) {
 
             throw new OrderValidationException(
                     "Cannot create order from an empty cart"
             );
         }
+
 
         for (CartItem item :
                 cart.getItems()) {
@@ -1274,21 +1564,24 @@ public class OrderServiceImpl implements OrderService {
                 );
             }
 
-            if (item.getProductVariant() == null ||
-                    item.getProductVariant().getId() == null) {
+
+            if (item.getProductVariant() == null
+                    || item.getProductVariant().getId() == null) {
 
                 throw new OrderValidationException(
                         "Cart contains an invalid product variant"
                 );
             }
 
-            if (item.getQuantity() == null ||
-                    item.getQuantity() <= 0) {
+
+            if (item.getQuantity() == null
+                    || item.getQuantity() <= 0) {
 
                 throw new OrderValidationException(
                         "Cart contains an invalid quantity"
                 );
             }
+
 
             if (item.getProduct() == null) {
 
@@ -1306,7 +1599,8 @@ public class OrderServiceImpl implements OrderService {
 
     private void validateStatusTransition(
             OrderStatus current,
-            OrderStatus next) {
+            OrderStatus next
+    ) {
 
         if (current == null) {
 
@@ -1315,12 +1609,14 @@ public class OrderServiceImpl implements OrderService {
             );
         }
 
+
         if (next == null) {
 
             throw new InvalidOrderStatusException(
                     "New order status is required"
             );
         }
+
 
         if (current == next) {
 
@@ -1330,12 +1626,14 @@ public class OrderServiceImpl implements OrderService {
             );
         }
 
+
         /*
          * Terminal states.
          */
-        if (current == OrderStatus.CANCELLED ||
-                current == OrderStatus.REFUNDED ||
-                current == OrderStatus.RETURNED) {
+
+        if (current == OrderStatus.CANCELLED
+                || current == OrderStatus.REFUNDED
+                || current == OrderStatus.RETURNED) {
 
             throw new InvalidOrderStatusException(
                     "Order cannot transition from: "
@@ -1343,33 +1641,38 @@ public class OrderServiceImpl implements OrderService {
             );
         }
 
+
         boolean valid;
+
 
         switch (current) {
 
             case PENDING:
 
                 valid =
-                        next == OrderStatus.CONFIRMED ||
-                                next == OrderStatus.CANCELLED;
+                        next == OrderStatus.CONFIRMED
+                                || next == OrderStatus.CANCELLED;
 
                 break;
+
 
             case CONFIRMED:
 
                 valid =
-                        next == OrderStatus.PROCESSING ||
-                                next == OrderStatus.CANCELLED;
+                        next == OrderStatus.PROCESSING
+                                || next == OrderStatus.CANCELLED;
 
                 break;
+
 
             case PROCESSING:
 
                 valid =
-                        next == OrderStatus.SHIPPED ||
-                                next == OrderStatus.CANCELLED;
+                        next == OrderStatus.SHIPPED
+                                || next == OrderStatus.CANCELLED;
 
                 break;
+
 
             case SHIPPED:
 
@@ -1378,12 +1681,14 @@ public class OrderServiceImpl implements OrderService {
 
                 break;
 
+
             case DELIVERED:
 
                 valid =
                         next == OrderStatus.RETURN_REQUESTED;
 
                 break;
+
 
             case RETURN_REQUESTED:
 
@@ -1392,6 +1697,7 @@ public class OrderServiceImpl implements OrderService {
 
                 break;
 
+
             case RETURN_APPROVED:
 
                 valid =
@@ -1399,10 +1705,12 @@ public class OrderServiceImpl implements OrderService {
 
                 break;
 
+
             default:
 
                 valid = false;
         }
+
 
         if (!valid) {
 
@@ -1421,11 +1729,12 @@ public class OrderServiceImpl implements OrderService {
     // =========================================================
 
     private boolean isCancellable(
-            OrderStatus status) {
+            OrderStatus status
+    ) {
 
-        return status == OrderStatus.PENDING ||
-                status == OrderStatus.CONFIRMED ||
-                status == OrderStatus.PROCESSING;
+        return status == OrderStatus.PENDING
+                || status == OrderStatus.CONFIRMED
+                || status == OrderStatus.PROCESSING;
     }
 
 
@@ -1434,40 +1743,57 @@ public class OrderServiceImpl implements OrderService {
     // =========================================================
 
     /**
-     * Resolves the authenticated customer from the JWT subject.
+     * Resolves the authenticated user from the JWT subject.
      *
-     * Current JWT configuration stores the user id as the subject,
-     * so phone-only customers work correctly even when email is null.
+     * Current JWT configuration stores the user id as
+     * the subject, so phone-only customers work correctly
+     * even when email is null.
      *
-     * For backward compatibility, an email identifier is also accepted.
+     * For backward compatibility, an email identifier
+     * is also accepted.
      */
     private User getUser(
-            String userIdentifier) {
+            String userIdentifier
+    ) {
 
         validateUserIdentifier(userIdentifier);
+
 
         String identifier =
                 userIdentifier.trim();
 
-        // Current authentication flow: JWT subject = user id.
+
+        /*
+         * Current authentication flow:
+         * JWT subject = user id.
+         */
+
         try {
-            Long userId = Long.valueOf(identifier);
+
+            Long userId =
+                    Long.valueOf(identifier);
+
 
             return userRepository
                     .findById(userId)
-                    .orElseThrow(
-                            () -> new OrderNotFoundException(
+                    .orElseThrow(() ->
+                            new OrderNotFoundException(
                                     "User not found"
                             )
                     );
+
         } catch (NumberFormatException ignored) {
-            // Backward-compatible email lookup.
+
+            /*
+             * Backward-compatible email lookup.
+             */
         }
+
 
         return userRepository
                 .findByEmailIgnoreCase(identifier)
-                .orElseThrow(
-                        () -> new OrderNotFoundException(
+                .orElseThrow(() ->
+                        new OrderNotFoundException(
                                 "User not found"
                         )
                 );
@@ -1479,10 +1805,11 @@ public class OrderServiceImpl implements OrderService {
     // =========================================================
 
     private void validateUserIdentifier(
-            String userIdentifier) {
+            String userIdentifier
+    ) {
 
-        if (userIdentifier == null ||
-                userIdentifier.isBlank()) {
+        if (userIdentifier == null
+                || userIdentifier.isBlank()) {
 
             throw new OrderValidationException(
                     "Authenticated user is required"
@@ -1496,10 +1823,10 @@ public class OrderServiceImpl implements OrderService {
     // =========================================================
 
     private void validateId(
-            Long id) {
+            Long id
+    ) {
 
-        if (id == null ||
-                id <= 0) {
+        if (id == null || id <= 0) {
 
             throw new OrderValidationException(
                     "Invalid ID"
@@ -1529,15 +1856,17 @@ public class OrderServiceImpl implements OrderService {
     // =========================================================
 
     private String getProductName(
-            CartItem cartItem) {
+            CartItem cartItem
+    ) {
 
-        if (cartItem == null ||
-                cartItem.getProduct() == null) {
+        if (cartItem == null
+                || cartItem.getProduct() == null) {
 
             throw new OrderValidationException(
                     "Cart item has no product"
             );
         }
+
 
         return cartItem
                 .getProduct()
@@ -1550,11 +1879,14 @@ public class OrderServiceImpl implements OrderService {
     // =========================================================
 
     private BigDecimal money(
-            BigDecimal value) {
+            BigDecimal value
+    ) {
 
         if (value == null) {
+
             return ZERO;
         }
+
 
         return value.setScale(
                 MONEY_SCALE,
@@ -1568,10 +1900,12 @@ public class OrderServiceImpl implements OrderService {
     // =========================================================
 
     private OrderResponseDTO mapToResponse(
-            OrderEntity order) {
+            OrderEntity order
+    ) {
 
         List<OrderItemResponseDTO> itemResponses =
                 new ArrayList<>();
+
 
         if (order.getItems() != null) {
 
@@ -1584,12 +1918,30 @@ public class OrderServiceImpl implements OrderService {
             }
         }
 
-        return OrderResponseDTO.builder()
-                .id(order.getId())
-                .orderNumber(order.getOrderNumber())
-                .status(order.getStatus())
-                .paymentMethod(order.getPaymentMethod())
-                .paymentStatus(order.getPaymentStatus())
+
+        return OrderResponseDTO
+                .builder()
+
+                .id(
+                        order.getId()
+                )
+
+                .orderNumber(
+                        order.getOrderNumber()
+                )
+
+                .status(
+                        order.getStatus()
+                )
+
+                .paymentMethod(
+                        order.getPaymentMethod()
+                )
+
+                .paymentStatus(
+                        order.getPaymentStatus()
+                )
+
 
                 // =====================================
                 // PAYMENT
@@ -1599,6 +1951,7 @@ public class OrderServiceImpl implements OrderService {
                         order.getPaymentExpiresAt()
                 )
 
+
                 // =====================================
                 // SHIPPING
                 // =====================================
@@ -1606,27 +1959,35 @@ public class OrderServiceImpl implements OrderService {
                 .shippingFullName(
                         order.getShippingFullName()
                 )
+
                 .shippingPhoneNumber(
                         order.getShippingPhoneNumber()
                 )
+
                 .shippingStreetAddress(
                         order.getShippingStreetAddress()
                 )
+
                 .shippingLandmark(
                         order.getShippingLandmark()
                 )
+
                 .shippingCity(
                         order.getShippingCity()
                 )
+
                 .shippingState(
                         order.getShippingState()
                 )
+
                 .shippingPostalCode(
                         order.getShippingPostalCode()
                 )
+
                 .shippingCountry(
                         order.getShippingCountry()
                 )
+
 
                 // =====================================
                 // PRICE
@@ -1635,27 +1996,36 @@ public class OrderServiceImpl implements OrderService {
                 .subtotal(
                         order.getSubtotal()
                 )
+
                 .discountAmount(
                         order.getDiscountAmount()
                 )
+
                 .shippingCharge(
                         order.getShippingCharge()
                 )
+
                 .taxAmount(
                         order.getTaxAmount()
                 )
+
                 .totalAmount(
                         order.getTotalAmount()
                 )
+
                 .currency(
                         order.getCurrency()
                 )
+
 
                 // =====================================
                 // ITEMS
                 // =====================================
 
-                .items(itemResponses)
+                .items(
+                        itemResponses
+                )
+
 
                 // =====================================
                 // TIMESTAMPS
@@ -1664,6 +2034,7 @@ public class OrderServiceImpl implements OrderService {
                 .createdAt(
                         order.getCreatedAt()
                 )
+
                 .updatedAt(
                         order.getUpdatedAt()
                 )
@@ -1677,43 +2048,60 @@ public class OrderServiceImpl implements OrderService {
     // =========================================================
 
     private OrderItemResponseDTO mapItemToResponse(
-            OrderItemEntity item) {
+            OrderItemEntity item
+    ) {
 
-        if (item == null ||
-                item.getProductVariant() == null ||
-                item.getProductVariant().getId() == null) {
+        if (item == null
+                || item.getProductVariant() == null
+                || item.getProductVariant().getId() == null) {
 
             throw new OrderValidationException(
                     "Order contains invalid item data"
             );
         }
 
-        return OrderItemResponseDTO.builder()
-                .id(item.getId())
-                .productVariantId(
-                        item.getProductVariant().getId()
+
+        return OrderItemResponseDTO
+                .builder()
+
+                .id(
+                        item.getId()
                 )
+
+                .productVariantId(
+                        item
+                                .getProductVariant()
+                                .getId()
+                )
+
                 .productName(
                         item.getProductName()
                 )
+
                 .sku(
                         item.getSku()
                 )
+
                 .quantity(
                         item.getQuantity()
                 )
+
                 .unitMrp(
                         item.getUnitMrp()
                 )
+
                 .unitSellingPrice(
                         item.getUnitSellingPrice()
                 )
+
                 .discountAmount(
                         item.getDiscountAmount()
                 )
+
                 .lineTotal(
                         item.getLineTotal()
                 )
+
                 .build();
     }
 
@@ -1727,7 +2115,8 @@ public class OrderServiceImpl implements OrderService {
             BigDecimal subtotal,
             BigDecimal discountAmount,
             BigDecimal totalAmount,
-            String currency) {
+            String currency
+    ) {
     }
 
 
@@ -1741,10 +2130,7 @@ public class OrderServiceImpl implements OrderService {
             BigDecimal unitMrp,
             BigDecimal unitSellingPrice,
             BigDecimal discountAmount,
-            BigDecimal lineTotal) {
+            BigDecimal lineTotal
+    ) {
     }
 }
-
-
-
-

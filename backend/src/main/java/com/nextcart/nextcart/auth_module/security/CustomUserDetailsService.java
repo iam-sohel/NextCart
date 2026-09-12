@@ -24,10 +24,18 @@ public class CustomUserDetailsService implements UserDetailsService {
             );
         }
 
-        String email = username.trim();
+        final Long userId;
+
+        try {
+            userId = Long.valueOf(username.trim());
+        } catch (NumberFormatException ex) {
+            throw new UsernameNotFoundException(
+                    "Invalid user identifier"
+            );
+        }
 
         User user = userRepository
-                .findByEmailIgnoreCase(email)
+                .findById(userId)
                 .orElseThrow(() ->
                         new UsernameNotFoundException(
                                 "User not found"

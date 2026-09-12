@@ -1,12 +1,12 @@
 package com.nextcart.nextcart.payment_module.entity;
 
-import com.nextcart.nextcart.adcommon.entity.BaseEntity;
 import com.nextcart.nextcart.order_module.OrderEntity;
 import com.nextcart.nextcart.user_module.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(
@@ -31,7 +31,15 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class PaymentTransaction extends BaseEntity {
+public class PaymentTransaction {
+
+    // =========================================================
+    // PRIMARY KEY
+    // =========================================================
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     // =========================================================
     // USER
@@ -44,7 +52,6 @@ public class PaymentTransaction extends BaseEntity {
     )
     private User user;
 
-
     // =========================================================
     // ORDER
     // =========================================================
@@ -55,7 +62,6 @@ public class PaymentTransaction extends BaseEntity {
             nullable = false
     )
     private OrderEntity order;
-
 
     // =========================================================
     // RAZORPAY ORDER
@@ -69,7 +75,6 @@ public class PaymentTransaction extends BaseEntity {
     )
     private String razorpayOrderId;
 
-
     // =========================================================
     // RAZORPAY PAYMENT
     // =========================================================
@@ -81,13 +86,11 @@ public class PaymentTransaction extends BaseEntity {
     )
     private String razorpayPaymentId;
 
-
     @Column(
             name = "razorpay_signature",
             length = 255
     )
     private String razorpaySignature;
-
 
     // =========================================================
     // PAYMENT AMOUNT
@@ -99,7 +102,6 @@ public class PaymentTransaction extends BaseEntity {
     )
     private Long amountInPaise;
 
-
     @Column(
             name = "amount_in_rupees",
             nullable = false,
@@ -107,7 +109,6 @@ public class PaymentTransaction extends BaseEntity {
             scale = 2
     )
     private BigDecimal amountInRupees;
-
 
     // =========================================================
     // CURRENCY
@@ -118,7 +119,6 @@ public class PaymentTransaction extends BaseEntity {
             length = 3
     )
     private String currency;
-
 
     // =========================================================
     // PAYMENT STATUS
@@ -131,7 +131,6 @@ public class PaymentTransaction extends BaseEntity {
     )
     private PaymentStatusEnum status;
 
-
     // =========================================================
     // FAILURE
     // =========================================================
@@ -141,7 +140,6 @@ public class PaymentTransaction extends BaseEntity {
             length = 500
     )
     private String failureReason;
-
 
     // =========================================================
     // REFUND
@@ -154,12 +152,10 @@ public class PaymentTransaction extends BaseEntity {
     )
     private String razorpayRefundId;
 
-
     @Column(
             name = "refunded_amount_in_paise"
     )
     private Long refundedAmountInPaise;
-
 
     @Column(
             name = "refunded_amount_in_rupees",
@@ -167,4 +163,40 @@ public class PaymentTransaction extends BaseEntity {
             scale = 2
     )
     private BigDecimal refundedAmountInRupees;
+
+    // =========================================================
+    // TIMESTAMPS
+    // =========================================================
+
+    @Column(
+            name = "created_at",
+            nullable = false,
+            updatable = false
+    )
+    private LocalDateTime createdAt;
+
+    @Column(
+            name = "updated_at",
+            nullable = false
+    )
+    private LocalDateTime updatedAt;
+
+    // =========================================================
+    // JPA CALLBACKS
+    // =========================================================
+
+    @PrePersist
+    protected void onCreate() {
+
+        LocalDateTime now = LocalDateTime.now();
+
+        createdAt = now;
+        updatedAt = now;
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+
+        updatedAt = LocalDateTime.now();
+    }
 }

@@ -17,7 +17,9 @@ public class CustomUserDetails implements UserDetails {
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
 
-        if (user.getRole() == null || user.getRole().getName() == null) {
+        if (user.getRole() == null ||
+                user.getRole().getName() == null) {
+
             return List.of();
         }
 
@@ -42,7 +44,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public String getUsername() {
-        return user.getEmail();
+        return user.getId().toString();
     }
 
     @Override

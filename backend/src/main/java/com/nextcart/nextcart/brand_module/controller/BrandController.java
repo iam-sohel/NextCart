@@ -1,6 +1,6 @@
 package com.nextcart.nextcart.brand_module.controller;
 
-import com.nextcart.nextcart.adcommon.dto.ApiResponse;
+import com.nextcart.nextcart.common.dto.ApiResponse;
 import com.nextcart.nextcart.brand_module.dto.BrandCreateRequest;
 import com.nextcart.nextcart.brand_module.dto.BrandResponse;
 import com.nextcart.nextcart.brand_module.dto.BrandUpdateRequest;

@@ -4,26 +4,27 @@ import com.nextcart.nextcart.auth_module.dto.*;
 import com.nextcart.nextcart.auth_module.entity.EmailOtp;
 import com.nextcart.nextcart.auth_module.entity.PasswordResetOtp;
 import com.nextcart.nextcart.auth_module.entity.PendingRegistration;
-import com.nextcart.nextcart.auth_module.entity.PhoneOtp;
 import com.nextcart.nextcart.auth_module.entity.RefreshToken;
+import com.nextcart.nextcart.auth_module.exceptions.InvalidAuthRequestException;
+import com.nextcart.nextcart.auth_module.exceptions.InvalidCredentialsException;
+import com.nextcart.nextcart.auth_module.exceptions.OtpVerificationException;
 import com.nextcart.nextcart.auth_module.exceptions.PendingRegistrationNotFoundException;
 import com.nextcart.nextcart.auth_module.exceptions.RegistrationExpiredException;
 import com.nextcart.nextcart.auth_module.exceptions.RegistrationVerificationException;
+import com.nextcart.nextcart.auth_module.exceptions.TokenException;
 import com.nextcart.nextcart.auth_module.repository.EmailOtpRepository;
 import com.nextcart.nextcart.auth_module.repository.PasswordResetOtpRepository;
 import com.nextcart.nextcart.auth_module.repository.PendingRegistrationRepository;
 import com.nextcart.nextcart.auth_module.repository.PhoneOtpRepository;
 import com.nextcart.nextcart.auth_module.util.JwtUtil;
-import com.nextcart.nextcart.seller_module.entity.Seller;
-import com.nextcart.nextcart.seller_module.entity.SellerRepository;
+import com.nextcart.nextcart.seller_module.seller.entity.Seller;
+import com.nextcart.nextcart.seller_module.seller.repository.SellerRepository;
 import com.nextcart.nextcart.user_module.entity.Role;
 import com.nextcart.nextcart.user_module.entity.User;
 import com.nextcart.nextcart.user_module.exception.UserAlreadyExistsException;
 import com.nextcart.nextcart.user_module.repository.RoleRepository;
 import com.nextcart.nextcart.user_module.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,7 +50,7 @@ public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     private final JwtUtil jwtUtil;
     private final RefreshTokenService refreshTokenService;
@@ -63,13 +64,6 @@ public class AuthServiceImpl implements AuthService {
 
     private final EmailService emailService;
     private final SmsService smsService;
-
-    /*
-     * MSG91 Widget service.
-     *
-     * Used only for the new customer phone-registration
-     * verification flow.
-     */
     private final Msg91WidgetService msg91WidgetService;
 
     private final SecureRandom secureRandom = new SecureRandom();
@@ -91,94 +85,60 @@ public class AuthServiceImpl implements AuthService {
         boolean hasEmail = email != null && !email.isBlank();
         boolean hasPhone = phone != null && !phone.isBlank();
 
-        /*
-         * Customer registration must contain exactly
-         * one identifier.
-         */
         if (!hasEmail && !hasPhone) {
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Email or phone is required"
             );
         }
 
         if (hasEmail && hasPhone) {
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Provide either email or phone, not both"
             );
         }
 
-        // =====================================================
-        // CHECK DUPLICATE USER
-        // =====================================================
-
-        if (hasEmail
-                && userRepository.existsByEmailIgnoreCase(email)) {
+        if (hasEmail &&
+                userRepository.existsByEmailIgnoreCase(email)) {
 
             throw new UserAlreadyExistsException(
                     "Email is already registered"
             );
         }
 
-        if (hasPhone
-                && userRepository.existsByPhone(phone)) {
+        if (hasPhone &&
+                userRepository.existsByPhone(phone)) {
 
             throw new UserAlreadyExistsException(
                     "Phone number is already registered"
             );
         }
 
-        // =====================================================
-        // CUSTOMER ROLE
-        // =====================================================
-
         Role customerRole = roleRepository
                 .findByNameIgnoreCase(CUSTOMER_ROLE)
                 .orElseThrow(() ->
-                        new IllegalStateException(
+                        new InvalidAuthRequestException(
                                 "CUSTOMER role is not configured"
                         )
                 );
 
-        // =====================================================
-        // REMOVE PREVIOUS PENDING REGISTRATION
-        // =====================================================
-
         if (hasEmail) {
-
             pendingRegistrationRepository
                     .findByEmailIgnoreCase(email)
-                    .ifPresent(
-                            pendingRegistrationRepository::delete
-                    );
+                    .ifPresent(pendingRegistrationRepository::delete);
         }
 
         if (hasPhone) {
-
             pendingRegistrationRepository
                     .findByPhone(phone)
-                    .ifPresent(
-                            pendingRegistrationRepository::delete
-                    );
+                    .ifPresent(pendingRegistrationRepository::delete);
         }
-
-        // =====================================================
-        // CREATE PENDING REGISTRATION
-        // =====================================================
 
         PendingRegistration pendingRegistration =
                 PendingRegistration.builder()
-                        .firstName(
-                                request.getFirstName().trim()
-                        )
-                        .lastName(
-                                request.getLastName().trim()
-                        )
-                        .email(
-                                hasEmail ? email : null
-                        )
-                        .phone(
-                                hasPhone ? phone : null
-                        )
+                        .firstName(request.getFirstName().trim())
+                        .lastName(request.getLastName().trim())
+                        .email(hasEmail ? email : null)
+                        .phone(hasPhone ? phone : null)
                         .passwordHash(
                                 passwordEncoder.encode(
                                         request.getPassword()
@@ -200,10 +160,6 @@ public class AuthServiceImpl implements AuthService {
                 pendingRegistration
         );
 
-        // =====================================================
-        // EMAIL REGISTRATION
-        // =====================================================
-
         if (hasEmail) {
 
             sendEmailOtp(
@@ -213,12 +169,8 @@ public class AuthServiceImpl implements AuthService {
             );
 
             return RegisterResponse.builder()
-                    .firstName(
-                            pendingRegistration.getFirstName()
-                    )
-                    .lastName(
-                            pendingRegistration.getLastName()
-                    )
+                    .firstName(pendingRegistration.getFirstName())
+                    .lastName(pendingRegistration.getLastName())
                     .email(email)
                     .phone(null)
                     .role(customerRole.getName())
@@ -230,30 +182,9 @@ public class AuthServiceImpl implements AuthService {
                     .build();
         }
 
-        // =====================================================
-        // PHONE REGISTRATION
-        // =====================================================
-
-        /*
-         * IMPORTANT:
-         *
-         * We do NOT generate or send a Java OTP here.
-         *
-         * The frontend starts the MSG91 Widget and the user
-         * completes phone OTP verification there.
-         *
-         * Backend verification is performed through:
-         *
-         * POST /api/v1/auth/phone/verify-widget
-         */
-
         return RegisterResponse.builder()
-                .firstName(
-                        pendingRegistration.getFirstName()
-                )
-                .lastName(
-                        pendingRegistration.getLastName()
-                )
+                .firstName(pendingRegistration.getFirstName())
+                .lastName(pendingRegistration.getLastName())
                 .email(null)
                 .phone(phone)
                 .role(customerRole.getName())
@@ -273,14 +204,12 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public RegisterResponse registerSeller(
-            SellerRegisterRequest request
-    ) {
+            SellerRegisterRequest request) {
 
         validateSellerRegisterRequest(request);
 
         String email = normalizeEmail(request.getEmail());
         String phone = normalizePhone(request.getPhone());
-
         String gstNumber = normalizeUpperCase(
                 request.getGstNumber()
         );
@@ -297,10 +226,8 @@ public class AuthServiceImpl implements AuthService {
             );
         }
 
-        if (gstNumber != null
-                && sellerRepository.existsByGstNumberIgnoreCase(
-                gstNumber
-        )) {
+        if (gstNumber != null &&
+                sellerRepository.existsByGstNumberIgnoreCase(gstNumber)) {
 
             throw new UserAlreadyExistsException(
                     "GST number is already registered"
@@ -310,7 +237,7 @@ public class AuthServiceImpl implements AuthService {
         Role sellerRole = roleRepository
                 .findByNameIgnoreCase(SELLER_ROLE)
                 .orElseThrow(() ->
-                        new IllegalStateException(
+                        new InvalidAuthRequestException(
                                 "SELLER role is not configured"
                         )
                 );
@@ -372,8 +299,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public RegisterResponse completeRegistration(
             String email,
-            String phone
-    ) {
+            String phone) {
 
         boolean hasEmail =
                 email != null && !email.isBlank();
@@ -381,34 +307,23 @@ public class AuthServiceImpl implements AuthService {
         boolean hasPhone =
                 phone != null && !phone.isBlank();
 
-        /*
-         * Exactly one identifier is required.
-         */
         if (!hasEmail && !hasPhone) {
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Email or phone is required"
             );
         }
 
         if (hasEmail && hasPhone) {
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Provide either email or phone, not both"
             );
         }
 
         String normalizedEmail =
-                hasEmail
-                        ? normalizeEmail(email)
-                        : null;
+                hasEmail ? normalizeEmail(email) : null;
 
         String normalizedPhone =
-                hasPhone
-                        ? normalizePhone(phone)
-                        : null;
-
-        // =====================================================
-        // FIND PENDING REGISTRATION
-        // =====================================================
+                hasPhone ? normalizePhone(phone) : null;
 
         PendingRegistration pendingRegistration;
 
@@ -429,19 +344,13 @@ public class AuthServiceImpl implements AuthService {
 
             pendingRegistration =
                     pendingRegistrationRepository
-                            .findByPhone(
-                                    normalizedPhone
-                            )
+                            .findByPhone(normalizedPhone)
                             .orElseThrow(() ->
                                     new PendingRegistrationNotFoundException(
                                             "Pending registration not found"
                                     )
                             );
         }
-
-        // =====================================================
-        // CHECK EXPIRY
-        // =====================================================
 
         if (pendingRegistration.isExpired()) {
 
@@ -454,37 +363,26 @@ public class AuthServiceImpl implements AuthService {
             );
         }
 
-        // =====================================================
-        // VERIFY SELECTED CHANNEL
-        // =====================================================
+        if (hasEmail &&
+                !pendingRegistration.isEmailVerified()) {
 
-        if (hasEmail) {
-
-            if (!pendingRegistration.isEmailVerified()) {
-
-                throw new RegistrationVerificationException(
-                        "Please verify your email OTP before completing registration."
-                );
-            }
-
-        } else {
-
-            if (!pendingRegistration.isPhoneVerified()) {
-
-                throw new RegistrationVerificationException(
-                        "Please verify your phone OTP before completing registration."
-                );
-            }
+            throw new RegistrationVerificationException(
+                    "Please verify your email OTP before completing registration."
+            );
         }
 
-        // =====================================================
-        // FINAL DUPLICATE CHECK
-        // =====================================================
+        if (hasPhone &&
+                !pendingRegistration.isPhoneVerified()) {
 
-        if (hasEmail
-                && userRepository.existsByEmailIgnoreCase(
-                normalizedEmail
-        )) {
+            throw new RegistrationVerificationException(
+                    "Please verify your phone OTP before completing registration."
+            );
+        }
+
+        if (hasEmail &&
+                userRepository.existsByEmailIgnoreCase(
+                        normalizedEmail
+                )) {
 
             pendingRegistrationRepository.delete(
                     pendingRegistration
@@ -495,10 +393,10 @@ public class AuthServiceImpl implements AuthService {
             );
         }
 
-        if (hasPhone
-                && userRepository.existsByPhone(
-                normalizedPhone
-        )) {
+        if (hasPhone &&
+                userRepository.existsByPhone(
+                        normalizedPhone
+                )) {
 
             pendingRegistrationRepository.delete(
                     pendingRegistration
@@ -509,21 +407,13 @@ public class AuthServiceImpl implements AuthService {
             );
         }
 
-        // =====================================================
-        // CUSTOMER ROLE
-        // =====================================================
-
         Role customerRole = roleRepository
                 .findByNameIgnoreCase(CUSTOMER_ROLE)
                 .orElseThrow(() ->
-                        new IllegalStateException(
+                        new InvalidAuthRequestException(
                                 "CUSTOMER role is not configured"
                         )
                 );
-
-        // =====================================================
-        // CREATE USER
-        // =====================================================
 
         User user = new User();
 
@@ -543,10 +433,6 @@ public class AuthServiceImpl implements AuthService {
                 pendingRegistration.getPhone()
         );
 
-        /*
-         * Password was already BCrypt encoded when
-         * PendingRegistration was created.
-         */
         user.setPassword(
                 pendingRegistration.getPasswordHash()
         );
@@ -554,19 +440,12 @@ public class AuthServiceImpl implements AuthService {
         user.setRole(customerRole);
         user.setEnabled(true);
 
-        User savedUser = userRepository.save(user);
-
-        // =====================================================
-        // DELETE PENDING REGISTRATION
-        // =====================================================
+        User savedUser =
+                userRepository.save(user);
 
         pendingRegistrationRepository.delete(
                 pendingRegistration
         );
-
-        // =====================================================
-        // RESPONSE
-        // =====================================================
 
         return RegisterResponse.builder()
                 .firstName(savedUser.getFirstName())
@@ -574,12 +453,8 @@ public class AuthServiceImpl implements AuthService {
                 .email(savedUser.getEmail())
                 .phone(savedUser.getPhone())
                 .role(savedUser.getRole().getName())
-                .emailOtpSent(
-                        savedUser.getEmail() != null
-                )
-                .phoneOtpSent(
-                        savedUser.getPhone() != null
-                )
+                .emailOtpSent(savedUser.getEmail() != null)
+                .phoneOtpSent(savedUser.getPhone() != null)
                 .message("User registered successfully")
                 .build();
     }
@@ -598,8 +473,7 @@ public class AuthServiceImpl implements AuthService {
         User user = findUserForLogin(request);
 
         if (!user.isEnabled()) {
-
-            throw new BadCredentialsException(
+            throw new InvalidCredentialsException(
                     "Invalid email/phone or password"
             );
         }
@@ -608,15 +482,10 @@ public class AuthServiceImpl implements AuthService {
                 request.getPassword(),
                 user.getPassword()
         )) {
-
-            throw new BadCredentialsException(
+            throw new InvalidCredentialsException(
                     "Invalid email/phone or password"
             );
         }
-
-        // =====================================================
-        // ACCESS TOKEN
-        // =====================================================
 
         String accessToken =
                 jwtUtil.generateAccessToken(
@@ -625,16 +494,8 @@ public class AuthServiceImpl implements AuthService {
                         user.getRole().getName()
                 );
 
-        // =====================================================
-        // REFRESH TOKEN
-        // =====================================================
-
         String refreshToken =
                 refreshTokenService.createRefreshToken(user);
-
-        // =====================================================
-        // LOGIN RESPONSE
-        // =====================================================
 
         return LoginResponse.builder()
                 .accessToken(accessToken)
@@ -658,14 +519,13 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public TokenRefreshResponse refreshAccessToken(
-            RefreshTokenRequest request
-    ) {
+            RefreshTokenRequest request) {
 
-        if (request == null
-                || request.getRefreshToken() == null
-                || request.getRefreshToken().isBlank()) {
+        if (request == null ||
+                request.getRefreshToken() == null ||
+                request.getRefreshToken().isBlank()) {
 
-            throw new BadCredentialsException(
+            throw new TokenException(
                     "Refresh token is required"
             );
         }
@@ -681,18 +541,15 @@ public class AuthServiceImpl implements AuthService {
         User user = oldRefreshToken.getUser();
 
         if (user == null || !user.isEnabled()) {
-
-            throw new BadCredentialsException(
+            throw new TokenException(
                     "User account is disabled"
             );
         }
 
-        // Revoke old refresh token
         refreshTokenService.revokeToken(
                 oldRefreshToken
         );
 
-        // Generate new access token
         String newAccessToken =
                 jwtUtil.generateAccessToken(
                         user.getId(),
@@ -700,7 +557,6 @@ public class AuthServiceImpl implements AuthService {
                         user.getRole().getName()
                 );
 
-        // Generate new refresh token
         String newRefreshToken =
                 refreshTokenService.createRefreshToken(user);
 
@@ -712,36 +568,22 @@ public class AuthServiceImpl implements AuthService {
                 .build();
     }
 
-
     // =========================================================
-    // LOGOUT
-    // =========================================================
+// LOGOUT
+// =========================================================
 
     @Override
     @Transactional
-    public void logout(String email) {
+    public void logout(Long userId) {
 
-        if (email == null || email.isBlank()) {
-
-            throw new BadCredentialsException(
+        if (userId == null) {
+            throw new InvalidAuthRequestException(
                     "Authenticated user is required"
             );
         }
 
-        User user = userRepository
-                .findByEmailIgnoreCase(email.trim())
-                .orElseThrow(() ->
-                        new BadCredentialsException(
-                                "Authenticated user not found"
-                        )
-                );
-
-        refreshTokenService.revokeAllUserTokens(
-                user.getId()
-        );
+        refreshTokenService.revokeAllUserTokens(userId);
     }
-
-
     // =========================================================
     // SEND EMAIL OTP
     // =========================================================
@@ -749,14 +591,13 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void sendEmailOtp(
-            SendEmailOtpRequest request
-    ) {
+            SendEmailOtpRequest request) {
 
-        if (request == null
-                || request.getEmail() == null
-                || request.getEmail().isBlank()) {
+        if (request == null ||
+                request.getEmail() == null ||
+                request.getEmail().isBlank()) {
 
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Email is required"
             );
         }
@@ -801,12 +642,10 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void verifyEmailOtp(
-            VerifyEmailOtpRequest request
-    ) {
+            VerifyEmailOtpRequest request) {
 
         if (request == null) {
-
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Verification request is required"
             );
         }
@@ -820,7 +659,7 @@ public class AuthServiceImpl implements AuthService {
                                 email
                         )
                         .orElseThrow(() ->
-                                new BadCredentialsException(
+                                new OtpVerificationException(
                                         "Invalid or expired OTP"
                                 )
                         );
@@ -842,7 +681,7 @@ public class AuthServiceImpl implements AuthService {
 
             emailOtpRepository.save(emailOtp);
 
-            throw new BadCredentialsException(
+            throw new OtpVerificationException(
                     "Invalid OTP"
             );
         }
@@ -883,30 +722,6 @@ public class AuthServiceImpl implements AuthService {
 
 
     // =========================================================
-    // LEGACY SEND PHONE OTP
-    // =========================================================
-
-    /*
-     * Kept for backward compatibility.
-     *
-     * New customer registration should use MSG91 Widget
-     * instead of this direct Java OTP flow.
-     */
-
-
-    // =========================================================
-    // LEGACY VERIFY PHONE OTP
-    // =========================================================
-
-    /*
-     * Kept for backward compatibility.
-     *
-     * New customer phone registration uses
-     * verifyPhoneOtpWidget().
-     */
-
-
-    // =========================================================
     // VERIFY PHONE OTP USING MSG91 WIDGET
     // =========================================================
 
@@ -914,19 +729,16 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public void verifyPhoneOtpWidget(
             String phone,
-            String accessToken
-    ) {
+            String accessToken) {
 
         if (phone == null || phone.isBlank()) {
-
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Phone number is required"
             );
         }
 
         if (accessToken == null || accessToken.isBlank()) {
-
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "MSG91 access token is required"
             );
         }
@@ -960,8 +772,7 @@ public class AuthServiceImpl implements AuthService {
                 );
 
         if (!verified) {
-
-            throw new BadCredentialsException(
+            throw new OtpVerificationException(
                     "Phone OTP verification failed"
             );
         }
@@ -981,12 +792,10 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void forgotPassword(
-            ForgotPasswordRequest request
-    ) {
+            ForgotPasswordRequest request) {
 
         if (request == null) {
-
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Forgot password request is required"
             );
         }
@@ -1000,15 +809,13 @@ public class AuthServiceImpl implements AuthService {
                         && !request.getPhone().isBlank();
 
         if (!hasEmail && !hasPhone) {
-
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Email or phone is required"
             );
         }
 
         if (hasEmail && hasPhone) {
-
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Provide either email or phone, not both"
             );
         }
@@ -1018,9 +825,6 @@ public class AuthServiceImpl implements AuthService {
             String email =
                     normalizeEmail(request.getEmail());
 
-            /*
-             * Do not reveal whether account exists.
-             */
             if (!userRepository.existsByEmailIgnoreCase(email)) {
                 return;
             }
@@ -1062,9 +866,6 @@ public class AuthServiceImpl implements AuthService {
         String phone =
                 normalizePhone(request.getPhone());
 
-        /*
-         * Do not reveal whether account exists.
-         */
         if (!userRepository.existsByPhone(phone)) {
             return;
         }
@@ -1106,12 +907,10 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public String verifyResetOtp(
-            VerifyResetOtpRequest request
-    ) {
+            VerifyResetOtpRequest request) {
 
         if (request == null) {
-
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Reset OTP request is required"
             );
         }
@@ -1125,15 +924,13 @@ public class AuthServiceImpl implements AuthService {
                         && !request.getPhone().isBlank();
 
         if (!hasEmail && !hasPhone) {
-
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Email or phone is required"
             );
         }
 
         if (hasEmail && hasPhone) {
-
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Provide either email or phone, not both"
             );
         }
@@ -1151,7 +948,7 @@ public class AuthServiceImpl implements AuthService {
                                     email
                             )
                             .orElseThrow(() ->
-                                    new BadCredentialsException(
+                                    new OtpVerificationException(
                                             "Invalid or expired OTP"
                                     )
                             );
@@ -1167,7 +964,7 @@ public class AuthServiceImpl implements AuthService {
                                     phone
                             )
                             .orElseThrow(() ->
-                                    new BadCredentialsException(
+                                    new OtpVerificationException(
                                             "Invalid or expired OTP"
                                     )
                             );
@@ -1190,7 +987,7 @@ public class AuthServiceImpl implements AuthService {
 
             passwordResetOtpRepository.save(resetOtp);
 
-            throw new BadCredentialsException(
+            throw new OtpVerificationException(
                     "Invalid OTP"
             );
         }
@@ -1229,21 +1026,35 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void resetPassword(
-            ResetPasswordRequest request
-    ) {
+            ResetPasswordRequest request) {
 
         if (request == null) {
-
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Reset password request is required"
+            );
+        }
+
+        if (request.getNewPassword() == null ||
+                request.getConfirmPassword() == null) {
+
+            throw new InvalidAuthRequestException(
+                    "New password and confirm password are required"
             );
         }
 
         if (!request.getNewPassword()
                 .equals(request.getConfirmPassword())) {
 
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "New password and confirm password do not match"
+            );
+        }
+
+        if (request.getResetToken() == null ||
+                request.getResetToken().isBlank()) {
+
+            throw new TokenException(
+                    "Reset token is required"
             );
         }
 
@@ -1256,14 +1067,13 @@ public class AuthServiceImpl implements AuthService {
                                 hashValue(resetToken)
                         )
                         .orElseThrow(() ->
-                                new BadCredentialsException(
+                                new TokenException(
                                         "Invalid reset token"
                                 )
                         );
 
         if (!resetOtp.isVerified()) {
-
-            throw new BadCredentialsException(
+            throw new TokenException(
                     "Reset OTP has not been verified"
             );
         }
@@ -1272,7 +1082,7 @@ public class AuthServiceImpl implements AuthService {
                 || resetOtp.getResetTokenExpiresAt()
                 .isBefore(LocalDateTime.now())) {
 
-            throw new BadCredentialsException(
+            throw new TokenException(
                     "Reset token has expired"
             );
         }
@@ -1287,7 +1097,7 @@ public class AuthServiceImpl implements AuthService {
                             resetOtp.getEmail()
                     )
                     .orElseThrow(() ->
-                            new BadCredentialsException(
+                            new TokenException(
                                     "User account not found"
                             )
                     );
@@ -1300,14 +1110,14 @@ public class AuthServiceImpl implements AuthService {
                             resetOtp.getPhone()
                     )
                     .orElseThrow(() ->
-                            new BadCredentialsException(
+                            new TokenException(
                                     "User account not found"
                             )
                     );
 
         } else {
 
-            throw new BadCredentialsException(
+            throw new InvalidAuthRequestException(
                     "Invalid reset request"
             );
         }
@@ -1320,16 +1130,10 @@ public class AuthServiceImpl implements AuthService {
 
         userRepository.save(user);
 
-        /*
-         * Revoke all active sessions after password reset.
-         */
         refreshTokenService.revokeAllUserTokens(
                 user.getId()
         );
 
-        /*
-         * Consume reset token.
-         */
         resetOtp.setResetTokenHash(null);
         resetOtp.setResetTokenExpiresAt(null);
 
@@ -1342,8 +1146,7 @@ public class AuthServiceImpl implements AuthService {
     // =========================================================
 
     private User findUserForLogin(
-            LoginRequest request
-    ) {
+            LoginRequest request) {
 
         if (request.getEmail() != null
                 && !request.getEmail().isBlank()) {
@@ -1355,7 +1158,7 @@ public class AuthServiceImpl implements AuthService {
                             )
                     )
                     .orElseThrow(() ->
-                            new BadCredentialsException(
+                            new InvalidCredentialsException(
                                     "Invalid email/phone or password"
                             )
                     );
@@ -1371,13 +1174,13 @@ public class AuthServiceImpl implements AuthService {
                             )
                     )
                     .orElseThrow(() ->
-                            new BadCredentialsException(
+                            new InvalidCredentialsException(
                                     "Invalid email/phone or password"
                             )
                     );
         }
 
-        throw new BadCredentialsException(
+        throw new InvalidAuthRequestException(
                 "Email or phone is required"
         );
     }
@@ -1388,12 +1191,10 @@ public class AuthServiceImpl implements AuthService {
     // =========================================================
 
     private void validateRegisterRequest(
-            RegisterRequest request
-    ) {
+            RegisterRequest request) {
 
         if (request == null) {
-
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Registration request cannot be null"
             );
         }
@@ -1401,7 +1202,7 @@ public class AuthServiceImpl implements AuthService {
         if (request.getFirstName() == null
                 || request.getFirstName().isBlank()) {
 
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "First name is required"
             );
         }
@@ -1409,7 +1210,7 @@ public class AuthServiceImpl implements AuthService {
         if (request.getLastName() == null
                 || request.getLastName().isBlank()) {
 
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Last name is required"
             );
         }
@@ -1423,15 +1224,13 @@ public class AuthServiceImpl implements AuthService {
                         && !request.getPhone().isBlank();
 
         if (!hasEmail && !hasPhone) {
-
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Email or phone is required"
             );
         }
 
         if (hasEmail && hasPhone) {
-
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Provide either email or phone, not both"
             );
         }
@@ -1439,7 +1238,7 @@ public class AuthServiceImpl implements AuthService {
         if (request.getPassword() == null
                 || request.getPassword().isBlank()) {
 
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Password is required"
             );
         }
@@ -1451,12 +1250,10 @@ public class AuthServiceImpl implements AuthService {
     // =========================================================
 
     private void validateSellerRegisterRequest(
-            SellerRegisterRequest request
-    ) {
+            SellerRegisterRequest request) {
 
         if (request == null) {
-
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Seller registration request cannot be null"
             );
         }
@@ -1464,7 +1261,7 @@ public class AuthServiceImpl implements AuthService {
         if (request.getFirstName() == null
                 || request.getFirstName().isBlank()) {
 
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "First name is required"
             );
         }
@@ -1472,7 +1269,7 @@ public class AuthServiceImpl implements AuthService {
         if (request.getLastName() == null
                 || request.getLastName().isBlank()) {
 
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Last name is required"
             );
         }
@@ -1480,7 +1277,7 @@ public class AuthServiceImpl implements AuthService {
         if (request.getEmail() == null
                 || request.getEmail().isBlank()) {
 
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Email is required"
             );
         }
@@ -1488,7 +1285,7 @@ public class AuthServiceImpl implements AuthService {
         if (request.getPhone() == null
                 || request.getPhone().isBlank()) {
 
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Phone number is required"
             );
         }
@@ -1496,7 +1293,7 @@ public class AuthServiceImpl implements AuthService {
         if (request.getPassword() == null
                 || request.getPassword().isBlank()) {
 
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Password is required"
             );
         }
@@ -1504,7 +1301,7 @@ public class AuthServiceImpl implements AuthService {
         if (request.getBusinessName() == null
                 || request.getBusinessName().isBlank()) {
 
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Business name is required"
             );
         }
@@ -1516,12 +1313,10 @@ public class AuthServiceImpl implements AuthService {
     // =========================================================
 
     private void validateLoginRequest(
-            LoginRequest request
-    ) {
+            LoginRequest request) {
 
         if (request == null) {
-
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Login request cannot be null"
             );
         }
@@ -1535,15 +1330,13 @@ public class AuthServiceImpl implements AuthService {
                         && !request.getPhone().isBlank();
 
         if (!hasEmail && !hasPhone) {
-
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Email or phone is required"
             );
         }
 
         if (hasEmail && hasPhone) {
-
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Provide either email or phone, not both"
             );
         }
@@ -1551,7 +1344,7 @@ public class AuthServiceImpl implements AuthService {
         if (request.getPassword() == null
                 || request.getPassword().isBlank()) {
 
-            throw new IllegalArgumentException(
+            throw new InvalidAuthRequestException(
                     "Password is required"
             );
         }
@@ -1563,12 +1356,10 @@ public class AuthServiceImpl implements AuthService {
     // =========================================================
 
     private void validateOtpAttempts(
-            int attempts
-    ) {
+            int attempts) {
 
         if (attempts >= MAX_OTP_ATTEMPTS) {
-
-            throw new BadCredentialsException(
+            throw new OtpVerificationException(
                     "Maximum OTP attempts exceeded"
             );
         }
@@ -1576,15 +1367,14 @@ public class AuthServiceImpl implements AuthService {
 
 
     private void validateOtpExpiration(
-            LocalDateTime expiresAt
-    ) {
+            LocalDateTime expiresAt) {
 
         if (expiresAt == null
                 || !expiresAt.isAfter(
                 LocalDateTime.now()
         )) {
 
-            throw new BadCredentialsException(
+            throw new OtpVerificationException(
                     "OTP has expired"
             );
         }
@@ -1629,8 +1419,7 @@ public class AuthServiceImpl implements AuthService {
     // =========================================================
 
     private String hashValue(
-            String value
-    ) {
+            String value) {
 
         try {
 
@@ -1665,8 +1454,7 @@ public class AuthServiceImpl implements AuthService {
     // =========================================================
 
     private String normalizeEmail(
-            String email
-    ) {
+            String email) {
 
         if (email == null || email.isBlank()) {
             return null;
@@ -1683,8 +1471,7 @@ public class AuthServiceImpl implements AuthService {
     // =========================================================
 
     private String normalizePhone(
-            String phone
-    ) {
+            String phone) {
 
         if (phone == null || phone.isBlank()) {
             return null;
@@ -1699,8 +1486,7 @@ public class AuthServiceImpl implements AuthService {
     // =========================================================
 
     private String normalizeUpperCase(
-            String value
-    ) {
+            String value) {
 
         if (value == null || value.isBlank()) {
             return null;

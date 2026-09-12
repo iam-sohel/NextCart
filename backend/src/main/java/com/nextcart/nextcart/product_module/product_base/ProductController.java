@@ -1,6 +1,6 @@
 package com.nextcart.nextcart.product_module.product_base;
 
-import com.nextcart.nextcart.adcommon.dto.ApiResponse;
+import com.nextcart.nextcart.common.dto.ApiResponse;
 import com.nextcart.nextcart.product_module.product_base.dto.ProductCreateRequest;
 import com.nextcart.nextcart.product_module.product_base.dto.ProductDetailsResponse;
 import com.nextcart.nextcart.product_module.product_base.dto.ProductResponse;
@@ -29,7 +29,7 @@ public class ProductController {
     // ADMIN + SELLER
     // =========================================================
 
-    
+
 
 
     @PostMapping

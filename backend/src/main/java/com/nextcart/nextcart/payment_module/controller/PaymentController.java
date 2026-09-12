@@ -1,6 +1,6 @@
 package com.nextcart.nextcart.payment_module.controller;
 
-import com.nextcart.nextcart.adcommon.dto.ApiResponse;
+import com.nextcart.nextcart.common.dto.ApiResponse;
 import com.nextcart.nextcart.payment_module.dto.CreatePaymentRequestDTO;
 import com.nextcart.nextcart.payment_module.dto.CreatePaymentResponseDTO;
 import com.nextcart.nextcart.payment_module.dto.PaymentResponseDTO;

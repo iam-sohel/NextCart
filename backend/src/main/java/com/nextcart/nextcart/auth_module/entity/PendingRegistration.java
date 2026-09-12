@@ -34,37 +34,87 @@ public class PendingRegistration {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "first_name", nullable = false, length = 100)
+    @Column(
+            name = "first_name",
+            nullable = false,
+            length = 100
+    )
     private String firstName;
 
-    @Column(name = "last_name", nullable = false, length = 100)
+    @Column(
+            name = "last_name",
+            nullable = false,
+            length = 100
+    )
     private String lastName;
 
-    @Column(name = "email", nullable = true, length = 150)
+    /*
+     * Exactly one identifier should be present:
+     *
+     * Email registration:
+     * email != null
+     * phone == null
+     *
+     * Phone registration:
+     * email == null
+     * phone != null
+     */
+    @Column(
+            name = "email",
+            length = 150
+    )
     private String email;
 
-    @Column(name = "phone", nullable = true, length = 20)
+    @Column(
+            name = "phone",
+            length = 20
+    )
     private String phone;
 
-    @Column(name = "password_hash", nullable = false, length = 255)
+    /*
+     * BCrypt encoded password.
+     * Never store the raw password.
+     */
+    @Column(
+            name = "password_hash",
+            nullable = false,
+            length = 255
+    )
     private String passwordHash;
 
-    @Column(name = "role", nullable = false, length = 30)
+    @Column(
+            name = "role",
+            nullable = false,
+            length = 30
+    )
     @Builder.Default
     private String role = "CUSTOMER";
 
+    @Column(
+            name = "email_verified",
+            nullable = false
+    )
     @Builder.Default
-    @Column(name = "email_verified", nullable = false)
     private boolean emailVerified = false;
 
+    @Column(
+            name = "phone_verified",
+            nullable = false
+    )
     @Builder.Default
-    @Column(name = "phone_verified", nullable = false)
     private boolean phoneVerified = false;
 
-    @Column(name = "expires_at", nullable = false)
+    @Column(
+            name = "expires_at",
+            nullable = false
+    )
     private LocalDateTime expiresAt;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(
+            name = "created_at",
+            nullable = false,
+            updatable = false
+    )
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -74,12 +124,14 @@ public class PendingRegistration {
     @PrePersist
     protected void onCreate() {
 
+        LocalDateTime now = LocalDateTime.now();
+
         if (createdAt == null) {
-            createdAt = LocalDateTime.now();
+            createdAt = now;
         }
 
         if (expiresAt == null) {
-            expiresAt = LocalDateTime.now().plusMinutes(15);
+            expiresAt = now.plusMinutes(15);
         }
     }
 
@@ -105,8 +157,26 @@ public class PendingRegistration {
         return false;
     }
 
+    /**
+     * Returns true when the pending registration
+     * has passed its registration lifetime.
+     */
     public boolean isExpired() {
         return expiresAt == null
                 || !expiresAt.isAfter(LocalDateTime.now());
+    }
+
+    /**
+     * Returns true when this is an email-based registration.
+     */
+    public boolean isEmailRegistration() {
+        return email != null && !email.isBlank();
+    }
+
+    /**
+     * Returns true when this is a phone-based registration.
+     */
+    public boolean isPhoneRegistration() {
+        return phone != null && !phone.isBlank();
     }
 }

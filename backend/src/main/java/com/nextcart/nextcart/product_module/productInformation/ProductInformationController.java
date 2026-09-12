@@ -1,6 +1,6 @@
 package com.nextcart.nextcart.product_module.productInformation;
 
-import com.nextcart.nextcart.adcommon.dto.ApiResponse;
+import com.nextcart.nextcart.common.dto.ApiResponse;
 import com.nextcart.nextcart.product_module.productInformation.productInformation.ProductInformationCreateRequest;
 import com.nextcart.nextcart.product_module.productInformation.productInformation.ProductInformationResponse;
 import com.nextcart.nextcart.product_module.productInformation.productInformation.ProductInformationUpdateRequest;
