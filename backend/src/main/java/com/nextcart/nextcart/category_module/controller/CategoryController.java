@@ -1,6 +1,6 @@
 package com.nextcart.nextcart.category_module.controller;
 
-import com.nextcart.nextcart.adcommon.dto.ApiResponse;
+import com.nextcart.nextcart.common.dto.ApiResponse;
 import com.nextcart.nextcart.category_module.dto.CategoryCreateRequest;
 import com.nextcart.nextcart.category_module.dto.CategoryResponse;
 import com.nextcart.nextcart.category_module.dto.CategoryUpdateRequest;

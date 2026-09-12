@@ -2,6 +2,7 @@ package com.nextcart.nextcart.product_module.product_base;
 
 import com.nextcart.nextcart.brand_module.entity.Brand;
 import com.nextcart.nextcart.category_module.entity.Category;
+import com.nextcart.nextcart.seller_module.seller.entity.Seller;
 import com.nextcart.nextcart.subcategory_module.entity.SubCategory;
 import jakarta.persistence.*;
 import lombok.*;
@@ -18,6 +19,10 @@ import java.time.Instant;
                 )
         },
         indexes = {
+                @Index(
+                        name = "idx_products_seller_id",
+                        columnList = "seller_id"
+                ),
                 @Index(
                         name = "idx_products_category_id",
                         columnList = "category_id"
@@ -47,6 +52,23 @@ public class ProductEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /*
+     * Seller who owns/created this product.
+     */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(
+            name = "seller_id",
+            nullable = false,
+            foreignKey = @ForeignKey(
+                    name = "fk_products_seller"
+            )
+    )
+    private Seller seller;
+
+    /*
+     * Existing Category.
+     * Seller selects it; Seller does not create it.
+     */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
             name = "category_id",
@@ -57,6 +79,10 @@ public class ProductEntity {
     )
     private Category category;
 
+    /*
+     * Existing SubCategory.
+     * Must belong to the selected Category.
+     */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
             name = "subcategory_id",
@@ -67,6 +93,10 @@ public class ProductEntity {
     )
     private SubCategory subCategory;
 
+    /*
+     * Existing Brand.
+     * Seller selects it; Seller does not create it.
+     */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
             name = "brand_id",

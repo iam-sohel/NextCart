@@ -1,6 +1,6 @@
 package com.nextcart.nextcart.product_module.productSpecification;
 
-import com.nextcart.nextcart.adcommon.dto.ApiResponse;
+import com.nextcart.nextcart.common.dto.ApiResponse;
 import com.nextcart.nextcart.product_module.productSpecification.productSpecification.ProductSpecificationCreateRequest;
 import com.nextcart.nextcart.product_module.productSpecification.productSpecification.ProductSpecificationResponse;
 import com.nextcart.nextcart.product_module.productSpecification.productSpecification.ProductSpecificationUpdateRequest;

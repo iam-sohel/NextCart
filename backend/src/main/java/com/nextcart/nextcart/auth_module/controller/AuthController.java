@@ -2,8 +2,10 @@ package com.nextcart.nextcart.auth_module.controller;
 
 import com.nextcart.nextcart.auth_module.dto.*;
 import com.nextcart.nextcart.auth_module.service.AuthService;
+import com.nextcart.nextcart.common.dto.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -17,123 +19,227 @@ public class AuthController {
 
     private final AuthService authService;
 
+
     // ============================================================
     // CUSTOMER REGISTRATION
     // ============================================================
 
     @PostMapping("/register")
-    public ResponseEntity<RegisterResponse> register(
+    public ResponseEntity<ApiResponse<RegisterResponse>> register(
             @Valid @RequestBody RegisterRequest request) {
 
-        return ResponseEntity.ok(
-                authService.register(request)
-        );
+        RegisterResponse response =
+                authService.register(request);
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(
+                        new ApiResponse<>(
+                                true,
+                                "Registration initiated successfully",
+                                response
+                        )
+                );
     }
 
-    /**
-     * Complete customer registration after
-     * email OR phone verification.
-     */
+
+    // ============================================================
+    // COMPLETE CUSTOMER REGISTRATION
+    // ============================================================
+
     @PostMapping("/register/complete")
-    public ResponseEntity<RegisterResponse> completeRegistration(
+    public ResponseEntity<ApiResponse<RegisterResponse>>
+    completeRegistration(
             @Valid @RequestBody CompleteRegistrationRequest request) {
 
-        return ResponseEntity.ok(
+        RegisterResponse response =
                 authService.completeRegistration(
                         request.getEmail(),
                         request.getPhone()
+                );
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "Registration completed successfully",
+                        response
                 )
         );
     }
+
 
     // ============================================================
     // SELLER REGISTRATION
     // ============================================================
 
     @PostMapping("/register/seller")
-    public ResponseEntity<RegisterResponse> registerSeller(
+    public ResponseEntity<ApiResponse<RegisterResponse>>
+    registerSeller(
             @Valid @RequestBody SellerRegisterRequest request) {
 
-        return ResponseEntity.ok(
-                authService.registerSeller(request)
-        );
+        RegisterResponse response =
+                authService.registerSeller(request);
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(
+                        new ApiResponse<>(
+                                true,
+                                "Seller registered successfully",
+                                response
+                        )
+                );
     }
+
 
     // ============================================================
     // LOGIN
     // ============================================================
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(
+    public ResponseEntity<ApiResponse<LoginResponse>> login(
             @Valid @RequestBody LoginRequest request) {
 
+        LoginResponse response =
+                authService.login(request);
+
         return ResponseEntity.ok(
-                authService.login(request)
+                new ApiResponse<>(
+                        true,
+                        "Login successful",
+                        response
+                )
         );
     }
+
 
     // ============================================================
     // REFRESH TOKEN
     // ============================================================
 
     @PostMapping("/refresh")
-    public ResponseEntity<TokenRefreshResponse> refreshAccessToken(
+    public ResponseEntity<ApiResponse<TokenRefreshResponse>>
+    refreshAccessToken(
             @Valid @RequestBody RefreshTokenRequest request) {
 
+        TokenRefreshResponse response =
+                authService.refreshAccessToken(request);
+
         return ResponseEntity.ok(
-                authService.refreshAccessToken(request)
+                new ApiResponse<>(
+                        true,
+                        "Token refreshed successfully",
+                        response
+                )
         );
     }
+
 
     // ============================================================
     // LOGOUT
     // ============================================================
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(
+    public ResponseEntity<ApiResponse<Void>> logout(
             Authentication authentication) {
 
-        authService.logout(authentication.getName());
+        if (authentication == null ||
+                authentication.getName() == null ||
+                authentication.getName().isBlank()) {
 
-        return ResponseEntity.noContent().build();
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(
+                            new ApiResponse<>(
+                                    false,
+                                    "Authenticated user is required",
+                                    null
+                            )
+                    );
+        }
+
+        final Long userId;
+
+        try {
+
+            userId = Long.valueOf(
+                    authentication.getName()
+            );
+
+        } catch (NumberFormatException ex) {
+
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(
+                            new ApiResponse<>(
+                                    false,
+                                    "Invalid authenticated user",
+                                    null
+                            )
+                    );
+        }
+
+        authService.logout(userId);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "Logout successful",
+                        null
+                )
+        );
     }
 
+
     // ============================================================
-    // EMAIL OTP
+    // EMAIL OTP - SEND
     // ============================================================
 
     @PostMapping("/email/send-otp")
-    public ResponseEntity<Void> sendEmailOtp(
+    public ResponseEntity<ApiResponse<Void>>
+    sendEmailOtp(
             @Valid @RequestBody SendEmailOtpRequest request) {
 
         authService.sendEmailOtp(request);
 
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "Email OTP sent successfully",
+                        null
+                )
+        );
     }
 
+
+    // ============================================================
+    // EMAIL OTP - VERIFY
+    // ============================================================
+
     @PostMapping("/email/verify-otp")
-    public ResponseEntity<Void> verifyEmailOtp(
+    public ResponseEntity<ApiResponse<Void>>
+    verifyEmailOtp(
             @Valid @RequestBody VerifyEmailOtpRequest request) {
 
         authService.verifyEmailOtp(request);
 
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "Email OTP verified successfully",
+                        null
+                )
+        );
     }
+
 
     // ============================================================
     // PHONE OTP - MSG91 WIDGET
     // ============================================================
 
-    /**
-     * Verify phone OTP using MSG91 Widget.
-     *
-     * The frontend completes OTP verification
-     * through MSG91 Widget and receives an access token.
-     *
-     * The access token is then sent to this endpoint.
-     */
     @PostMapping("/phone/verify-widget")
-    public ResponseEntity<Void> verifyPhoneOtpWidget(
+    public ResponseEntity<ApiResponse<Void>>
+    verifyPhoneOtpWidget(
             @Valid @RequestBody VerifyPhoneWidgetRequest request) {
 
         authService.verifyPhoneOtpWidget(
@@ -141,50 +247,79 @@ public class AuthController {
                 request.getAccessToken()
         );
 
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "Phone OTP verified successfully",
+                        null
+                )
+        );
     }
+
 
     // ============================================================
     // FORGOT PASSWORD
     // ============================================================
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<Void> forgotPassword(
+    public ResponseEntity<ApiResponse<Void>>
+    forgotPassword(
             @Valid @RequestBody ForgotPasswordRequest request) {
 
         authService.forgotPassword(request);
 
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "If the account exists, a password reset OTP has been sent",
+                        null
+                )
+        );
     }
+
 
     // ============================================================
     // VERIFY RESET OTP
     // ============================================================
 
     @PostMapping("/forgot-password/verify-otp")
-    public ResponseEntity<Map<String, String>> verifyResetOtp(
+    public ResponseEntity<ApiResponse<Map<String, String>>>
+    verifyResetOtp(
             @Valid @RequestBody VerifyResetOtpRequest request) {
 
-        String resetToken = authService.verifyResetOtp(request);
+        String resetToken =
+                authService.verifyResetOtp(request);
 
         return ResponseEntity.ok(
-                Map.of(
-                        "resetToken", resetToken,
-                        "message", "OTP verified successfully"
+                new ApiResponse<>(
+                        true,
+                        "OTP verified successfully",
+                        Map.of(
+                                "resetToken",
+                                resetToken
+                        )
                 )
         );
     }
+
 
     // ============================================================
     // RESET PASSWORD
     // ============================================================
 
     @PostMapping("/reset-password")
-    public ResponseEntity<Void> resetPassword(
+    public ResponseEntity<ApiResponse<Void>>
+    resetPassword(
             @Valid @RequestBody ResetPasswordRequest request) {
 
         authService.resetPassword(request);
 
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "Password reset successfully",
+                        null
+                )
+        );
     }
 }

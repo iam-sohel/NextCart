@@ -1,6 +1,6 @@
 package com.nextcart.nextcart.order_module;
 
-import com.nextcart.nextcart.adcommon.dto.ApiResponse;
+import com.nextcart.nextcart.common.dto.ApiResponse;
 import com.nextcart.nextcart.auth_module.security.CustomUserDetails;
 import com.nextcart.nextcart.order_module.dto.OrderCreateRequestDTO;
 import com.nextcart.nextcart.order_module.dto.OrderResponseDTO;

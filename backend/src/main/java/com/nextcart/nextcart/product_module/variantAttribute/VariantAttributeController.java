@@ -1,6 +1,6 @@
 package com.nextcart.nextcart.product_module.variantAttribute;
 
-import com.nextcart.nextcart.adcommon.dto.ApiResponse;
+import com.nextcart.nextcart.common.dto.ApiResponse;
 import com.nextcart.nextcart.product_module.variantAttribute.dto.VariantAttributeCreateRequest;
 import com.nextcart.nextcart.product_module.variantAttribute.dto.VariantAttributeResponse;
 import com.nextcart.nextcart.product_module.variantAttribute.dto.VariantAttributeUpdateRequest;

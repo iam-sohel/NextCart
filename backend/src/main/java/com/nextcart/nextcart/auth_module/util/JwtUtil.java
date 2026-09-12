@@ -20,9 +20,16 @@ public class JwtUtil {
             @Value("${app.security.jwt.secret}") String secret,
             @Value("${app.security.jwt.expiration-ms:900000}") long expirationMillis
     ) {
+
         if (secret == null || secret.length() < 32) {
             throw new IllegalArgumentException(
                     "JWT secret must be at least 32 characters long"
+            );
+        }
+
+        if (expirationMillis <= 0) {
+            throw new IllegalArgumentException(
+                    "JWT expiration must be greater than zero"
             );
         }
 
@@ -32,6 +39,7 @@ public class JwtUtil {
 
         this.expirationMillis = expirationMillis;
     }
+
 
     // =========================================================
     // GENERATE ACCESS TOKEN
@@ -43,43 +51,43 @@ public class JwtUtil {
             String role
     ) {
 
+        if (userId == null) {
+            throw new IllegalArgumentException(
+                    "User ID is required"
+            );
+        }
+
+        if (role == null || role.isBlank()) {
+            throw new IllegalArgumentException(
+                    "User role is required"
+            );
+        }
+
         Date now = new Date();
 
         Date expiry = new Date(
                 now.getTime() + expirationMillis
         );
 
-        return Jwts.builder()
-                /*
-                 * Use userId as JWT subject.
-                 *
-                 * This works for both:
-                 * - email users
-                 * - phone-only users
-                 */
-                .subject(String.valueOf(userId))
-
-                .claim("userId", userId)
+        var builder = Jwts.builder()
+                .subject(userId.toString())
                 .claim("role", role)
-
-                /*
-                 * Keep email as an optional claim.
-                 *
-                 * Phone-only users may have email = null,
-                 * so do not put a null claim into the JWT.
-                 */
-                .claim(
-                        "email",
-                        email != null && !email.isBlank()
-                                ? email
-                                : ""
-                )
-
                 .issuedAt(now)
-                .expiration(expiry)
+                .expiration(expiry);
+
+        /*
+         * Email is optional because phone-only customers
+         * do not have an email address.
+         */
+        if (email != null && !email.isBlank()) {
+            builder.claim("email", email);
+        }
+
+        return builder
                 .signWith(secretKey)
                 .compact();
     }
+
 
     // =========================================================
     // EXTRACT ALL CLAIMS
@@ -94,6 +102,29 @@ public class JwtUtil {
                 .getPayload();
     }
 
+
+    // =========================================================
+    // EXTRACT USER ID
+    // =========================================================
+
+    public Long extractUserId(String token) {
+
+        String subject =
+                extractAllClaims(token)
+                        .getSubject();
+
+        if (subject == null || subject.isBlank()) {
+            return null;
+        }
+
+        try {
+            return Long.valueOf(subject);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+
     // =========================================================
     // EXTRACT EMAIL
     // =========================================================
@@ -104,20 +135,6 @@ public class JwtUtil {
                 .get("email", String.class);
     }
 
-    // =========================================================
-    // EXTRACT USER ID
-    // =========================================================
-
-    public Long extractUserId(String token) {
-
-        Number userId =
-                extractAllClaims(token)
-                        .get("userId", Number.class);
-
-        return userId != null
-                ? userId.longValue()
-                : null;
-    }
 
     // =========================================================
     // EXTRACT ROLE
@@ -129,6 +146,7 @@ public class JwtUtil {
                 .get("role", String.class);
     }
 
+
     // =========================================================
     // EXTRACT EXPIRATION
     // =========================================================
@@ -139,6 +157,7 @@ public class JwtUtil {
                 .getExpiration();
     }
 
+
     // =========================================================
     // CHECK EXPIRATION
     // =========================================================
@@ -148,6 +167,7 @@ public class JwtUtil {
         return extractExpiration(token)
                 .before(new Date());
     }
+
 
     // =========================================================
     // VALIDATE TOKEN BY USER ID
@@ -164,6 +184,7 @@ public class JwtUtil {
                     extractUserId(token);
 
             return tokenUserId != null
+                    && userId != null
                     && tokenUserId.equals(userId)
                     && !isTokenExpired(token);
 

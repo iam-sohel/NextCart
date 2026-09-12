@@ -3,37 +3,50 @@ package com.nextcart.nextcart.address_module.service.address;
 import com.nextcart.nextcart.address_module.dto.AddressRequestDTO;
 import com.nextcart.nextcart.address_module.dto.AddressResponseDTO;
 import com.nextcart.nextcart.address_module.entity.Address;
-import com.nextcart.nextcart.user_module.entity.User;
 import com.nextcart.nextcart.address_module.repository.AddressRepository;
-import com.nextcart.nextcart.user_module.repository.UserRepository;
+import com.nextcart.nextcart.customer_module.entity.Customer;
+import com.nextcart.nextcart.customer_module.repository.CustomerRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class AddressServiceImpl implements AddressService {
 
     private final AddressRepository addressRepository;
-    private final UserRepository userRepository;
+    private final CustomerRepository customerRepository;
+
+    // =========================================================
+    // ADD ADDRESS
+    // =========================================================
 
     @Override
-    @Transactional
-    public AddressResponseDTO addAddress(String userEmail, AddressRequestDTO requestDto) {
-        User user = getUserByEmail(userEmail);
+    public AddressResponseDTO addAddress(
+            Long userId,
+            AddressRequestDTO requestDto
+    ) {
 
-        boolean isFirstAddress = addressRepository.findByUserOrderByIsDefaultDescCreatedAtDesc(user).isEmpty();
-        boolean setAsDefault = Boolean.TRUE.equals(requestDto.getIsDefault()) || isFirstAddress;
+        Customer customer = getCustomer(userId);
 
-        if (setAsDefault) {
-            addressRepository.resetDefaultAddressForUser(user);
+        List<Address> existingAddresses =
+                addressRepository.findByCustomerOrderByIsDefaultDescCreatedAtDesc(
+                        customer
+                );
+
+        boolean shouldBeDefault =
+                existingAddresses.isEmpty()
+                        || Boolean.TRUE.equals(requestDto.getIsDefault());
+
+        if (shouldBeDefault) {
+            addressRepository.resetDefaultAddressForCustomer(customer);
         }
 
         Address address = Address.builder()
-                .user(user)
+                .customer(customer)
                 .fullName(requestDto.getFullName())
                 .phoneNumber(requestDto.getPhoneNumber())
                 .streetAddress(requestDto.getStreetAddress())
@@ -42,41 +55,91 @@ public class AddressServiceImpl implements AddressService {
                 .state(requestDto.getState())
                 .postalCode(requestDto.getPostalCode())
                 .country(requestDto.getCountry())
-                .isDefault(setAsDefault)
+                .isDefault(shouldBeDefault)
                 .build();
 
         Address savedAddress = addressRepository.save(address);
-        return mapToResponseDto(savedAddress);
+
+        return mapToResponse(savedAddress);
     }
+
+    // =========================================================
+    // GET ALL ADDRESSES
+    // =========================================================
 
     @Override
     @Transactional(readOnly = true)
-    public List<AddressResponseDTO> getUserAddresses(String userEmail) {
-        User user = getUserByEmail(userEmail);
-        return addressRepository.findByUserOrderByIsDefaultDescCreatedAtDesc(user)
+    public List<AddressResponseDTO> getUserAddresses(Long userId) {
+
+        Customer customer = getCustomer(userId);
+
+        return addressRepository
+                .findByCustomerOrderByIsDefaultDescCreatedAtDesc(customer)
                 .stream()
-                .map(this::mapToResponseDto)
-                .collect(Collectors.toList());
+                .map(this::mapToResponse)
+                .toList();
     }
+
+    // =========================================================
+    // GET ADDRESS BY ID
+    // =========================================================
 
     @Override
     @Transactional(readOnly = true)
-    public AddressResponseDTO getAddressById(String userEmail, Long addressId) {
-        User user = getUserByEmail(userEmail);
-        Address address = addressRepository.findByIdAndUser(addressId, user)
-                .orElseThrow(() -> new RuntimeException("Address not found or does not belong to user"));
-        return mapToResponseDto(address);
+    public AddressResponseDTO getAddressById(
+            Long userId,
+            Long addressId
+    ) {
+
+        Customer customer = getCustomer(userId);
+
+        Address address = addressRepository
+                .findByIdAndCustomer(addressId, customer)
+                .orElseThrow(() ->
+                        new RuntimeException("Address not found")
+                );
+
+        return mapToResponse(address);
     }
 
-    @Override
-    @Transactional
-    public AddressResponseDTO updateAddress(String userEmail, Long addressId, AddressRequestDTO requestDto) {
-        User user = getUserByEmail(userEmail);
-        Address address = addressRepository.findByIdAndUser(addressId, user)
-                .orElseThrow(() -> new RuntimeException("Address not found or access denied"));
+    // =========================================================
+    // UPDATE ADDRESS
+    // =========================================================
 
-        if (Boolean.TRUE.equals(requestDto.getIsDefault()) && !address.getIsDefault()) {
-            addressRepository.resetDefaultAddressForUser(user);
+    @Override
+    public AddressResponseDTO updateAddress(
+            Long userId,
+            Long addressId,
+            AddressRequestDTO requestDto
+    ) {
+
+        Customer customer = getCustomer(userId);
+
+        Address address = addressRepository
+                .findByIdAndCustomer(addressId, customer)
+                .orElseThrow(() ->
+                        new RuntimeException("Address not found")
+                );
+
+        boolean requestedDefault =
+                Boolean.TRUE.equals(requestDto.getIsDefault());
+
+        /*
+         * If this address is being changed to default,
+         * remove default status from all other addresses.
+         */
+        if (requestedDefault && !Boolean.TRUE.equals(address.getIsDefault())) {
+
+            addressRepository.resetDefaultAddressForCustomer(customer);
+
+            address.setIsDefault(true);
+        }
+
+        /*
+         * Do not allow the existing default address to become
+         * non-default without another default address being selected.
+         */
+        if (!requestedDefault && Boolean.TRUE.equals(address.getIsDefault())) {
             address.setIsDefault(true);
         }
 
@@ -90,49 +153,104 @@ public class AddressServiceImpl implements AddressService {
         address.setCountry(requestDto.getCountry());
 
         Address updatedAddress = addressRepository.save(address);
-        return mapToResponseDto(updatedAddress);
+
+        return mapToResponse(updatedAddress);
     }
 
-    @Override
-    @Transactional
-    public void deleteAddress(String userEmail, Long addressId) {
-        User user = getUserByEmail(userEmail);
-        Address address = addressRepository.findByIdAndUser(addressId, user)
-                .orElseThrow(() -> new RuntimeException("Address not found or access denied"));
+    // =========================================================
+    // DELETE ADDRESS
+    // =========================================================
 
-        boolean wasDefault = address.getIsDefault();
+    @Override
+    public void deleteAddress(
+            Long userId,
+            Long addressId
+    ) {
+
+        Customer customer = getCustomer(userId);
+
+        Address address = addressRepository
+                .findByIdAndCustomer(addressId, customer)
+                .orElseThrow(() ->
+                        new RuntimeException("Address not found")
+                );
+
+        boolean wasDefault =
+                Boolean.TRUE.equals(address.getIsDefault());
+
         addressRepository.delete(address);
 
+        /*
+         * If the deleted address was default,
+         * promote the next available address.
+         */
         if (wasDefault) {
-            List<Address> remaining = addressRepository.findByUserOrderByIsDefaultDescCreatedAtDesc(user);
-            if (!remaining.isEmpty()) {
-                Address newDefault = remaining.get(0);
+
+            List<Address> remainingAddresses =
+                    addressRepository
+                            .findByCustomerOrderByIsDefaultDescCreatedAtDesc(
+                                    customer
+                            );
+
+            if (!remainingAddresses.isEmpty()) {
+
+                Address newDefault = remainingAddresses.get(0);
+
                 newDefault.setIsDefault(true);
+
                 addressRepository.save(newDefault);
             }
         }
     }
 
-    @Override
-    @Transactional
-    public AddressResponseDTO setDefaultAddress(String userEmail, Long addressId) {
-        User user = getUserByEmail(userEmail);
-        Address address = addressRepository.findByIdAndUser(addressId, user)
-                .orElseThrow(() -> new RuntimeException("Address not found or access denied"));
+    // =========================================================
+    // SET DEFAULT ADDRESS
+    // =========================================================
 
-        addressRepository.resetDefaultAddressForUser(user);
+    @Override
+    public AddressResponseDTO setDefaultAddress(
+            Long userId,
+            Long addressId
+    ) {
+
+        Customer customer = getCustomer(userId);
+
+        Address address = addressRepository
+                .findByIdAndCustomer(addressId, customer)
+                .orElseThrow(() ->
+                        new RuntimeException("Address not found")
+                );
+
+        addressRepository.resetDefaultAddressForCustomer(customer);
+
         address.setIsDefault(true);
 
-        Address updatedAddress = addressRepository.save(address);
-        return mapToResponseDto(updatedAddress);
+        Address savedAddress = addressRepository.save(address);
+
+        return mapToResponse(savedAddress);
     }
 
-    private User getUserByEmail(String email) {
-        return userRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    // =========================================================
+    // GET CUSTOMER
+    // =========================================================
+
+    private Customer getCustomer(Long userId) {
+
+        return customerRepository
+                .findByUserId(userId)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Customer profile not found"
+                        )
+                );
     }
 
-    private AddressResponseDTO mapToResponseDto(Address address) {
+    // =========================================================
+    // ENTITY -> RESPONSE DTO
+    // =========================================================
+
+    private AddressResponseDTO mapToResponse(Address address) {
+
         return AddressResponseDTO.builder()
                 .id(address.getId())
                 .fullName(address.getFullName())

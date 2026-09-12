@@ -10,8 +10,18 @@ import java.time.LocalDateTime;
 @Table(
         name = "refresh_tokens",
         indexes = {
-                @Index(name = "idx_refresh_tokens_user_id", columnList = "user_id"),
-                @Index(name = "idx_refresh_tokens_token_hash", columnList = "token_hash")
+                @Index(
+                        name = "idx_refresh_tokens_user_id",
+                        columnList = "user_id"
+                ),
+                @Index(
+                        name = "idx_refresh_tokens_token_hash",
+                        columnList = "token_hash"
+                ),
+                @Index(
+                        name = "idx_refresh_tokens_expires_at",
+                        columnList = "expires_at"
+                )
         }
 )
 @Getter
@@ -25,28 +35,108 @@ public class RefreshToken {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+
+    // =========================================================
+    // USER
+    // =========================================================
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(
+            name = "user_id",
+            nullable = false
+    )
     private User user;
 
-    @Column(name = "token_hash", nullable = false, unique = true, length = 255)
+
+    // =========================================================
+    // TOKEN HASH
+    // =========================================================
+
+    /*
+     * Never store the raw refresh token.
+     * Only SHA-256 hash is stored.
+     */
+    @Column(
+            name = "token_hash",
+            nullable = false,
+            unique = true,
+            length = 255
+    )
     private String tokenHash;
 
-    @Column(name = "expires_at", nullable = false)
+
+    // =========================================================
+    // EXPIRY
+    // =========================================================
+
+    @Column(
+            name = "expires_at",
+            nullable = false
+    )
     private LocalDateTime expiresAt;
 
+
+    // =========================================================
+    // REVOCATION
+    // =========================================================
+
     @Builder.Default
-    @Column(name = "revoked", nullable = false)
+    @Column(
+            name = "revoked",
+            nullable = false
+    )
     private boolean revoked = false;
 
-    @Column(name = "created_at", nullable = false)
-    @Builder.Default
-    private LocalDateTime createdAt = LocalDateTime.now();
-
-    @Column(name = "updated_at", nullable = false)
-    @Builder.Default
-    private LocalDateTime updatedAt = LocalDateTime.now();
 
     @Column(name = "revoked_at")
     private LocalDateTime revokedAt;
+
+
+    // =========================================================
+    // AUDIT
+    // =========================================================
+
+    @Builder.Default
+    @Column(
+            name = "created_at",
+            nullable = false,
+            updatable = false
+    )
+    private LocalDateTime createdAt =
+            LocalDateTime.now();
+
+    @Builder.Default
+    @Column(
+            name = "updated_at",
+            nullable = false
+    )
+    private LocalDateTime updatedAt =
+            LocalDateTime.now();
+
+
+    // =========================================================
+    // ENTITY CALLBACKS
+    // =========================================================
+
+    @PrePersist
+    protected void onCreate() {
+
+        LocalDateTime now =
+                LocalDateTime.now();
+
+        if (createdAt == null) {
+            createdAt = now;
+        }
+
+        if (updatedAt == null) {
+            updatedAt = now;
+        }
+    }
+
+
+    @PreUpdate
+    protected void onUpdate() {
+
+        updatedAt = LocalDateTime.now();
+    }
 }

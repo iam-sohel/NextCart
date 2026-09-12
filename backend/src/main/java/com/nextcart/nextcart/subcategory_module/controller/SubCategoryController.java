@@ -1,6 +1,6 @@
 package com.nextcart.nextcart.subcategory_module.controller;
 
-import com.nextcart.nextcart.adcommon.dto.ApiResponse;
+import com.nextcart.nextcart.common.dto.ApiResponse;
 import com.nextcart.nextcart.subcategory_module.dto.SubCategoryCreateRequest;
 import com.nextcart.nextcart.subcategory_module.dto.SubCategoryResponse;
 import com.nextcart.nextcart.subcategory_module.dto.SubCategoryUpdateRequest;
