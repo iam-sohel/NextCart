@@ -10,10 +10,16 @@ on:
 
 permissions:
   contents: read
+  id-token: write
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: nextcart/backend
+  AWS_ROLE_ARN: arn:aws:iam::289981265262:role/GitHubActions-NextCart-ECR
 
 jobs:
   backend-build:
-    name: Backend Build & Test
+    name: Backend Build, Test & ECR Publish
     runs-on: ubuntu-latest
 
     defaults:
@@ -36,3 +42,50 @@ jobs:
 
       - name: Build and verify backend
         run: ./mvnw --batch-mode --no-transfer-progress clean verify
+
+      - name: Configure AWS credentials via GitHub OIDC
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: aws-actions/configure-aws-credentials@v6.2.4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          role-session-name: NextCart-GitHubActions-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+          allowed-account-ids: '289981265262'
+
+      - name: Verify AWS identity
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: aws sts get-caller-identity
+        working-directory: .
+
+      - name: Login to Amazon ECR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2.1.6
+
+      - name: Build Docker image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build \
+            --pull \
+            -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" \
+            .
+
+      - name: Push Docker image to Amazon ECR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+      - name: Print published image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          echo "Published image:"
+          echo "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
