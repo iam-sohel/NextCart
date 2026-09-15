@@ -8,9 +8,9 @@ import lombok.*;
 
 @Getter
 @Setter
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class SellerRegisterRequest {
 
     @NotBlank(message = "First name is required")
@@ -22,14 +22,14 @@ public class SellerRegisterRequest {
     private String lastName;
 
     @NotBlank(message = "Email is required")
-    @Email(message = "Invalid email address")
+    @Email(message = "Invalid email format")
     @Size(max = 150, message = "Email must not exceed 150 characters")
     private String email;
 
     @NotBlank(message = "Phone number is required")
     @Pattern(
             regexp = "^[6-9]\\d{9}$",
-            message = "Invalid phone number"
+            message = "Invalid Indian mobile number"
     )
     private String phone;
 

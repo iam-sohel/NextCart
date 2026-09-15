@@ -20,10 +20,16 @@ public interface SellerKycService {
             SellerKycRequest request
     );
 
+    SellerKycResponse getKycStatus(
+            Long userId
+    );
+
     SellerKycResponse uploadKycDocuments(
             Long userId,
             MultipartFile panDocument,
             MultipartFile aadhaarDocument,
-            MultipartFile gstDocument
+            MultipartFile gstDocument,
+            MultipartFile registrationDocument,
+            MultipartFile addressDocument
     );
 }

@@ -85,10 +85,55 @@ public class AuthController {
                 .body(
                         new ApiResponse<>(
                                 true,
-                                "Seller registered successfully",
+                                "Seller registration initiated successfully",
                                 response
                         )
                 );
+    }
+
+
+    // ============================================================
+    // SELLER EMAIL OTP - VERIFY
+    // ============================================================
+
+    @PostMapping("/verify-seller-email-otp")
+    public ResponseEntity<ApiResponse<Void>>
+    verifySellerEmailOtp(
+            @Valid @RequestBody VerifyEmailOtpRequest request) {
+
+        authService.verifySellerEmailOtp(request);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "Seller email OTP verified successfully",
+                        null
+                )
+        );
+    }
+
+
+    // ============================================================
+    // SELLER PHONE OTP - MSG91 WIDGET
+    // ============================================================
+
+    @PostMapping("/verify-seller-phone-otp")
+    public ResponseEntity<ApiResponse<Void>>
+    verifySellerPhoneOtp(
+            @Valid @RequestBody VerifyPhoneWidgetRequest request) {
+
+        authService.verifySellerPhoneOtpWidget(
+                request.getPhone(),
+                request.getAccessToken()
+        );
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "Seller phone OTP verified successfully",
+                        null
+                )
+        );
     }
 
 

@@ -24,9 +24,10 @@ public class SellerKycController {
     private final SellerKycService sellerKycService;
 
 
-    /**
-     * Submit KYC details
-     */
+    // =========================================================
+    // SUBMIT KYC DETAILS
+    // =========================================================
+
     @PostMapping
     public ResponseEntity<ApiResponse<SellerKycResponse>> submitKyc(
             Authentication authentication,
@@ -52,9 +53,10 @@ public class SellerKycController {
     }
 
 
-    /**
-     * Get my KYC details
-     */
+    // =========================================================
+    // GET MY KYC
+    // =========================================================
+
     @GetMapping
     public ResponseEntity<ApiResponse<SellerKycResponse>> getMyKyc(
             Authentication authentication
@@ -76,9 +78,10 @@ public class SellerKycController {
     }
 
 
-    /**
-     * Update KYC details
-     */
+    // =========================================================
+    // UPDATE KYC
+    // =========================================================
+
     @PutMapping
     public ResponseEntity<ApiResponse<SellerKycResponse>> updateKyc(
             Authentication authentication,
@@ -104,9 +107,35 @@ public class SellerKycController {
     }
 
 
-    /**
-     * Upload KYC PDF documents
-     */
+    // =========================================================
+    // GET KYC STATUS
+    // =========================================================
+
+    @GetMapping("/status")
+    public ResponseEntity<ApiResponse<SellerKycResponse>> getKycStatus(
+            Authentication authentication
+    ) {
+
+        Long userId =
+                Long.valueOf(authentication.getName());
+
+        SellerKycResponse response =
+                sellerKycService.getKycStatus(userId);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "KYC status retrieved successfully",
+                        response
+                )
+        );
+    }
+
+
+    // =========================================================
+    // UPLOAD KYC DOCUMENTS
+    // =========================================================
+
     @PostMapping(
             value = "/documents",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
@@ -131,7 +160,19 @@ public class SellerKycController {
                     value = "gstDocument",
                     required = false
             )
-            MultipartFile gstDocument
+            MultipartFile gstDocument,
+
+            @RequestPart(
+                    value = "registrationDocument",
+                    required = false
+            )
+            MultipartFile registrationDocument,
+
+            @RequestPart(
+                    value = "addressDocument",
+                    required = false
+            )
+            MultipartFile addressDocument
     ) {
 
         Long userId =
@@ -142,7 +183,9 @@ public class SellerKycController {
                         userId,
                         panDocument,
                         aadhaarDocument,
-                        gstDocument
+                        gstDocument,
+                        registrationDocument,
+                        addressDocument
                 );
 
         return ResponseEntity.ok(

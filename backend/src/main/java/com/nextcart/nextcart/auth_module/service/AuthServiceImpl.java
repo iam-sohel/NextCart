@@ -4,6 +4,7 @@ import com.nextcart.nextcart.auth_module.dto.*;
 import com.nextcart.nextcart.auth_module.entity.EmailOtp;
 import com.nextcart.nextcart.auth_module.entity.PasswordResetOtp;
 import com.nextcart.nextcart.auth_module.entity.PendingRegistration;
+import com.nextcart.nextcart.auth_module.entity.PendingSellerRegistration;
 import com.nextcart.nextcart.auth_module.entity.RefreshToken;
 import com.nextcart.nextcart.auth_module.exceptions.InvalidAuthRequestException;
 import com.nextcart.nextcart.auth_module.exceptions.InvalidCredentialsException;
@@ -15,6 +16,7 @@ import com.nextcart.nextcart.auth_module.exceptions.TokenException;
 import com.nextcart.nextcart.auth_module.repository.EmailOtpRepository;
 import com.nextcart.nextcart.auth_module.repository.PasswordResetOtpRepository;
 import com.nextcart.nextcart.auth_module.repository.PendingRegistrationRepository;
+import com.nextcart.nextcart.auth_module.repository.PendingSellerRegistrationRepository;
 import com.nextcart.nextcart.auth_module.repository.PhoneOtpRepository;
 import com.nextcart.nextcart.auth_module.util.JwtUtil;
 import com.nextcart.nextcart.seller_module.seller.entity.Seller;
@@ -61,6 +63,8 @@ public class AuthServiceImpl implements AuthService {
     private final PhoneOtpRepository phoneOtpRepository;
     private final PasswordResetOtpRepository passwordResetOtpRepository;
     private final PendingRegistrationRepository pendingRegistrationRepository;
+
+    private final PendingSellerRegistrationRepository pendingSellerRegistrationRepository;
 
     private final EmailService emailService;
     private final SmsService smsService;
@@ -210,83 +214,54 @@ public class AuthServiceImpl implements AuthService {
 
         String email = normalizeEmail(request.getEmail());
         String phone = normalizePhone(request.getPhone());
-        String gstNumber = normalizeUpperCase(
-                request.getGstNumber()
-        );
+        String gstNumber = normalizeUpperCase(request.getGstNumber());
 
         if (userRepository.existsByEmailIgnoreCase(email)) {
-            throw new UserAlreadyExistsException(
-                    "Email is already registered"
-            );
+            throw new UserAlreadyExistsException("Email is already registered");
         }
 
         if (userRepository.existsByPhone(phone)) {
-            throw new UserAlreadyExistsException(
-                    "Phone number is already registered"
-            );
+            throw new UserAlreadyExistsException("Phone number is already registered");
         }
 
-        if (gstNumber != null &&
-                sellerRepository.existsByGstNumberIgnoreCase(gstNumber)) {
-
-            throw new UserAlreadyExistsException(
-                    "GST number is already registered"
-            );
+        if (gstNumber != null && sellerRepository.existsByGstNumberIgnoreCase(gstNumber)) {
+            throw new UserAlreadyExistsException("GST number is already registered");
         }
 
-        Role sellerRole = roleRepository
-                .findByNameIgnoreCase(SELLER_ROLE)
-                .orElseThrow(() ->
-                        new InvalidAuthRequestException(
-                                "SELLER role is not configured"
-                        )
-                );
+        pendingSellerRegistrationRepository.findByEmailIgnoreCase(email)
+                .ifPresent(pendingSellerRegistrationRepository::delete);
 
-        User user = new User();
+        pendingSellerRegistrationRepository.findByPhone(phone)
+                .ifPresent(pendingSellerRegistrationRepository::delete);
 
-        user.setFirstName(
-                request.getFirstName().trim()
-        );
+        PendingSellerRegistration pendingSeller =
+                PendingSellerRegistration.builder()
+                        .firstName(request.getFirstName().trim())
+                        .lastName(request.getLastName().trim())
+                        .email(email)
+                        .phone(phone)
+                        .passwordHash(passwordEncoder.encode(request.getPassword()))
+                        .businessName(request.getBusinessName().trim())
+                        .gstNumber(gstNumber)
+                        .emailVerified(false)
+                        .phoneVerified(false)
+                        .expiresAt(LocalDateTime.now().plusMinutes(REGISTRATION_EXPIRY_MINUTES))
+                        .createdAt(LocalDateTime.now())
+                        .build();
 
-        user.setLastName(
-                request.getLastName().trim()
-        );
+        pendingSellerRegistrationRepository.save(pendingSeller);
 
-        user.setEmail(email);
-        user.setPhone(phone);
-
-        user.setPassword(
-                passwordEncoder.encode(
-                        request.getPassword()
-                )
-        );
-
-        user.setRole(sellerRole);
-        user.setEnabled(true);
-
-        User savedUser = userRepository.save(user);
-
-        Seller seller = Seller.builder()
-                .user(savedUser)
-                .businessName(
-                        request.getBusinessName().trim()
-                )
-                .gstNumber(gstNumber)
-                .verified(false)
-                .active(true)
-                .build();
-
-        sellerRepository.save(seller);
+        sendSellerEmailOtp(email);
 
         return RegisterResponse.builder()
-                .firstName(savedUser.getFirstName())
-                .lastName(savedUser.getLastName())
-                .email(savedUser.getEmail())
-                .phone(savedUser.getPhone())
-                .role(savedUser.getRole().getName())
-                .emailOtpSent(false)
-                .phoneOtpSent(false)
-                .message("Seller registered successfully")
+                .firstName(pendingSeller.getFirstName())
+                .lastName(pendingSeller.getLastName())
+                .email(email)
+                .phone(phone)
+                .role(SELLER_ROLE)
+                .emailOtpSent(true)
+                .phoneOtpSent(true)
+                .message("Seller registration initiated. Please verify both email and phone OTP.")
                 .build();
     }
 
@@ -782,6 +757,225 @@ public class AuthServiceImpl implements AuthService {
         pendingRegistrationRepository.save(
                 pendingRegistration
         );
+    }
+
+
+    // =========================================================
+    // SEND SELLER EMAIL OTP
+    // =========================================================
+
+    @Transactional
+    public void sendSellerEmailOtp(String email) {
+
+        if (email == null || email.isBlank()) {
+            throw new InvalidAuthRequestException("Email is required");
+        }
+
+        String normalizedEmail = normalizeEmail(email);
+
+        PendingSellerRegistration pendingSeller =
+                pendingSellerRegistrationRepository.findByEmailIgnoreCase(normalizedEmail)
+                        .orElseThrow(() -> new PendingRegistrationNotFoundException(
+                                "Pending seller registration not found"));
+
+        if (pendingSeller.isExpired()) {
+            pendingSellerRegistrationRepository.delete(pendingSeller);
+            throw new RegistrationExpiredException(
+                    "Seller registration session has expired. Please register again.");
+        }
+
+        emailOtpRepository.deleteByEmail(normalizedEmail);
+
+        String otp = generateOtp();
+
+        EmailOtp emailOtp = EmailOtp.builder()
+                .email(normalizedEmail)
+                .otpHash(hashValue(otp))
+                .expiresAt(LocalDateTime.now().plusMinutes(OTP_EXPIRY_MINUTES))
+                .attempts(0)
+                .verified(false)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        emailOtpRepository.save(emailOtp);
+
+        emailService.sendEmail(
+                normalizedEmail,
+                "NextCart Seller Email Verification OTP",
+                "Your NextCart seller verification OTP is: " + otp
+                        + "\n\nThis OTP is valid for 5 minutes."
+        );
+    }
+
+
+    // =========================================================
+    // VERIFY SELLER EMAIL OTP
+    // =========================================================
+
+    @Override
+    @Transactional
+    public void verifySellerEmailOtp(
+            VerifyEmailOtpRequest request) {
+
+        if (request == null) {
+            throw new InvalidAuthRequestException("Verification request is required");
+        }
+
+        String email = normalizeEmail(request.getEmail());
+
+        if (email == null) {
+            throw new InvalidAuthRequestException("Email is required");
+        }
+
+        EmailOtp emailOtp =
+                emailOtpRepository
+                        .findTopByEmailIgnoreCaseAndVerifiedFalseOrderByCreatedAtDesc(email)
+                        .orElseThrow(() -> new OtpVerificationException("Invalid or expired OTP"));
+
+        validateOtpAttempts(emailOtp.getAttempts());
+        validateOtpExpiration(emailOtp.getExpiresAt());
+
+        if (!hashValue(request.getOtp()).equals(emailOtp.getOtpHash())) {
+            emailOtp.setAttempts(emailOtp.getAttempts() + 1);
+            emailOtpRepository.save(emailOtp);
+            throw new OtpVerificationException("Invalid OTP");
+        }
+
+        emailOtp.setVerified(true);
+        emailOtp.setVerifiedAt(LocalDateTime.now());
+        emailOtpRepository.save(emailOtp);
+
+        PendingSellerRegistration pendingSeller =
+                pendingSellerRegistrationRepository.findByEmailIgnoreCase(email)
+                        .orElseThrow(() -> new PendingRegistrationNotFoundException(
+                                "Pending seller registration not found"));
+
+        if (pendingSeller.isExpired()) {
+            pendingSellerRegistrationRepository.delete(pendingSeller);
+            throw new RegistrationExpiredException(
+                    "Seller registration session has expired. Please register again.");
+        }
+
+        pendingSeller.setEmailVerified(true);
+        pendingSellerRegistrationRepository.save(pendingSeller);
+
+        if (pendingSeller.isFullyVerified()) {
+            completeSellerRegistration(pendingSeller);
+        }
+    }
+
+
+    // =========================================================
+    // VERIFY SELLER PHONE OTP USING MSG91 WIDGET
+    // =========================================================
+
+    @Override
+    @Transactional
+    public void verifySellerPhoneOtpWidget(
+            String phone,
+            String accessToken) {
+
+        if (phone == null || phone.isBlank()) {
+            throw new InvalidAuthRequestException("Phone number is required");
+        }
+
+        if (accessToken == null || accessToken.isBlank()) {
+            throw new InvalidAuthRequestException("MSG91 access token is required");
+        }
+
+        String normalizedPhone = normalizePhone(phone);
+
+        PendingSellerRegistration pendingSeller =
+                pendingSellerRegistrationRepository.findByPhone(normalizedPhone)
+                        .orElseThrow(() -> new PendingRegistrationNotFoundException(
+                                "Pending seller registration not found"));
+
+        if (pendingSeller.isExpired()) {
+            pendingSellerRegistrationRepository.delete(pendingSeller);
+            throw new RegistrationExpiredException(
+                    "Seller registration session has expired. Please register again.");
+        }
+
+        boolean verified = msg91WidgetService.verifyAccessToken(accessToken.trim());
+
+        if (!verified) {
+            throw new OtpVerificationException("Phone OTP verification failed");
+        }
+
+        pendingSeller.setPhoneVerified(true);
+        pendingSellerRegistrationRepository.save(pendingSeller);
+
+        if (pendingSeller.isFullyVerified()) {
+            completeSellerRegistration(pendingSeller);
+        }
+    }
+
+
+    // =========================================================
+    // COMPLETE SELLER REGISTRATION
+    // =========================================================
+
+    @Transactional
+    protected void completeSellerRegistration(
+            PendingSellerRegistration pendingSeller) {
+
+        if (pendingSeller == null) {
+            throw new InvalidAuthRequestException("Pending seller registration is required");
+        }
+
+        if (!pendingSeller.isFullyVerified()) {
+            throw new RegistrationVerificationException(
+                    "Both email and phone must be verified");
+        }
+
+        if (pendingSeller.isExpired()) {
+            pendingSellerRegistrationRepository.delete(pendingSeller);
+            throw new RegistrationExpiredException(
+                    "Seller registration session has expired. Please register again.");
+        }
+
+        String email = normalizeEmail(pendingSeller.getEmail());
+        String phone = normalizePhone(pendingSeller.getPhone());
+        String gstNumber = normalizeUpperCase(pendingSeller.getGstNumber());
+
+        if (userRepository.existsByEmailIgnoreCase(email)) {
+            throw new UserAlreadyExistsException("Email is already registered");
+        }
+
+        if (userRepository.existsByPhone(phone)) {
+            throw new UserAlreadyExistsException("Phone number is already registered");
+        }
+
+        if (gstNumber != null && sellerRepository.existsByGstNumberIgnoreCase(gstNumber)) {
+            throw new UserAlreadyExistsException("GST number is already registered");
+        }
+
+        Role sellerRole = roleRepository.findByNameIgnoreCase(SELLER_ROLE)
+                .orElseThrow(() -> new InvalidAuthRequestException(
+                        "SELLER role is not configured"));
+
+        User user = new User();
+        user.setFirstName(pendingSeller.getFirstName());
+        user.setLastName(pendingSeller.getLastName());
+        user.setEmail(email);
+        user.setPhone(phone);
+        user.setPassword(pendingSeller.getPasswordHash());
+        user.setRole(sellerRole);
+        user.setEnabled(true);
+
+        User savedUser = userRepository.save(user);
+
+        Seller seller = Seller.builder()
+                .user(savedUser)
+                .businessName(pendingSeller.getBusinessName())
+                .gstNumber(gstNumber)
+                .verified(false)
+                .active(true)
+                .build();
+
+        sellerRepository.save(seller);
+
+        pendingSellerRegistrationRepository.delete(pendingSeller);
     }
 
 

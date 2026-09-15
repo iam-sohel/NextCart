@@ -1,7 +1,5 @@
 package com.nextcart.nextcart.product_module.product_base;
 
-
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -48,5 +46,30 @@ public interface ProductRepository extends JpaRepository<ProductEntity, Long> {
             Long brandId,
             ProductStatus status,
             Pageable pageable
+    );
+
+    // ============================
+    // Seller Product Queries
+    // ============================
+
+    Optional<ProductEntity> findByIdAndSellerId(
+            Long id,
+            Long sellerId
+    );
+
+    Page<ProductEntity> findAllBySellerId(
+            Long sellerId,
+            Pageable pageable
+    );
+
+    Page<ProductEntity> findAllBySellerIdAndStatus(
+            Long sellerId,
+            ProductStatus status,
+            Pageable pageable
+    );
+
+    boolean existsByIdAndSellerId(
+            Long id,
+            Long sellerId
     );
 }
