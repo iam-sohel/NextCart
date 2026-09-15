@@ -1,5 +1,6 @@
 package com.nextcart.nextcart.seller_module.sellerKyc.dto;
 
+import com.nextcart.nextcart.seller_module.sellerKyc.entity.BusinessType;
 import com.nextcart.nextcart.seller_module.sellerKyc.entity.KycStatus;
 import lombok.*;
 
@@ -16,23 +17,51 @@ public class SellerKycResponse {
 
     private Long sellerId;
 
-    private String panNumber;
-
-    private String maskedAadhaarNumber;
+    private BusinessType businessType;
 
     private String gstNumber;
 
-    private boolean panDocumentUploaded;
+    private String gstDocumentUrl;
 
-    private boolean aadhaarDocumentUploaded;
+    private String registrationNumber;
 
-    private boolean gstDocumentUploaded;
+    private String registrationDocumentUrl;
+
+    private String ownerName;
+
+    private String panNumber;
+
+    private String panDocumentUrl;
+
+    /*
+     * Aadhaar number is returned masked.
+     * Example: XXXX-XXXX-1234
+     */
+    private String aadhaarNumber;
+
+    private String aadhaarDocumentUrl;
+
+    private String businessAddress;
+
+    private String city;
+
+    private String state;
+
+    private String postalCode;
+
+    private String country;
+
+    private String addressDocumentUrl;
 
     private KycStatus status;
 
     private String rejectionReason;
 
-    private LocalDateTime verifiedAt;
+    private LocalDateTime submittedAt;
+
+    private LocalDateTime reviewedAt;
+
+    private Long reviewedBy;
 
     private LocalDateTime createdAt;
 

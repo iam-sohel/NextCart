@@ -28,14 +28,10 @@ public class WarehouseController {
             @Valid @RequestBody WarehouseCreateRequest request
     ) {
 
-        Long userId =
-                Long.valueOf(authentication.getName());
+        Long userId = Long.valueOf(authentication.getName());
 
         WarehouseResponse response =
-                warehouseService.createWarehouse(
-                        userId,
-                        request
-                );
+                warehouseService.createWarehouse(userId, request);
 
         return ResponseEntity.ok(
                 new ApiResponse<>(
@@ -51,8 +47,7 @@ public class WarehouseController {
             Authentication authentication
     ) {
 
-        Long userId =
-                Long.valueOf(authentication.getName());
+        Long userId = Long.valueOf(authentication.getName());
 
         List<WarehouseResponse> response =
                 warehouseService.getMyWarehouses(userId);
@@ -72,8 +67,7 @@ public class WarehouseController {
             @PathVariable Long warehouseId
     ) {
 
-        Long userId =
-                Long.valueOf(authentication.getName());
+        Long userId = Long.valueOf(authentication.getName());
 
         WarehouseResponse response =
                 warehouseService.getMyWarehouse(
@@ -97,8 +91,7 @@ public class WarehouseController {
             @Valid @RequestBody WarehouseUpdateRequest request
     ) {
 
-        Long userId =
-                Long.valueOf(authentication.getName());
+        Long userId = Long.valueOf(authentication.getName());
 
         WarehouseResponse response =
                 warehouseService.updateMyWarehouse(
@@ -116,14 +109,13 @@ public class WarehouseController {
         );
     }
 
-    @DeleteMapping("/{warehouseId}")
+    @PatchMapping("/{warehouseId}/deactivate")
     public ResponseEntity<ApiResponse<Void>> deactivateWarehouse(
             Authentication authentication,
             @PathVariable Long warehouseId
     ) {
 
-        Long userId =
-                Long.valueOf(authentication.getName());
+        Long userId = Long.valueOf(authentication.getName());
 
         warehouseService.deactivateWarehouse(
                 userId,

@@ -15,16 +15,16 @@ import java.time.LocalDateTime;
                         columnList = "seller_id"
                 ),
                 @Index(
-                        name = "idx_seller_kyc_pan_number",
-                        columnList = "pan_number"
+                        name = "idx_seller_kyc_status",
+                        columnList = "status"
                 ),
                 @Index(
                         name = "idx_seller_kyc_gst_number",
                         columnList = "gst_number"
                 ),
                 @Index(
-                        name = "idx_seller_kyc_status",
-                        columnList = "status"
+                        name = "idx_seller_kyc_pan_number",
+                        columnList = "pan_number"
                 )
         }
 )
@@ -39,8 +39,15 @@ public class SellerKyc {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /*
-     * One Seller can have only one active KYC profile.
+
+    // =========================================================
+    // SELLER
+    // =========================================================
+
+    /**
+     * Seller associated with this KYC.
+     *
+     * One seller can have one current KYC record.
      */
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
@@ -53,21 +60,104 @@ public class SellerKyc {
     )
     private Seller seller;
 
-    /*
-     * PAN details
+
+    // =========================================================
+    // BUSINESS DETAILS
+    // =========================================================
+
+    /**
+     * Business type.
+     *
+     * Examples:
+     * PROPRIETORSHIP
+     * PARTNERSHIP
+     * LLP
+     * PRIVATE_LIMITED
+     * PUBLIC_LIMITED
+     * OTHER
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(
+            name = "business_type",
+            nullable = false,
+            length = 30
+    )
+    private BusinessType businessType;
+
+    /**
+     * GST Identification Number.
+     */
+    @Column(
+            name = "gst_number",
+            length = 15
+    )
+    private String gstNumber;
+
+    /**
+     * GST Certificate PDF storage reference.
+     */
+    @Column(
+            name = "gst_document_url",
+            length = 500
+    )
+    private String gstDocumentUrl;
+
+    /**
+     * Business registration number.
+     */
+    @Column(
+            name = "registration_number",
+            length = 100
+    )
+    private String registrationNumber;
+
+    /**
+     * Business registration certificate PDF
+     * storage reference.
+     */
+    @Column(
+            name = "registration_document_url",
+            length = 500
+    )
+    private String registrationDocumentUrl;
+
+
+    // =========================================================
+    // OWNER / AUTHORIZED PERSON DETAILS
+    // =========================================================
+
+    /**
+     * Owner or authorized person's full name.
+     */
+    @Column(
+            name = "owner_name",
+            nullable = false,
+            length = 150
+    )
+    private String ownerName;
+
+    /**
+     * PAN number of owner / authorized person.
      */
     @Column(
             name = "pan_number",
+            nullable = false,
             length = 10
     )
     private String panNumber;
 
-    /*
-     * Full Aadhaar number.
-     *
-     * IMPORTANT:
-     * Encrypt this value before storing it in production.
-     * Never expose it through response DTOs.
+    /**
+     * PAN Card PDF storage reference.
+     */
+    @Column(
+            name = "pan_document_url",
+            nullable = false,
+            length = 500
+    )
+    private String panDocumentUrl;
+
+    /**
+     * Aadhaar number of owner / authorized person.
      */
     @Column(
             name = "aadhaar_number",
@@ -75,41 +165,76 @@ public class SellerKyc {
     )
     private String aadhaarNumber;
 
-    /*
-     * GST details
+    /**
+     * Aadhaar Card PDF storage reference.
      */
     @Column(
-            name = "gst_number",
-            length = 30
+            name = "aadhaar_document_url",
+            length = 500
     )
-    private String gstNumber;
+    private String aadhaarDocumentUrl;
 
-    /*
-     * Secure storage references.
-     *
-     * These should contain an object-storage key/path,
-     * NOT the actual PDF bytes.
+
+    // =========================================================
+    // BUSINESS ADDRESS
+    // =========================================================
+
+    /**
+     * Complete registered business address.
      */
     @Column(
-            name = "pan_document_path",
+            name = "business_address",
+            nullable = false,
             length = 500
     )
-    private String panDocumentPath;
+    private String businessAddress;
 
     @Column(
-            name = "aadhaar_document_path",
-            length = 500
+            name = "city",
+            nullable = false,
+            length = 100
     )
-    private String aadhaarDocumentPath;
+    private String city;
 
     @Column(
-            name = "gst_document_path",
+            name = "state",
+            nullable = false,
+            length = 100
+    )
+    private String state;
+
+    @Column(
+            name = "postal_code",
+            nullable = false,
+            length = 10
+    )
+    private String postalCode;
+
+    @Column(
+            name = "country",
+            nullable = false,
+            length = 100
+    )
+    @Builder.Default
+    private String country = "India";
+
+    /**
+     * Business address proof PDF storage reference.
+     */
+    @Column(
+            name = "address_document_url",
+            nullable = false,
             length = 500
     )
-    private String gstDocumentPath;
+    private String addressDocumentUrl;
 
-    /*
-     * KYC workflow status.
+
+    // =========================================================
+    // KYC STATUS
+    // =========================================================
+
+    /**
+     * Current KYC verification status.
      */
     @Enumerated(EnumType.STRING)
     @Column(
@@ -120,20 +245,37 @@ public class SellerKyc {
     @Builder.Default
     private KycStatus status = KycStatus.PENDING;
 
-    /*
-     * Admin rejection reason.
+    /**
+     * Reason provided by Admin when KYC is rejected.
      */
     @Column(
             name = "rejection_reason",
-            length = 500
+            length = 1000
     )
     private String rejectionReason;
 
-    /*
-     * Timestamp when Admin verified the KYC.
+    /**
+     * Date/time when seller submitted KYC.
      */
-    @Column(name = "verified_at")
-    private LocalDateTime verifiedAt;
+    @Column(name = "submitted_at")
+    private LocalDateTime submittedAt;
+
+    /**
+     * Date/time when Admin reviewed KYC.
+     */
+    @Column(name = "reviewed_at")
+    private LocalDateTime reviewedAt;
+
+    /**
+     * Admin User ID who reviewed the KYC.
+     */
+    @Column(name = "reviewed_by")
+    private Long reviewedBy;
+
+
+    // =========================================================
+    // AUDIT FIELDS
+    // =========================================================
 
     @Column(
             name = "created_at",
@@ -144,6 +286,11 @@ public class SellerKyc {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+
+    // =========================================================
+    // JPA CALLBACKS
+    // =========================================================
 
     @PrePersist
     protected void onCreate() {
@@ -159,6 +306,7 @@ public class SellerKyc {
 
     @PreUpdate
     protected void onUpdate() {
+
         updatedAt = LocalDateTime.now();
     }
 }
