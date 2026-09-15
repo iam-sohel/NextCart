@@ -33,4 +33,7 @@ npm-debug.log*
 Thumbs.db
 
 # Local-only archives
-NextCart-Frontend.zip
+NextCart-Frontend.zip.freebuff/
+
+.freebuff/
+.freebuff
