@@ -47,11 +47,15 @@ import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -481,6 +485,38 @@ public class GlobalExceptionHandler {
         String message = exception.getConstraintViolations().stream().map(violation -> violation.getPropertyPath() + ": " + violation.getMessage()).collect(Collectors.joining(", "));
 
         return buildError(HttpStatus.BAD_REQUEST, message, "VALIDATION_ERROR");
+    }
+
+
+    // =========================================================
+    // MISSING / INVALID REQUEST PARAMS
+    // =========================================================
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>> handleMissingParameter(MissingServletRequestParameterException exception) {
+
+        return buildError(HttpStatus.BAD_REQUEST, "Required request parameter is missing: " + exception.getParameterName(), "MISSING_REQUEST_PARAMETER");
+    }
+
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>> handleParameterTypeMismatch(MethodArgumentTypeMismatchException exception) {
+
+        return buildError(HttpStatus.BAD_REQUEST, "Invalid value for parameter: " + exception.getName(), "INVALID_REQUEST_PARAMETER");
+    }
+
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>> handleNoResourceFound(NoResourceFoundException exception) {
+
+        return buildError(HttpStatus.NOT_FOUND, "No endpoint found for: " + exception.getResourcePath(), "ENDPOINT_NOT_FOUND");
+    }
+
+
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>> handleNoHandlerFound(NoHandlerFoundException exception) {
+
+        return buildError(HttpStatus.NOT_FOUND, "No endpoint found for: " + exception.getRequestURL(), "ENDPOINT_NOT_FOUND");
     }
 
 

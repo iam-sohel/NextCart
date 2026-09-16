@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+local-runtime.properties
+run-*.log
+run-*.err.log

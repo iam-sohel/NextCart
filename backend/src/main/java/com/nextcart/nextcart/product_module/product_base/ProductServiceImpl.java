@@ -626,8 +626,38 @@ public class ProductServiceImpl implements ProductService {
                         brandId,
                         ProductStatus.ACTIVE,
                         pageable
+                )                .map(productMapper::toResponse);
+    }
+
+
+    // =========================================================
+    // SEARCH PRODUCTS BY KEYWORD
+    // =========================================================
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductResponse> searchProducts(String keyword) {
+
+        /*
+         * Defensive trim/blank check. The controller already rejects
+         * blank keywords; this keeps the service safe when reused.
+         */
+        String normalizedKeyword =
+                keyword == null ? "" : keyword.trim();
+
+        if (normalizedKeyword.isEmpty()) {
+
+            return Collections.emptyList();
+        }
+
+        return productRepository
+                .searchByKeyword(
+                        normalizedKeyword,
+                        ProductStatus.ACTIVE
                 )
-                .map(productMapper::toResponse);
+                .stream()
+                .map(productMapper::toResponse)
+                .toList();
     }
 
 
