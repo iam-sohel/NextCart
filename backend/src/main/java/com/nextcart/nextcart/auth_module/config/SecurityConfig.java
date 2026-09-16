@@ -23,10 +23,11 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(
+            JwtAuthenticationFilter jwtAuthenticationFilter) {
+
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
-
 
     // =========================================================
     // PASSWORD ENCODER
@@ -34,9 +35,9 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
+
         return new BCryptPasswordEncoder();
     }
-
 
     // =========================================================
     // CORS CONFIGURATION
@@ -45,42 +46,53 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
-        CorsConfiguration configuration = new CorsConfiguration();
+        CorsConfiguration configuration =
+                new CorsConfiguration();
 
-        /*
-         * Frontend origin
-         */
-        configuration.setAllowedOrigins(List.of("http://localhost:3000"));
+        configuration.setAllowedOrigins(
+                List.of("http://localhost:3000")
+        );
 
-        /*
-         * Allowed HTTP methods
-         */
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(
+                List.of(
+                        "GET",
+                        "POST",
+                        "PUT",
+                        "PATCH",
+                        "DELETE",
+                        "OPTIONS"
+                )
+        );
 
-        /*
-         * Allowed request headers
-         */
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin"));
+        configuration.setAllowedHeaders(
+                List.of(
+                        "Authorization",
+                        "Content-Type",
+                        "Accept",
+                        "Origin"
+                )
+        );
 
-        /*
-         * Required when using credentials.
-         */
         configuration.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
 
-        source.registerCorsConfiguration("/**", configuration);
+        source.registerCorsConfiguration(
+                "/**",
+                configuration
+        );
 
         return source;
     }
-
 
     // =========================================================
     // SECURITY FILTER CHAIN
     // =========================================================
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http) throws Exception {
 
         http
 
@@ -88,42 +100,43 @@ public class SecurityConfig {
                 // CSRF
                 // =================================================
 
-                /*
-                 * Application uses stateless JWT authentication.
-                 */.csrf(csrf -> csrf.disable())
-
+                .csrf(csrf -> csrf.disable())
 
                 // =================================================
                 // CORS
                 // =================================================
 
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
+                .cors(cors ->
+                        cors.configurationSource(
+                                corsConfigurationSource()
+                        )
+                )
 
                 // =================================================
                 // SESSION MANAGEMENT
                 // =================================================
 
-                /*
-                 * Do not create or maintain HTTP sessions.
-                 */.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
-
-                // =================================================
-                // DISABLE DEFAULT AUTHENTICATION MECHANISMS
-                // =================================================
-
-                /*
-                 * Authentication is handled using JWT.
-                 */.formLogin(form -> form.disable()).httpBasic(basic -> basic.disable())
-
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS
+                        )
+                )
 
                 // =================================================
-                // JWT AUTHENTICATION FILTER
+                // DEFAULT AUTHENTICATION
                 // =================================================
 
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .formLogin(form -> form.disable())
+                .httpBasic(basic -> basic.disable())
 
+                // =================================================
+                // JWT FILTER
+                // =================================================
+
+                .addFilterBefore(
+                        jwtAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class
+                )
 
                 // =================================================
                 // AUTHORIZATION
@@ -135,69 +148,97 @@ public class SecurityConfig {
                         // CORS PREFLIGHT
                         // -------------------------------------------------
 
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
+                        .requestMatchers(
+                                HttpMethod.OPTIONS,
+                                "/**"
+                        ).permitAll()
 
                         // -------------------------------------------------
                         // PUBLIC AUTH APIs
                         // -------------------------------------------------
 
-                        .requestMatchers(HttpMethod.POST,
+                        .requestMatchers(
+                                HttpMethod.POST,
 
-                                "/api/v1/auth/register", "/api/v1/auth/register/complete", "/api/v1/auth/register/seller",
+                                "/api/v1/auth/register",
+                                "/api/v1/auth/register/complete",
+                                "/api/v1/auth/register/seller",
 
-                                "/api/v1/auth/login", "/api/v1/auth/refresh",
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/customer/login",
+                                "/api/v1/auth/admin/login",
+                                "/api/v1/auth/refresh",
 
-                                "/api/v1/auth/email/send-otp", "/api/v1/auth/email/verify-otp",
+                                "/api/v1/auth/email/send-otp",
+                                "/api/v1/auth/email/verify-otp",
 
                                 "/api/v1/auth/phone/verify-widget",
 
-                                "/api/v1/auth/forgot-password", "/api/v1/auth/forgot-password/verify-otp", "/api/v1/auth/reset-password").permitAll()
-
+                                "/api/v1/auth/forgot-password",
+                                "/api/v1/auth/forgot-password/verify-otp",
+                                "/api/v1/auth/reset-password"
+                        ).permitAll()
 
                         // -------------------------------------------------
                         // LOGOUT
                         // -------------------------------------------------
 
-                        /*
-                         * Logout requires a valid authenticated user
-                         * because it revokes that user's sessions.
-                         */.requestMatchers(HttpMethod.POST, "/api/v1/auth/logout").authenticated()
-
-
-                        // -------------------------------------------------
-                        // PUBLIC PRODUCT APIs - GET ONLY
-                        // -------------------------------------------------
-
-                        .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
-
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/auth/logout"
+                        ).authenticated()
 
                         // -------------------------------------------------
-                        // PUBLIC CATEGORY APIs - GET ONLY
+                        // PUBLIC PRODUCT GET APIs
                         // -------------------------------------------------
 
-                        .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
-
-
-                        // -------------------------------------------------
-                        // PUBLIC SUBCATEGORY APIs - GET ONLY
-                        // -------------------------------------------------
-
-                        .requestMatchers(HttpMethod.GET, "/api/v1/subcategories/**").permitAll()
-
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/products/**"
+                        ).permitAll()
 
                         // -------------------------------------------------
-                        // SWAGGER UI
+                        // PUBLIC CATEGORY GET APIs
                         // -------------------------------------------------
 
-                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
-
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/categories/**"
+                        ).permitAll()
 
                         // -------------------------------------------------
-                        // ALL OTHER REQUESTS
+                        // PUBLIC SUBCATEGORY GET APIs
                         // -------------------------------------------------
 
-                        .anyRequest().authenticated());
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/subcategories/**"
+                        ).permitAll()
+
+                        // -------------------------------------------------
+                        // SWAGGER
+                        // -------------------------------------------------
+
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**"
+                        ).permitAll()
+
+                        // -------------------------------------------------
+                        // ADMIN APIs
+                        // -------------------------------------------------
+
+                        .requestMatchers(
+                                "/api/v1/admin/**"
+                        ).hasRole("ADMIN")
+
+                        // -------------------------------------------------
+                        // EVERYTHING ELSE
+                        // -------------------------------------------------
+
+                        .anyRequest().authenticated()
+                );
 
         return http.build();
     }

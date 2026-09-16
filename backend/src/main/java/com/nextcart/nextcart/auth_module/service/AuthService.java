@@ -19,107 +19,80 @@ public interface AuthService {
     // CUSTOMER REGISTRATION
     // =========================================================
 
-    RegisterResponse register(
-            RegisterRequest request
-    );
+    RegisterResponse register(RegisterRequest request);
 
-    RegisterResponse completeRegistration(
-            String email,
-            String phone
-    );
+    RegisterResponse completeRegistration(String email, String phone);
 
 
     // =========================================================
     // SELLER REGISTRATION
     // =========================================================
 
-    RegisterResponse registerSeller(
-            SellerRegisterRequest request
-    );
+    RegisterResponse registerSeller(SellerRegisterRequest request);
 
-    void verifySellerEmailOtp(
-            VerifyEmailOtpRequest request
-    );
+    void verifySellerEmailOtp(VerifyEmailOtpRequest request);
 
-    void verifySellerPhoneOtpWidget(
-            String phone,
-            String accessToken
-    );
+    void verifySellerPhoneOtpWidget(String phone, String accessToken);
 
 
     // =========================================================
     // LOGIN
     // =========================================================
 
-    LoginResponse login(
-            LoginRequest request
-    );
+    LoginResponse login(LoginRequest request);
+
+    LoginResponse customerLogin(LoginRequest request);
+
+    LoginResponse adminLogin(LoginRequest request);
 
 
     // =========================================================
     // REFRESH TOKEN
     // =========================================================
 
-    TokenRefreshResponse refreshAccessToken(
-            RefreshTokenRequest request
-    );
+    TokenRefreshResponse refreshAccessToken(RefreshTokenRequest request);
 
 
     // =========================================================
     // LOGOUT
     // =========================================================
 
-    void logout(
-            Long userId
-    );
+    void logout(Long userId);
 
 
     // =========================================================
     // CUSTOMER EMAIL OTP
     // =========================================================
 
-    void sendEmailOtp(
-            SendEmailOtpRequest request
-    );
+    void sendEmailOtp(SendEmailOtpRequest request);
 
-    void verifyEmailOtp(
-            VerifyEmailOtpRequest request
-    );
+    void verifyEmailOtp(VerifyEmailOtpRequest request);
 
 
     // =========================================================
     // CUSTOMER PHONE OTP
     // =========================================================
 
-    void verifyPhoneOtpWidget(
-            String phone,
-            String accessToken
-    );
+    void verifyPhoneOtpWidget(String phone, String accessToken);
 
 
     // =========================================================
     // FORGOT PASSWORD
     // =========================================================
 
-    void forgotPassword(
-            ForgotPasswordRequest request
-    );
+    void forgotPassword(ForgotPasswordRequest request);
 
 
     // =========================================================
     // VERIFY RESET OTP
     // =========================================================
 
-    String verifyResetOtp(
-            VerifyResetOtpRequest request
-    );
+    String verifyResetOtp(VerifyResetOtpRequest request);
 
 
     // =========================================================
     // RESET PASSWORD
     // =========================================================
 
-    void resetPassword(
-            ResetPasswordRequest request
-    );
+    void resetPassword(ResetPasswordRequest request);
 }

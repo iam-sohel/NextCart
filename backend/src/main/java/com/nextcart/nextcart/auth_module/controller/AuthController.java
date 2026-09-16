@@ -138,7 +138,7 @@ public class AuthController {
 
 
     // ============================================================
-    // LOGIN
+    // LOGIN - COMMON / LEGACY
     // ============================================================
 
     @PostMapping("/login")
@@ -152,6 +152,50 @@ public class AuthController {
                 new ApiResponse<>(
                         true,
                         "Login successful",
+                        response
+                )
+        );
+    }
+
+
+    // ============================================================
+    // CUSTOMER LOGIN
+    // ============================================================
+
+    @PostMapping("/customer/login")
+    public ResponseEntity<ApiResponse<LoginResponse>>
+    customerLogin(
+            @Valid @RequestBody LoginRequest request) {
+
+        LoginResponse response =
+                authService.customerLogin(request);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "Customer login successful",
+                        response
+                )
+        );
+    }
+
+
+    // ============================================================
+    // ADMIN LOGIN
+    // ============================================================
+
+    @PostMapping("/admin/login")
+    public ResponseEntity<ApiResponse<LoginResponse>>
+    adminLogin(
+            @Valid @RequestBody LoginRequest request) {
+
+        LoginResponse response =
+                authService.adminLogin(request);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "Admin login successful",
                         response
                 )
         );

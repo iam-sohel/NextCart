@@ -6,30 +6,13 @@ import org.springframework.web.multipart.MultipartFile;
 
 public interface SellerKycService {
 
-    SellerKycResponse submitKyc(
-            Long userId,
-            SellerKycRequest request
-    );
+    SellerKycResponse submitKyc(Long userId, SellerKycRequest request);
 
-    SellerKycResponse getMyKyc(
-            Long userId
-    );
+    SellerKycResponse getMyKyc(Long userId);
 
-    SellerKycResponse updateKyc(
-            Long userId,
-            SellerKycRequest request
-    );
+    SellerKycResponse updateKyc(Long userId, SellerKycRequest request);
 
-    SellerKycResponse getKycStatus(
-            Long userId
-    );
+    SellerKycResponse getKycStatus(Long userId);
 
-    SellerKycResponse uploadKycDocuments(
-            Long userId,
-            MultipartFile panDocument,
-            MultipartFile aadhaarDocument,
-            MultipartFile gstDocument,
-            MultipartFile registrationDocument,
-            MultipartFile addressDocument
-    );
+    SellerKycResponse uploadKycDocuments(Long userId, MultipartFile panDocument, MultipartFile aadhaarDocument, MultipartFile gstDocument, MultipartFile registrationDocument, MultipartFile addressDocument);
 }

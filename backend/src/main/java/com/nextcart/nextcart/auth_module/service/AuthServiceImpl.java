@@ -43,6 +43,7 @@ public class AuthServiceImpl implements AuthService {
 
     private static final String CUSTOMER_ROLE = "CUSTOMER";
     private static final String SELLER_ROLE = "SELLER";
+    private static final String ADMIN_ROLE = "ADMIN";
 
     private static final int MAX_OTP_ATTEMPTS = 5;
 
@@ -63,7 +64,6 @@ public class AuthServiceImpl implements AuthService {
     private final PhoneOtpRepository phoneOtpRepository;
     private final PasswordResetOtpRepository passwordResetOtpRepository;
     private final PendingRegistrationRepository pendingRegistrationRepository;
-
     private final PendingSellerRegistrationRepository pendingSellerRegistrationRepository;
 
     private final EmailService emailService;
@@ -217,21 +217,31 @@ public class AuthServiceImpl implements AuthService {
         String gstNumber = normalizeUpperCase(request.getGstNumber());
 
         if (userRepository.existsByEmailIgnoreCase(email)) {
-            throw new UserAlreadyExistsException("Email is already registered");
+            throw new UserAlreadyExistsException(
+                    "Email is already registered"
+            );
         }
 
         if (userRepository.existsByPhone(phone)) {
-            throw new UserAlreadyExistsException("Phone number is already registered");
+            throw new UserAlreadyExistsException(
+                    "Phone number is already registered"
+            );
         }
 
-        if (gstNumber != null && sellerRepository.existsByGstNumberIgnoreCase(gstNumber)) {
-            throw new UserAlreadyExistsException("GST number is already registered");
+        if (gstNumber != null &&
+                sellerRepository.existsByGstNumberIgnoreCase(gstNumber)) {
+
+            throw new UserAlreadyExistsException(
+                    "GST number is already registered"
+            );
         }
 
-        pendingSellerRegistrationRepository.findByEmailIgnoreCase(email)
+        pendingSellerRegistrationRepository
+                .findByEmailIgnoreCase(email)
                 .ifPresent(pendingSellerRegistrationRepository::delete);
 
-        pendingSellerRegistrationRepository.findByPhone(phone)
+        pendingSellerRegistrationRepository
+                .findByPhone(phone)
                 .ifPresent(pendingSellerRegistrationRepository::delete);
 
         PendingSellerRegistration pendingSeller =
@@ -240,16 +250,29 @@ public class AuthServiceImpl implements AuthService {
                         .lastName(request.getLastName().trim())
                         .email(email)
                         .phone(phone)
-                        .passwordHash(passwordEncoder.encode(request.getPassword()))
-                        .businessName(request.getBusinessName().trim())
+                        .passwordHash(
+                                passwordEncoder.encode(
+                                        request.getPassword()
+                                )
+                        )
+                        .businessName(
+                                request.getBusinessName().trim()
+                        )
                         .gstNumber(gstNumber)
                         .emailVerified(false)
                         .phoneVerified(false)
-                        .expiresAt(LocalDateTime.now().plusMinutes(REGISTRATION_EXPIRY_MINUTES))
+                        .expiresAt(
+                                LocalDateTime.now()
+                                        .plusMinutes(
+                                                REGISTRATION_EXPIRY_MINUTES
+                                        )
+                        )
                         .createdAt(LocalDateTime.now())
                         .build();
 
-        pendingSellerRegistrationRepository.save(pendingSeller);
+        pendingSellerRegistrationRepository.save(
+                pendingSeller
+        );
 
         sendSellerEmailOtp(email);
 
@@ -261,7 +284,9 @@ public class AuthServiceImpl implements AuthService {
                 .role(SELLER_ROLE)
                 .emailOtpSent(true)
                 .phoneOtpSent(true)
-                .message("Seller registration initiated. Please verify both email and phone OTP.")
+                .message(
+                        "Seller registration initiated. Please verify both email and phone OTP."
+                )
                 .build();
     }
 
@@ -447,6 +472,56 @@ public class AuthServiceImpl implements AuthService {
 
         User user = findUserForLogin(request);
 
+        return authenticateUser(user, request);
+    }
+
+
+    // =========================================================
+    // CUSTOMER LOGIN
+    // =========================================================
+
+    @Override
+    @Transactional
+    public LoginResponse customerLogin(
+            LoginRequest request) {
+
+        validateLoginRequest(request);
+
+        User user = findUserForLogin(request);
+
+        validateRole(user, CUSTOMER_ROLE);
+
+        return authenticateUser(user, request);
+    }
+
+
+    // =========================================================
+    // ADMIN LOGIN
+    // =========================================================
+
+    @Override
+    @Transactional
+    public LoginResponse adminLogin(
+            LoginRequest request) {
+
+        validateLoginRequest(request);
+
+        User user = findUserForLogin(request);
+
+        validateRole(user, ADMIN_ROLE);
+
+        return authenticateUser(user, request);
+    }
+
+
+    // =========================================================
+    // COMMON USER AUTHENTICATION
+    // =========================================================
+
+    private LoginResponse authenticateUser(
+            User user,
+            LoginRequest request) {
+
         if (!user.isEnabled()) {
             throw new InvalidCredentialsException(
                     "Invalid email/phone or password"
@@ -455,8 +530,8 @@ public class AuthServiceImpl implements AuthService {
 
         if (!passwordEncoder.matches(
                 request.getPassword(),
-                user.getPassword()
-        )) {
+                user.getPassword())) {
+
             throw new InvalidCredentialsException(
                     "Invalid email/phone or password"
             );
@@ -484,6 +559,26 @@ public class AuthServiceImpl implements AuthService {
                 .role(user.getRole().getName())
                 .message("Login successful")
                 .build();
+    }
+
+
+    // =========================================================
+    // ROLE VALIDATION
+    // =========================================================
+
+    private void validateRole(
+            User user,
+            String expectedRole) {
+
+        if (user.getRole() == null
+                || user.getRole().getName() == null
+                || !expectedRole.equalsIgnoreCase(
+                        user.getRole().getName())) {
+
+            throw new InvalidCredentialsException(
+                    "Invalid email/phone or password"
+            );
+        }
     }
 
 
@@ -543,9 +638,10 @@ public class AuthServiceImpl implements AuthService {
                 .build();
     }
 
+
     // =========================================================
-// LOGOUT
-// =========================================================
+    // LOGOUT
+    // =========================================================
 
     @Override
     @Transactional
@@ -559,6 +655,8 @@ public class AuthServiceImpl implements AuthService {
 
         refreshTokenService.revokeAllUserTokens(userId);
     }
+
+
     // =========================================================
     // SEND EMAIL OTP
     // =========================================================
@@ -768,30 +866,49 @@ public class AuthServiceImpl implements AuthService {
     public void sendSellerEmailOtp(String email) {
 
         if (email == null || email.isBlank()) {
-            throw new InvalidAuthRequestException("Email is required");
+            throw new InvalidAuthRequestException(
+                    "Email is required"
+            );
         }
 
-        String normalizedEmail = normalizeEmail(email);
+        String normalizedEmail =
+                normalizeEmail(email);
 
         PendingSellerRegistration pendingSeller =
-                pendingSellerRegistrationRepository.findByEmailIgnoreCase(normalizedEmail)
-                        .orElseThrow(() -> new PendingRegistrationNotFoundException(
-                                "Pending seller registration not found"));
+                pendingSellerRegistrationRepository
+                        .findByEmailIgnoreCase(normalizedEmail)
+                        .orElseThrow(() ->
+                                new PendingRegistrationNotFoundException(
+                                        "Pending seller registration not found"
+                                )
+                        );
 
         if (pendingSeller.isExpired()) {
-            pendingSellerRegistrationRepository.delete(pendingSeller);
+
+            pendingSellerRegistrationRepository.delete(
+                    pendingSeller
+            );
+
             throw new RegistrationExpiredException(
-                    "Seller registration session has expired. Please register again.");
+                    "Seller registration session has expired. Please register again."
+            );
         }
 
-        emailOtpRepository.deleteByEmail(normalizedEmail);
+        emailOtpRepository.deleteByEmail(
+                normalizedEmail
+        );
 
         String otp = generateOtp();
 
         EmailOtp emailOtp = EmailOtp.builder()
                 .email(normalizedEmail)
                 .otpHash(hashValue(otp))
-                .expiresAt(LocalDateTime.now().plusMinutes(OTP_EXPIRY_MINUTES))
+                .expiresAt(
+                        LocalDateTime.now()
+                                .plusMinutes(
+                                        OTP_EXPIRY_MINUTES
+                                )
+                )
                 .attempts(0)
                 .verified(false)
                 .createdAt(LocalDateTime.now())
@@ -802,7 +919,8 @@ public class AuthServiceImpl implements AuthService {
         emailService.sendEmail(
                 normalizedEmail,
                 "NextCart Seller Email Verification OTP",
-                "Your NextCart seller verification OTP is: " + otp
+                "Your NextCart seller verification OTP is: "
+                        + otp
                         + "\n\nThis OTP is valid for 5 minutes."
         );
     }
@@ -818,46 +936,85 @@ public class AuthServiceImpl implements AuthService {
             VerifyEmailOtpRequest request) {
 
         if (request == null) {
-            throw new InvalidAuthRequestException("Verification request is required");
+            throw new InvalidAuthRequestException(
+                    "Verification request is required"
+            );
         }
 
-        String email = normalizeEmail(request.getEmail());
+        String email =
+                normalizeEmail(request.getEmail());
 
         if (email == null) {
-            throw new InvalidAuthRequestException("Email is required");
+            throw new InvalidAuthRequestException(
+                    "Email is required"
+            );
         }
 
         EmailOtp emailOtp =
                 emailOtpRepository
-                        .findTopByEmailIgnoreCaseAndVerifiedFalseOrderByCreatedAtDesc(email)
-                        .orElseThrow(() -> new OtpVerificationException("Invalid or expired OTP"));
+                        .findTopByEmailIgnoreCaseAndVerifiedFalseOrderByCreatedAtDesc(
+                                email
+                        )
+                        .orElseThrow(() ->
+                                new OtpVerificationException(
+                                        "Invalid or expired OTP"
+                                )
+                        );
 
-        validateOtpAttempts(emailOtp.getAttempts());
-        validateOtpExpiration(emailOtp.getExpiresAt());
+        validateOtpAttempts(
+                emailOtp.getAttempts()
+        );
 
-        if (!hashValue(request.getOtp()).equals(emailOtp.getOtpHash())) {
-            emailOtp.setAttempts(emailOtp.getAttempts() + 1);
+        validateOtpExpiration(
+                emailOtp.getExpiresAt()
+        );
+
+        if (!hashValue(request.getOtp())
+                .equals(emailOtp.getOtpHash())) {
+
+            emailOtp.setAttempts(
+                    emailOtp.getAttempts() + 1
+            );
+
             emailOtpRepository.save(emailOtp);
-            throw new OtpVerificationException("Invalid OTP");
+
+            throw new OtpVerificationException(
+                    "Invalid OTP"
+            );
         }
 
         emailOtp.setVerified(true);
-        emailOtp.setVerifiedAt(LocalDateTime.now());
+        emailOtp.setVerifiedAt(
+                LocalDateTime.now()
+        );
+
         emailOtpRepository.save(emailOtp);
 
         PendingSellerRegistration pendingSeller =
-                pendingSellerRegistrationRepository.findByEmailIgnoreCase(email)
-                        .orElseThrow(() -> new PendingRegistrationNotFoundException(
-                                "Pending seller registration not found"));
+                pendingSellerRegistrationRepository
+                        .findByEmailIgnoreCase(email)
+                        .orElseThrow(() ->
+                                new PendingRegistrationNotFoundException(
+                                        "Pending seller registration not found"
+                                )
+                        );
 
         if (pendingSeller.isExpired()) {
-            pendingSellerRegistrationRepository.delete(pendingSeller);
+
+            pendingSellerRegistrationRepository.delete(
+                    pendingSeller
+            );
+
             throw new RegistrationExpiredException(
-                    "Seller registration session has expired. Please register again.");
+                    "Seller registration session has expired. Please register again."
+            );
         }
 
         pendingSeller.setEmailVerified(true);
-        pendingSellerRegistrationRepository.save(pendingSeller);
+
+        pendingSellerRegistrationRepository.save(
+                pendingSeller
+        );
 
         if (pendingSeller.isFullyVerified()) {
             completeSellerRegistration(pendingSeller);
@@ -876,34 +1033,56 @@ public class AuthServiceImpl implements AuthService {
             String accessToken) {
 
         if (phone == null || phone.isBlank()) {
-            throw new InvalidAuthRequestException("Phone number is required");
+            throw new InvalidAuthRequestException(
+                    "Phone number is required"
+            );
         }
 
         if (accessToken == null || accessToken.isBlank()) {
-            throw new InvalidAuthRequestException("MSG91 access token is required");
+            throw new InvalidAuthRequestException(
+                    "MSG91 access token is required"
+            );
         }
 
-        String normalizedPhone = normalizePhone(phone);
+        String normalizedPhone =
+                normalizePhone(phone);
 
         PendingSellerRegistration pendingSeller =
-                pendingSellerRegistrationRepository.findByPhone(normalizedPhone)
-                        .orElseThrow(() -> new PendingRegistrationNotFoundException(
-                                "Pending seller registration not found"));
+                pendingSellerRegistrationRepository
+                        .findByPhone(normalizedPhone)
+                        .orElseThrow(() ->
+                                new PendingRegistrationNotFoundException(
+                                        "Pending seller registration not found"
+                                )
+                        );
 
         if (pendingSeller.isExpired()) {
-            pendingSellerRegistrationRepository.delete(pendingSeller);
+
+            pendingSellerRegistrationRepository.delete(
+                    pendingSeller
+            );
+
             throw new RegistrationExpiredException(
-                    "Seller registration session has expired. Please register again.");
+                    "Seller registration session has expired. Please register again."
+            );
         }
 
-        boolean verified = msg91WidgetService.verifyAccessToken(accessToken.trim());
+        boolean verified =
+                msg91WidgetService.verifyAccessToken(
+                        accessToken.trim()
+                );
 
         if (!verified) {
-            throw new OtpVerificationException("Phone OTP verification failed");
+            throw new OtpVerificationException(
+                    "Phone OTP verification failed"
+            );
         }
 
         pendingSeller.setPhoneVerified(true);
-        pendingSellerRegistrationRepository.save(pendingSeller);
+
+        pendingSellerRegistrationRepository.save(
+                pendingSeller
+        );
 
         if (pendingSeller.isFullyVerified()) {
             completeSellerRegistration(pendingSeller);
@@ -920,54 +1099,98 @@ public class AuthServiceImpl implements AuthService {
             PendingSellerRegistration pendingSeller) {
 
         if (pendingSeller == null) {
-            throw new InvalidAuthRequestException("Pending seller registration is required");
+            throw new InvalidAuthRequestException(
+                    "Pending seller registration is required"
+            );
         }
 
         if (!pendingSeller.isFullyVerified()) {
             throw new RegistrationVerificationException(
-                    "Both email and phone must be verified");
+                    "Both email and phone must be verified"
+            );
         }
 
         if (pendingSeller.isExpired()) {
-            pendingSellerRegistrationRepository.delete(pendingSeller);
+
+            pendingSellerRegistrationRepository.delete(
+                    pendingSeller
+            );
+
             throw new RegistrationExpiredException(
-                    "Seller registration session has expired. Please register again.");
+                    "Seller registration session has expired. Please register again."
+            );
         }
 
-        String email = normalizeEmail(pendingSeller.getEmail());
-        String phone = normalizePhone(pendingSeller.getPhone());
-        String gstNumber = normalizeUpperCase(pendingSeller.getGstNumber());
+        String email =
+                normalizeEmail(pendingSeller.getEmail());
+
+        String phone =
+                normalizePhone(pendingSeller.getPhone());
+
+        String gstNumber =
+                normalizeUpperCase(
+                        pendingSeller.getGstNumber()
+                );
 
         if (userRepository.existsByEmailIgnoreCase(email)) {
-            throw new UserAlreadyExistsException("Email is already registered");
+            throw new UserAlreadyExistsException(
+                    "Email is already registered"
+            );
         }
 
         if (userRepository.existsByPhone(phone)) {
-            throw new UserAlreadyExistsException("Phone number is already registered");
+            throw new UserAlreadyExistsException(
+                    "Phone number is already registered"
+            );
         }
 
-        if (gstNumber != null && sellerRepository.existsByGstNumberIgnoreCase(gstNumber)) {
-            throw new UserAlreadyExistsException("GST number is already registered");
+        if (gstNumber != null &&
+                sellerRepository.existsByGstNumberIgnoreCase(
+                        gstNumber
+                )) {
+
+            throw new UserAlreadyExistsException(
+                    "GST number is already registered"
+            );
         }
 
-        Role sellerRole = roleRepository.findByNameIgnoreCase(SELLER_ROLE)
-                .orElseThrow(() -> new InvalidAuthRequestException(
-                        "SELLER role is not configured"));
+        Role sellerRole =
+                roleRepository
+                        .findByNameIgnoreCase(SELLER_ROLE)
+                        .orElseThrow(() ->
+                                new InvalidAuthRequestException(
+                                        "SELLER role is not configured"
+                                )
+                        );
 
         User user = new User();
-        user.setFirstName(pendingSeller.getFirstName());
-        user.setLastName(pendingSeller.getLastName());
+
+        user.setFirstName(
+                pendingSeller.getFirstName()
+        );
+
+        user.setLastName(
+                pendingSeller.getLastName()
+        );
+
         user.setEmail(email);
         user.setPhone(phone);
-        user.setPassword(pendingSeller.getPasswordHash());
+
+        user.setPassword(
+                pendingSeller.getPasswordHash()
+        );
+
         user.setRole(sellerRole);
         user.setEnabled(true);
 
-        User savedUser = userRepository.save(user);
+        User savedUser =
+                userRepository.save(user);
 
         Seller seller = Seller.builder()
                 .user(savedUser)
-                .businessName(pendingSeller.getBusinessName())
+                .businessName(
+                        pendingSeller.getBusinessName()
+                )
                 .gstNumber(gstNumber)
                 .verified(false)
                 .active(true)
@@ -975,7 +1198,9 @@ public class AuthServiceImpl implements AuthService {
 
         sellerRepository.save(seller);
 
-        pendingSellerRegistrationRepository.delete(pendingSeller);
+        pendingSellerRegistrationRepository.delete(
+                pendingSeller
+        );
     }
 
 
@@ -1187,6 +1412,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         resetOtp.setVerified(true);
+
         resetOtp.setVerifiedAt(
                 LocalDateTime.now()
         );
