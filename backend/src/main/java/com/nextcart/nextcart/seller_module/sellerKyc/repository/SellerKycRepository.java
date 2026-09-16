@@ -2,6 +2,8 @@ package com.nextcart.nextcart.seller_module.sellerKyc.repository;
 
 import com.nextcart.nextcart.seller_module.sellerKyc.entity.KycStatus;
 import com.nextcart.nextcart.seller_module.sellerKyc.entity.SellerKyc;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -9,8 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface SellerKycRepository
-        extends JpaRepository<SellerKyc, Long> {
+public interface SellerKycRepository extends JpaRepository<SellerKyc, Long> {
 
     Optional<SellerKyc> findBySellerId(Long sellerId);
 
@@ -22,5 +23,10 @@ public interface SellerKycRepository
 
     List<SellerKyc> findAllByStatusOrderBySubmittedAtAsc(
             KycStatus status
+    );
+
+    Page<SellerKyc> findAllByStatus(
+            KycStatus status,
+            Pageable pageable
     );
 }

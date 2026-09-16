@@ -7,27 +7,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(
-        name = "seller_kyc",
-        indexes = {
-                @Index(
-                        name = "idx_seller_kyc_seller_id",
-                        columnList = "seller_id"
-                ),
-                @Index(
-                        name = "idx_seller_kyc_status",
-                        columnList = "status"
-                ),
-                @Index(
-                        name = "idx_seller_kyc_gst_number",
-                        columnList = "gst_number"
-                ),
-                @Index(
-                        name = "idx_seller_kyc_pan_number",
-                        columnList = "pan_number"
-                )
-        }
-)
+@Table(name = "seller_kyc", indexes = {@Index(name = "idx_seller_kyc_seller_id", columnList = "seller_id"), @Index(name = "idx_seller_kyc_status", columnList = "status"), @Index(name = "idx_seller_kyc_gst_number", columnList = "gst_number"), @Index(name = "idx_seller_kyc_pan_number", columnList = "pan_number")})
 @Getter
 @Setter
 @Builder
@@ -46,18 +26,11 @@ public class SellerKyc {
 
     /**
      * Seller associated with this KYC.
-     *
+     * <p>
      * One seller can have one current KYC record.
      */
     @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(
-            name = "seller_id",
-            nullable = false,
-            unique = true,
-            foreignKey = @ForeignKey(
-                    name = "fk_seller_kyc_seller"
-            )
-    )
+    @JoinColumn(name = "seller_id", nullable = false, unique = true, foreignKey = @ForeignKey(name = "fk_seller_kyc_seller"))
     private Seller seller;
 
 
@@ -67,7 +40,7 @@ public class SellerKyc {
 
     /**
      * Business type.
-     *
+     * <p>
      * Examples:
      * PROPRIETORSHIP
      * PARTNERSHIP
@@ -77,48 +50,32 @@ public class SellerKyc {
      * OTHER
      */
     @Enumerated(EnumType.STRING)
-    @Column(
-            name = "business_type",
-            nullable = false,
-            length = 30
-    )
+    @Column(name = "business_type", nullable = false, length = 30)
     private BusinessType businessType;
 
     /**
      * GST Identification Number.
      */
-    @Column(
-            name = "gst_number",
-            length = 15
-    )
+    @Column(name = "gst_number", length = 15)
     private String gstNumber;
 
     /**
      * GST Certificate PDF storage reference.
      */
-    @Column(
-            name = "gst_document_url",
-            length = 500
-    )
+    @Column(name = "gst_document_url", length = 500)
     private String gstDocumentUrl;
 
     /**
      * Business registration number.
      */
-    @Column(
-            name = "registration_number",
-            length = 100
-    )
+    @Column(name = "registration_number", length = 100)
     private String registrationNumber;
 
     /**
      * Business registration certificate PDF
      * storage reference.
      */
-    @Column(
-            name = "registration_document_url",
-            length = 500
-    )
+    @Column(name = "registration_document_url", length = 500)
     private String registrationDocumentUrl;
 
 
@@ -129,49 +86,31 @@ public class SellerKyc {
     /**
      * Owner or authorized person's full name.
      */
-    @Column(
-            name = "owner_name",
-            nullable = false,
-            length = 150
-    )
+    @Column(name = "owner_name", nullable = false, length = 150)
     private String ownerName;
 
     /**
      * PAN number of owner / authorized person.
      */
-    @Column(
-            name = "pan_number",
-            nullable = false,
-            length = 10
-    )
+    @Column(name = "pan_number", nullable = false, length = 10)
     private String panNumber;
 
     /**
      * PAN Card PDF storage reference.
      */
-    @Column(
-            name = "pan_document_url",
-            nullable = false,
-            length = 500
-    )
+    @Column(name = "pan_document_url", nullable = false, length = 500)
     private String panDocumentUrl;
 
     /**
      * Aadhaar number of owner / authorized person.
      */
-    @Column(
-            name = "aadhaar_number",
-            length = 12
-    )
+    @Column(name = "aadhaar_number", length = 12)
     private String aadhaarNumber;
 
     /**
      * Aadhaar Card PDF storage reference.
      */
-    @Column(
-            name = "aadhaar_document_url",
-            length = 500
-    )
+    @Column(name = "aadhaar_document_url", length = 500)
     private String aadhaarDocumentUrl;
 
 
@@ -182,50 +121,26 @@ public class SellerKyc {
     /**
      * Complete registered business address.
      */
-    @Column(
-            name = "business_address",
-            nullable = false,
-            length = 500
-    )
+    @Column(name = "business_address", nullable = false, length = 500)
     private String businessAddress;
 
-    @Column(
-            name = "city",
-            nullable = false,
-            length = 100
-    )
+    @Column(name = "city", nullable = false, length = 100)
     private String city;
 
-    @Column(
-            name = "state",
-            nullable = false,
-            length = 100
-    )
+    @Column(name = "state", nullable = false, length = 100)
     private String state;
 
-    @Column(
-            name = "postal_code",
-            nullable = false,
-            length = 10
-    )
+    @Column(name = "postal_code", nullable = false, length = 10)
     private String postalCode;
 
-    @Column(
-            name = "country",
-            nullable = false,
-            length = 100
-    )
+    @Column(name = "country", nullable = false, length = 100)
     @Builder.Default
     private String country = "India";
 
     /**
      * Business address proof PDF storage reference.
      */
-    @Column(
-            name = "address_document_url",
-            nullable = false,
-            length = 500
-    )
+    @Column(name = "address_document_url", nullable = false, length = 500)
     private String addressDocumentUrl;
 
 
@@ -237,21 +152,14 @@ public class SellerKyc {
      * Current KYC verification status.
      */
     @Enumerated(EnumType.STRING)
-    @Column(
-            name = "status",
-            nullable = false,
-            length = 20
-    )
+    @Column(name = "status", nullable = false, length = 20)
     @Builder.Default
     private KycStatus status = KycStatus.PENDING;
 
     /**
      * Reason provided by Admin when KYC is rejected.
      */
-    @Column(
-            name = "rejection_reason",
-            length = 1000
-    )
+    @Column(name = "rejection_reason", length = 1000)
     private String rejectionReason;
 
     /**
@@ -277,11 +185,7 @@ public class SellerKyc {
     // AUDIT FIELDS
     // =========================================================
 
-    @Column(
-            name = "created_at",
-            nullable = false,
-            updatable = false
-    )
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")

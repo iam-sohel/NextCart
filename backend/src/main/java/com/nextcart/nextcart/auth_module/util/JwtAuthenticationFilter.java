@@ -24,21 +24,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UserRepository userRepository;
 
     @Override
-    protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain
-    ) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 
-        String authorizationHeader =
-                request.getHeader("Authorization");
+        String authorizationHeader = request.getHeader("Authorization");
 
         /*
          * No Authorization header.
          * Continue as anonymous.
          */
-        if (authorizationHeader == null
-                || !authorizationHeader.startsWith("Bearer ")) {
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
 
             filterChain.doFilter(request, response);
             return;
@@ -47,10 +41,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         /*
          * Remove "Bearer " prefix and whitespace.
          */
-        String token =
-                authorizationHeader
-                        .substring(7)
-                        .trim();
+        String token = authorizationHeader.substring(7).trim();
 
         if (token.isBlank()) {
             filterChain.doFilter(request, response);
@@ -66,46 +57,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
              * - Email users
              * - Phone-only users
              */
-            Long userId =
-                    jwtUtil.extractUserId(token);
+            Long userId = jwtUtil.extractUserId(token);
 
-            if (userId != null
-                    && SecurityContextHolder
-                    .getContext()
-                    .getAuthentication() == null) {
+            if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                User user =
-                        userRepository
-                                .findById(userId)
-                                .orElse(null);
+                User user = userRepository.findById(userId).orElse(null);
 
-                if (user != null
-                        && user.isEnabled()
-                        && jwtUtil.isTokenValid(
-                        token,
-                        userId
-                )) {
+                if (user != null && user.isEnabled() && jwtUtil.isTokenValid(token, userId)) {
 
-                    CustomUserDetails userDetails =
-                            new CustomUserDetails(user);
+                    CustomUserDetails userDetails = new CustomUserDetails(user);
 
-                    UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(
-                                    userDetails,
-                                    null,
-                                    userDetails.getAuthorities()
-                            );
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
 
-                    authentication.setDetails(
-                            new WebAuthenticationDetailsSource()
-                                    .buildDetails(request)
-                    );
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                    SecurityContextHolder
-                            .getContext()
-                            .setAuthentication(
-                                    authentication
-                            );
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             }
 
@@ -114,10 +80,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             /*
              * Never log the JWT itself.
              */
-            System.out.println(
-                    "JWT authentication failed: "
-                            + ex.getMessage()
-            );
+            System.out.println("JWT authentication failed: " + ex.getMessage());
         }
 
         filterChain.doFilter(request, response);
