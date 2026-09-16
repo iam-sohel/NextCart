@@ -7,6 +7,7 @@ import FavoriteIcon from "@mui/icons-material/Favorite";
 import { IconButton, Tooltip } from "@mui/material";
 import { useRouter } from "next/navigation";
 
+import { useAuthHydrated } from "@/hooks/useAuthHydrated";
 import useAuthStore from "@/store/authStore";
 import useWishlistStore from "@/store/wishlistStore";
 
@@ -25,6 +26,11 @@ export default function WishlistButton({
 
   const token = useAuthStore((state) => state.token);
 
+  // Auth state is restored from localStorage AFTER first paint
+  // (skipHydration + AuthClientBootstrap). Until then `token` is null
+  // even for a logged-in user, so wait before judging authentication.
+  const authReady = useAuthHydrated();
+
   const has = useWishlistStore((state) => state.has);
   const add = useWishlistStore((state) => state.add);
   const remove = useWishlistStore((state) => state.remove);
@@ -32,6 +38,13 @@ export default function WishlistButton({
   const liked = has(productId);
 
   const handleClick = () => {
+    // Not yet hydrated: the persisted session hasn't been read yet,
+    // so "no token" does not mean "logged out". Ignore this click and
+    // let the component re-render once hydration decides the state.
+    if (!authReady) {
+      return;
+    }
+
     if (!token) {
       router.push("/login?reason=login-required&return=/wishlist");
       return;

@@ -132,6 +132,31 @@ function isLikelyBadCredentials(status: number): boolean {
   return status === 401 || status >= 500;
 }
 
+/**
+ * The auth endpoints answer with the standard NextCart envelope
+ * (`{ success, message, data }`), and `apiRequest` hands back the parsed
+ * body as-is — so the payload must be pulled out of `data` when it is
+ * wrapped. Falls back to the raw body for unwrapped responses.
+ *
+ * Mirrors the helper used by the other services (e.g. wishlistService).
+ * Without this, `res.data.accessToken` reads a field that lives one level
+ * deeper and silently resolves to `undefined` — which stored an empty
+ * token at login and made every auth check treat a logged-in user as a
+ * guest (the wishlist → /login redirect bug).
+ */
+function unwrap<T>(payload: unknown, fallback: T): T {
+  if (
+    payload !== null &&
+    typeof payload === "object" &&
+    "success" in payload &&
+    "data" in payload
+  ) {
+    const inner = (payload as { data?: unknown }).data;
+    return (inner ?? fallback) as T;
+  }
+  return (payload as T) ?? fallback;
+}
+
 /* ──────────────────────────────────────────────────────────────────────
    Public API — used by components and the Zustand auth store
    ────────────────────────────────────────────────────────────────────── */
@@ -191,17 +216,19 @@ export const authService = {
       return res;
     }
 
-    const token = res.data?.accessToken ?? "";
-    const refreshToken = res.data?.refreshToken ?? "";
+    const payload = unwrap<BackendLoginResponse | null>(res.data, null);
+
+    const token = payload?.accessToken ?? "";
+    const refreshToken = payload?.refreshToken ?? "";
     const message =
-        res.data?.message ?? "Login successful";
+        payload?.message ?? "Login successful";
 
     const user: AuthUser = {
-      id: res.data?.userId,
-      firstName: res.data?.firstName ?? "",
-      lastName: res.data?.lastName ?? "",
-      email: res.data?.email ?? "",
-      phone: res.data?.phone ?? "",
+      id: payload?.userId,
+      firstName: payload?.firstName ?? "",
+      lastName: payload?.lastName ?? "",
+      email: payload?.email ?? "",
+      phone: payload?.phone ?? "",
     };
 
     return {
@@ -309,11 +336,14 @@ export const authService = {
 
     if (!res.ok) return res;
 
+    const payload =
+        unwrap<BackendTokenRefreshResponse | null>(res.data, null);
+
     const accessToken =
-        res.data?.accessToken ?? "";
+        payload?.accessToken ?? "";
 
     const rotatedRefreshToken =
-        res.data?.refreshToken ?? "";
+        payload?.refreshToken ?? "";
 
     if (!accessToken || !rotatedRefreshToken) {
       return {
