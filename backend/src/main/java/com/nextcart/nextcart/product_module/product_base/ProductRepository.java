@@ -48,10 +48,6 @@ public interface ProductRepository extends JpaRepository<ProductEntity, Long> {
             Pageable pageable
     );
 
-    // ============================
-    // Seller Product Queries
-    // ============================
-
     Optional<ProductEntity> findByIdAndSellerId(
             Long id,
             Long sellerId
@@ -71,5 +67,16 @@ public interface ProductRepository extends JpaRepository<ProductEntity, Long> {
     boolean existsByIdAndSellerId(
             Long id,
             Long sellerId
+    );
+
+    // ============================
+    // Seller Dashboard
+    // ============================
+
+    long countBySellerId(Long sellerId);
+
+    long countBySellerIdAndStatus(
+            Long sellerId,
+            ProductStatus status
     );
 }

@@ -14,6 +14,7 @@ import com.nextcart.nextcart.payment_module.dto.VerifyPaymentRequestDTO;
 import com.nextcart.nextcart.payment_module.entity.PaymentStatusEnum;
 import com.nextcart.nextcart.payment_module.entity.PaymentTransaction;
 import com.nextcart.nextcart.payment_module.repository.PaymentTransactionRepository;
+import com.nextcart.nextcart.seller_module.payment_module.SellerEarningService;
 import com.nextcart.nextcart.user_module.entity.User;
 import com.nextcart.nextcart.user_module.repository.UserRepository;
 import com.razorpay.RazorpayClient;
@@ -24,7 +25,6 @@ import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
@@ -35,8 +35,9 @@ public class PaymentServiceImpl implements PaymentService {
 
     private static final BigDecimal HUNDRED =
             BigDecimal.valueOf(100);
-
+    private final SellerEarningService sellerEarningService;
     private final PaymentTransactionRepository paymentRepository;
+
 
     private final OrderRepository orderRepository;
 
@@ -407,6 +408,9 @@ public class PaymentServiceImpl implements PaymentService {
                     order
             );
 
+            sellerEarningService.createEarningsForOrder(order);
+
+
             return mapToResponseDTO(
                     transaction
             );
@@ -629,13 +633,21 @@ public class PaymentServiceImpl implements PaymentService {
                 );
             }
 
+
             paymentRepository.save(
                     transaction
             );
 
+            if (transaction.getStatus() ==
+                    PaymentStatusEnum.SUCCESS) {
+
+                sellerEarningService.createEarningsForOrder(order);
+            }
+
             return mapToResponseDTO(
                     transaction
             );
+
 
         } catch (PaymentVerificationException exception) {
 
@@ -871,6 +883,8 @@ public class PaymentServiceImpl implements PaymentService {
             orderRepository.save(
                     order
             );
+
+            sellerEarningService.markEarningsRefunded(order);
 
             return mapToResponseDTO(
                     transaction
@@ -1143,6 +1157,7 @@ public class PaymentServiceImpl implements PaymentService {
         orderRepository.save(
                 order
         );
+        sellerEarningService.createEarningsForOrder(order);
     }
 
 
@@ -1348,6 +1363,8 @@ public class PaymentServiceImpl implements PaymentService {
         orderRepository.save(
                 order
         );
+
+        sellerEarningService.markEarningsRefunded(order);
     }
 
 
