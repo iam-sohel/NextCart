@@ -17,7 +17,12 @@ import {
 } from "@mui/material";
 
 import DashboardIcon from "@mui/icons-material/Dashboard";
+import Inventory2Icon from "@mui/icons-material/Inventory2";
+import WarehouseIcon from "@mui/icons-material/Warehouse";
+import VerifiedUserIcon from "@mui/icons-material/VerifiedUser";
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import StorefrontIcon from "@mui/icons-material/Storefront";
+import SettingsIcon from "@mui/icons-material/Settings";
 
 /**
  * NEXTCART — Seller panel sidebar.
@@ -25,10 +30,7 @@ import StorefrontIcon from "@mui/icons-material/Storefront";
  * Seller-specific navigation shell. Deliberately separate from the
  * customer `components/layout/Navbar.tsx`.
  *
- * Module 1 exposes only routes that actually exist:
- *   - Dashboard  → /seller
- *   - Profile    → /seller/profile
- *
+ * Only routes backed by real backend capabilities are listed.
  * Renders a permanent drawer on desktop and a temporary drawer (controlled by
  * the layout) on mobile.
  */
@@ -44,12 +46,12 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/seller", icon: DashboardIcon, exact: true },
-  {
-    label: "Profile",
-    href: "/seller/profile",
-    icon: StorefrontIcon,
-    exact: false,
-  },
+  { label: "Products", href: "/seller/products", icon: Inventory2Icon, exact: false },
+  { label: "Warehouses", href: "/seller/warehouses", icon: WarehouseIcon, exact: false },
+  { label: "KYC / Verification", href: "/seller/kyc", icon: VerifiedUserIcon, exact: false },
+  { label: "Bank Account", href: "/seller/bank", icon: AccountBalanceIcon, exact: false },
+  { label: "Profile", href: "/seller/profile", icon: StorefrontIcon, exact: false },
+  { label: "Settings", href: "/seller/settings", icon: SettingsIcon, exact: false },
 ];
 
 function isActive(pathname: string, href: string, exact: boolean): boolean {

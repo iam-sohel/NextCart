@@ -171,9 +171,16 @@ export async function apiRequest<T>(
   const url = `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 
   const resolvedToken = resolveToken(token);
+
+  // FormData (multipart) bodies must keep the browser-generated multipart
+  // boundary, so we never set Content-Type or JSON-serialize them. Every other
+  // body is sent as JSON exactly as before.
+  const isFormData =
+    typeof FormData !== "undefined" && body instanceof FormData;
+
   const finalHeaders: Record<string, string> = {
     Accept: "application/json",
-    "Content-Type": "application/json",
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
     ...headers,
   };
   if (resolvedToken) finalHeaders["Authorization"] = `Bearer ${resolvedToken}`;
@@ -183,7 +190,12 @@ export async function apiRequest<T>(
     response = await fetch(url, {
       method,
       headers: finalHeaders,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body:
+        body === undefined
+          ? undefined
+          : isFormData
+            ? (body as FormData)
+            : JSON.stringify(body),
       signal,
       credentials: "omit",
       cache: "no-store",

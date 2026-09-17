@@ -36,6 +36,21 @@ function getInitials(firstName?: string, lastName?: string): string {
   return initials || "S";
 }
 
+const PAGE_TITLES: Array<{ prefix: string; title: string }> = [
+  { prefix: "/seller/profile", title: "Profile" },
+  { prefix: "/seller/products/new", title: "Add Product" },
+  { prefix: "/seller/products", title: "Products" },
+  { prefix: "/seller/warehouses", title: "Warehouses" },
+  { prefix: "/seller/kyc", title: "KYC / Verification" },
+  { prefix: "/seller/bank", title: "Bank Account" },
+  { prefix: "/seller/settings", title: "Settings" },
+];
+
+function titleForPath(pathname: string): string {
+  const match = PAGE_TITLES.find((entry) => pathname.startsWith(entry.prefix));
+  return match?.title ?? "Dashboard";
+}
+
 interface SellerTopBarProps {
   onOpenMobileNav: () => void;
 }
@@ -53,9 +68,7 @@ export default function SellerTopBar({ onOpenMobileNav }: SellerTopBarProps) {
   const displayName =
     `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim() || "Seller";
 
-  const pageTitle = pathname.startsWith("/seller/profile")
-    ? "Profile"
-    : "Dashboard";
+  const pageTitle = titleForPath(pathname);
 
   const handleOpenMenu = (event: React.MouseEvent<HTMLElement>) => {
     setMenuAnchor(event.currentTarget);
