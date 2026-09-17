@@ -82,4 +82,19 @@ public interface ProductRepository extends JpaRepository<ProductEntity, Long> {
             Long sellerId,
             ProductStatus status
     );
+
+    @Query("""
+    SELECT p
+    FROM ProductEntity p
+    WHERE p.status = :status
+      AND (
+          LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+          OR LOWER(p.slug) LIKE LOWER(CONCAT('%', :keyword, '%'))
+          OR LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%'))
+      )
+""")
+    List<ProductEntity> searchByKeyword(
+            @Param("keyword") String keyword,
+            @Param("status") ProductStatus status
+    );
 }
