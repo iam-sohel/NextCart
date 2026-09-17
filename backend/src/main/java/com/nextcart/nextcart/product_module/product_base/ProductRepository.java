@@ -51,10 +51,6 @@ public interface ProductRepository extends JpaRepository<ProductEntity, Long> {
             Pageable pageable
     );
 
-    // ============================
-    // Seller Product Queries
-    // ============================
-
     Optional<ProductEntity> findByIdAndSellerId(
             Long id,
             Long sellerId
@@ -75,24 +71,28 @@ public interface ProductRepository extends JpaRepository<ProductEntity, Long> {
             Long id,
             Long sellerId
     );
-    /*
-     * Keyword search across product name, description and the
-     * related brand / category / subcategory names.
-     *
-     * Case-insensitive containment match; only ACTIVE products.
-     */
+
+    // ============================
+    // Seller Dashboard
+    // ============================
+
+    long countBySellerId(Long sellerId);
+
+    long countBySellerIdAndStatus(
+            Long sellerId,
+            ProductStatus status
+    );
+
     @Query("""
-            SELECT p FROM ProductEntity p
-            WHERE p.status = :status
-              AND (
-                    LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                 OR LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                 OR LOWER(p.brand.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                 OR LOWER(p.category.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                 OR LOWER(p.subCategory.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
-              )
-            ORDER BY p.name ASC
-            """)
+    SELECT p
+    FROM ProductEntity p
+    WHERE p.status = :status
+      AND (
+          LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+          OR LOWER(p.slug) LIKE LOWER(CONCAT('%', :keyword, '%'))
+          OR LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%'))
+      )
+""")
     List<ProductEntity> searchByKeyword(
             @Param("keyword") String keyword,
             @Param("status") ProductStatus status

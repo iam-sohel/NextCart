@@ -29,12 +29,52 @@ public interface InventoryItemRepository
 
     List<InventoryItem> findByProductVariantId(Long productVariantId);
 
-    /**
-     * Locks inventory item row for update.
-     *
-     * Used during stock reservation/release/deduction/restore
-     * to prevent concurrent stock updates.
-     */
+    // ============================
+    // Seller Dashboard
+    // ============================
+
+    @Query("""
+            SELECT COUNT(i)
+            FROM InventoryItem i
+            WHERE i.productVariant.productEntity.seller.id = :sellerId
+            """)
+    long countBySellerId(
+            @Param("sellerId") Long sellerId
+    );
+
+    @Query("""
+            SELECT COUNT(i)
+            FROM InventoryItem i
+            WHERE i.productVariant.productEntity.seller.id = :sellerId
+            AND i.availableStock <= :stock
+            """)
+    long countBySellerIdAndAvailableStockLessThanEqual(
+            @Param("sellerId") Long sellerId,
+            @Param("stock") Integer stock
+    );
+
+    @Query("""
+            SELECT COALESCE(SUM(i.availableStock), 0)
+            FROM InventoryItem i
+            WHERE i.productVariant.productEntity.seller.id = :sellerId
+            """)
+    long sumAvailableStockBySellerId(
+            @Param("sellerId") Long sellerId
+    );
+
+    @Query("""
+            SELECT COALESCE(SUM(i.reservedStock), 0)
+            FROM InventoryItem i
+            WHERE i.productVariant.productEntity.seller.id = :sellerId
+            """)
+    long sumReservedStockBySellerId(
+            @Param("sellerId") Long sellerId
+    );
+
+    // ============================
+    // Existing Lock Queries
+    // ============================
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             SELECT i
@@ -45,16 +85,12 @@ public interface InventoryItemRepository
             @Param("id") Long id
     );
 
-    /**
-     * Locks a specific product variant inventory row
-     * inside a warehouse inventory.
-     */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             SELECT i
             FROM InventoryItem i
             WHERE i.inventory.id = :inventoryId
-              AND i.productVariant.id = :productVariantId
+            AND i.productVariant.id = :productVariantId
             """)
     Optional<InventoryItem> findByInventoryIdAndProductVariantIdForUpdate(
             @Param("inventoryId") Long inventoryId,
