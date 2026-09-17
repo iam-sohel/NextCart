@@ -36,6 +36,8 @@ export interface AuthUser {
   lastName: string;
   email?: string;
   phone?: string;
+  /** Backend role (e.g. CUSTOMER / SELLER / ADMIN) when the login response provides it. */
+  role?: string;
 }
 
 /* ──────────────────────────────────────────────────────────────────────
@@ -229,6 +231,7 @@ export const authService = {
       lastName: payload?.lastName ?? "",
       email: payload?.email ?? "",
       phone: payload?.phone ?? "",
+      role: payload?.role,
     };
 
     return {
