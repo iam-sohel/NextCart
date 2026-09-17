@@ -17,6 +17,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/products")
 @RequiredArgsConstructor
@@ -122,6 +124,41 @@ public class ProductController {
                 new ApiResponse<>(
                         true,
                         "Products retrieved successfully",
+                        response
+                )
+        );
+    }
+
+    // =========================================================
+    // SEARCH
+    // PUBLIC
+    //
+    // Returns a plain list (not paged): the frontend search
+    // page enriches and filters/sorts/paginates client-side.
+    // NOTE: literal path wins over "/{id}" in Spring routing.
+    // =========================================================
+
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<List<ProductResponse>>> searchProducts(
+            @RequestParam("keyword") String keyword) {
+
+        if (keyword == null || keyword.trim().isEmpty()) {
+
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse<>(
+                            false,
+                            "Search keyword is required",
+                            null
+                    ));
+        }
+
+        List<ProductResponse> response =
+                productService.searchProducts(keyword);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "Products fetched successfully",
                         response
                 )
         );

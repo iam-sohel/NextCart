@@ -1,0 +1,214 @@
+"use client";
+
+import type { ComponentType } from "react";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+import {
+  Box,
+  Divider,
+  Drawer,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Typography,
+} from "@mui/material";
+
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import StorefrontIcon from "@mui/icons-material/Storefront";
+
+/**
+ * NEXTCART — Seller panel sidebar.
+ *
+ * Seller-specific navigation shell. Deliberately separate from the
+ * customer `components/layout/Navbar.tsx`.
+ *
+ * Module 1 exposes only routes that actually exist:
+ *   - Dashboard  → /seller
+ *   - Profile    → /seller/profile
+ *
+ * Renders a permanent drawer on desktop and a temporary drawer (controlled by
+ * the layout) on mobile.
+ */
+
+export const SELLER_SIDEBAR_WIDTH = 260;
+
+interface NavItem {
+  label: string;
+  href: string;
+  icon: ComponentType<{ fontSize?: "inherit" | "small" | "medium" | "large" }>;
+  exact: boolean;
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { label: "Dashboard", href: "/seller", icon: DashboardIcon, exact: true },
+  {
+    label: "Profile",
+    href: "/seller/profile",
+    icon: StorefrontIcon,
+    exact: false,
+  },
+];
+
+function isActive(pathname: string, href: string, exact: boolean): boolean {
+  if (exact) return pathname === href;
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function SellerBrand() {
+  return (
+    <Box sx={{ px: 2.5, py: 2.25 }}>
+      <Typography
+        sx={{
+          fontSize: "1.25rem",
+          fontWeight: 800,
+          letterSpacing: "-0.02em",
+          lineHeight: 1.1,
+          color: "secondary.main",
+        }}
+      >
+        Next
+        <Box component="span" sx={{ color: "primary.main" }}>
+          Cart
+        </Box>
+      </Typography>
+
+      <Typography
+        variant="caption"
+        sx={{
+          display: "block",
+          mt: 0.25,
+          color: "text.secondary",
+          fontWeight: 700,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+        }}
+      >
+        Seller Panel
+      </Typography>
+    </Box>
+  );
+}
+
+function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+  const pathname = usePathname();
+
+  return (
+    <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <SellerBrand />
+      <Divider />
+
+      <List
+        component="nav"
+        aria-label="Seller navigation"
+        sx={{ px: 1.5, py: 2 }}
+      >
+        {NAV_ITEMS.map((item) => {
+          const Icon = item.icon;
+          const active = isActive(pathname, item.href, item.exact);
+
+          return (
+            <ListItemButton
+              key={item.href}
+              component={Link}
+              href={item.href}
+              onClick={onNavigate}
+              selected={active}
+              aria-current={active ? "page" : undefined}
+              sx={{
+                borderRadius: 2,
+                minHeight: 46,
+                px: 1.5,
+                mb: 0.5,
+                "&.Mui-selected": {
+                  bgcolor: "action.selected",
+                  "&:hover": { bgcolor: "action.selected" },
+                },
+              }}
+            >
+              <ListItemIcon
+                sx={{
+                  minWidth: 40,
+                  color: active ? "primary.main" : "text.secondary",
+                }}
+              >
+                <Icon fontSize="small" />
+              </ListItemIcon>
+
+              <ListItemText
+                primary={item.label}
+                slotProps={{
+                  primary: {
+                    sx: {
+                      fontSize: "0.875rem",
+                      fontWeight: active ? 700 : 500,
+                    },
+                  },
+                }}
+              />
+            </ListItemButton>
+          );
+        })}
+      </List>
+    </Box>
+  );
+}
+
+interface SellerSidebarProps {
+  mobileOpen: boolean;
+  onClose: () => void;
+}
+
+export default function SellerSidebar({
+  mobileOpen,
+  onClose,
+}: SellerSidebarProps) {
+  return (
+    <>
+      {/* Desktop — permanent drawer */}
+      <Box
+        sx={{
+          width: { md: SELLER_SIDEBAR_WIDTH },
+          flexShrink: { md: 0 },
+        }}
+      >
+        <Drawer
+          variant="permanent"
+          open
+          sx={{
+            display: { xs: "none", md: "block" },
+            "& .MuiDrawer-paper": {
+              width: SELLER_SIDEBAR_WIDTH,
+              boxSizing: "border-box",
+              borderRight: "1px solid",
+              borderColor: "divider",
+              bgcolor: "background.paper",
+            },
+          }}
+        >
+          <SidebarContent />
+        </Drawer>
+      </Box>
+
+      {/* Mobile — temporary drawer */}
+      <Drawer
+        variant="temporary"
+        open={mobileOpen}
+        onClose={onClose}
+        ModalProps={{ keepMounted: true }}
+        sx={{
+          display: { xs: "block", md: "none" },
+          "& .MuiDrawer-paper": {
+            width: SELLER_SIDEBAR_WIDTH,
+            boxSizing: "border-box",
+            bgcolor: "background.paper",
+          },
+        }}
+      >
+        <SidebarContent onNavigate={onClose} />
+      </Drawer>
+    </>
+  );
+}

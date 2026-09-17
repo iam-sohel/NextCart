@@ -21,6 +21,7 @@ import FavoriteIcon from "@mui/icons-material/Favorite";
 
 import useWishlistStore from "@/store/wishlistStore";
 import useAuthStore from "@/store/authStore";
+import { useAuthHydrated } from "@/hooks/useAuthHydrated";
 
 const UNIVERSAL_FALLBACK =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Crect width='400' height='400' fill='%23F3F1EC'/%3E%3Cpath d='M120 280l55-65 40 45 30-35 55 55H120z' fill='%23c8c3b8'/%3E%3Ccircle cx='255' cy='145' r='25' fill='%23c8c3b8'/%3E%3C/svg%3E";
@@ -93,6 +94,11 @@ export default function ProductCard({
 
   const token = useAuthStore((state) => state.token);
 
+  // Auth state is restored from localStorage AFTER first paint
+  // (skipHydration + AuthClientBootstrap). Until then `token` is null
+  // even for a logged-in user, so wait before judging authentication.
+  const authReady = useAuthHydrated();
+
   const has = useWishlistStore((state) => state.has);
   const addToWishlistAction = useWishlistStore((state) => state.add);
   const removeFromWishlistAction = useWishlistStore(
@@ -109,6 +115,13 @@ export default function ProductCard({
   };
 
   const handleWishlistToggle = () => {
+    // Not yet hydrated: the persisted session hasn't been read yet,
+    // so "no token" does not mean "logged out". Ignore this click and
+    // let the component re-render once hydration decides the state.
+    if (!authReady) {
+      return;
+    }
+
     if (!token) {
       router.push(`/login?reason=login-required&return=/wishlist`);
       return;
