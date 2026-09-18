@@ -71,6 +71,7 @@ export default function SellerBankPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [bank, setBank] = useState<SellerBankResponse | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [mode, setMode] = useState<"view" | "form">("view");
 
   const [form, setForm] = useState<SellerBankRequest>({ ...EMPTY_FORM });
@@ -86,6 +87,7 @@ export default function SellerBankPage() {
   const load = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
+    setNotFound(false);
     setSaveError(null);
     setSaveSuccess(null);
 
@@ -94,17 +96,22 @@ export default function SellerBankPage() {
     if (!res.ok) {
       setLoading(false);
 
-      if (res.status === 0) {
-        setLoadError(res.message);
-      } else {
+      // Only HTTP 404 proves that this singleton is absent. The backend maps
+      // its missing-bank IllegalArgumentException through generic HTTP 500
+      // handling, so every other failure must remain a retryable API error.
+      if (res.status === 404) {
         setBank(null);
         setForm({ ...EMPTY_FORM });
         setMode("form");
+        setNotFound(true);
+      } else {
+        setLoadError(res.message);
       }
       return;
     }
 
     setBank(res.data);
+    setNotFound(false);
     setMode("view");
     setLoading(false);
   }, []);
@@ -160,6 +167,8 @@ export default function SellerBankPage() {
   };
 
   const handleSubmit = async () => {
+    if (saving) return;
+
     const validationError = validate();
     if (validationError) {
       setFormError(validationError);
@@ -241,7 +250,7 @@ export default function SellerBankPage() {
       <Stack spacing={3}>
         {saveSuccess && <Alert severity="success">{saveSuccess}</Alert>}
 
-        {!bank && mode === "form" && (
+        {notFound && (
           <Alert severity="info">
             No bank account is on file. Add your bank details below.
           </Alert>

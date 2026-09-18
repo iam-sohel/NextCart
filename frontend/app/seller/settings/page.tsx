@@ -21,10 +21,11 @@ import {
   SellerPageSkeleton,
 } from "@/components/seller/SellerStates";
 
-import { getMySellerProfile, type SellerResponse } from "@/services/sellerService";
-import { getMyKycStatus } from "@/services/sellerKycService";
-import { getMyBankAccount, type SellerBankResponse } from "@/services/sellerBankService";
-import { listWarehouses } from "@/services/sellerWarehouseService";
+import {
+  getSellerDashboard,
+  type SellerDashboardResponse,
+} from "@/services/sellerDashboardService";
+import { formatCount } from "@/utils/formatAmount";
 
 function Row({
   label,
@@ -57,32 +58,24 @@ export default function SellerSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const [profile, setProfile] = useState<SellerResponse | null>(null);
-  const [kycStatus, setKycStatus] = useState<string | null>(null);
-  const [bank, setBank] = useState<SellerBankResponse | null>(null);
-  const [warehouseCount, setWarehouseCount] = useState<number | null>(null);
+  const [dashboard, setDashboard] = useState<SellerDashboardResponse | null>(
+    null,
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
 
-    const [profileRes, kycRes, bankRes, warehouseRes] = await Promise.all([
-      getMySellerProfile(),
-      getMyKycStatus(),
-      getMyBankAccount(),
-      listWarehouses(),
-    ]);
+    const res = await getSellerDashboard();
 
-    if (!profileRes.ok) {
+    if (!res.ok) {
+      setDashboard(null);
       setLoading(false);
-      setLoadError(profileRes.message);
+      setLoadError(res.message);
       return;
     }
 
-    setProfile(profileRes.data);
-    setKycStatus(kycRes.ok ? kycRes.data.status : null);
-    setBank(bankRes.ok ? bankRes.data : null);
-    setWarehouseCount(warehouseRes.ok ? warehouseRes.data.length : null);
+    setDashboard(res.data);
     setLoading(false);
   }, []);
 
@@ -107,7 +100,7 @@ export default function SellerSettingsPage() {
     return <SellerPageSkeleton cards={2} />;
   }
 
-  if (loadError || !profile) {
+  if (loadError || !dashboard) {
     return (
       <SellerErrorState
         message={loadError ?? "Could not load account settings."}
@@ -137,36 +130,40 @@ export default function SellerSettingsPage() {
 
             <Row label="Business name">
               <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                {profile.businessName || "—"}
+                {dashboard.seller?.businessName || "—"}
               </Typography>
             </Row>
             <Row label="Seller account">
               <StatusChip
-                status={profile.active ? "ACTIVE" : "INACTIVE"}
-                label={profile.active ? "Active" : "Inactive"}
+                status={dashboard.seller?.active ? "ACTIVE" : "INACTIVE"}
+                label={dashboard.seller?.active ? "Active" : "Inactive"}
               />
             </Row>
             <Row label="Seller verification">
               <StatusChip
-                status={profile.verified ? "VERIFIED" : "PENDING"}
-                label={profile.verified ? "Verified" : "Not verified"}
+                status={dashboard.seller?.verified ? "VERIFIED" : "PENDING"}
+                label={dashboard.seller?.verified ? "Verified" : "Not verified"}
               />
             </Row>
             <Row label="KYC">
               <StatusChip
-                status={kycStatus}
-                label={kycStatus ? undefined : "Not submitted"}
+                status={dashboard.verification?.kycStatus}
+                label={
+                  dashboard.verification?.kycStatus ? undefined : "Unavailable"
+                }
               />
             </Row>
             <Row label="Bank account">
               <StatusChip
-                status={bank ? bank.verificationStatus : null}
-                label={bank ? undefined : "Not added"}
+                status={dashboard.verification?.bankStatus}
+                label={
+                  dashboard.verification?.bankStatus ? undefined : "Unavailable"
+                }
               />
             </Row>
             <Row label="Warehouses">
               <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                {warehouseCount ?? "—"}
+                {formatCount(dashboard.warehouses?.total)}
               </Typography>
             </Row>
           </CardContent>

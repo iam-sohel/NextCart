@@ -18,8 +18,8 @@
  *   caller must not render protected content or redirect.
  *
  * Loop safety:
- *   The redirect targets are stable and mutually exclusive: guests are sent to
- *   `/login` (never back to the seller panel), non-sellers to `/`. The hook
+ *   The redirect targets are stable and mutually exclusive. Guests are sent
+ *   to the configured login page, while non-sellers go to `/`. The hook
  *   never redirects while `checking`, so it cannot fire before the guard knows
  *   the real auth state.
  */
@@ -40,7 +40,18 @@ export interface RequireSellerState {
   isSeller: boolean;
 }
 
-export function useRequireSeller(returnPath: string): RequireSellerState {
+export interface RequireSellerOptions {
+  /**
+   * Destination for unauthenticated seller-panel visitors.
+   * Defaults to the shared login page so existing callers keep working.
+   */
+  loginPath?: string;
+}
+
+export function useRequireSeller(
+  returnPath: string,
+  options?: RequireSellerOptions,
+): RequireSellerState {
   const router = useRouter();
   const token = useAuthStore((s) => s.token);
   const user = useAuthStore((s) => s.user);
@@ -48,6 +59,7 @@ export function useRequireSeller(returnPath: string): RequireSellerState {
 
   const isSeller =
     hasHydrated && Boolean(token) && user?.role === SELLER_ROLE;
+  const loginPath = options?.loginPath ?? "/login";
 
   useEffect(() => {
     // Never decide before hydration completes.
@@ -55,7 +67,7 @@ export function useRequireSeller(returnPath: string): RequireSellerState {
 
     if (!token) {
       router.replace(
-        `/login?reason=login-required&return=${encodeURIComponent(returnPath)}`,
+        `${loginPath}?reason=login-required&return=${encodeURIComponent(returnPath)}`,
       );
       return;
     }
@@ -63,7 +75,7 @@ export function useRequireSeller(returnPath: string): RequireSellerState {
     if (user?.role !== SELLER_ROLE) {
       router.replace("/");
     }
-  }, [hasHydrated, token, user, router, returnPath]);
+  }, [hasHydrated, token, user, router, returnPath, loginPath]);
 
   return {
     checking: !hasHydrated,

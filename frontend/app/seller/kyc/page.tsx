@@ -121,6 +121,7 @@ export default function SellerKycPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [kyc, setKyc] = useState<SellerKycResponse | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [mode, setMode] = useState<"view" | "edit">("view");
 
   const [form, setForm] = useState<SellerKycRequest>({ ...EMPTY_FORM });
@@ -130,6 +131,7 @@ export default function SellerKycPage() {
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
 
   const [documents, setDocuments] = useState<KycDocumentFiles>({});
+  const [documentsFieldKey, setDocumentsFieldKey] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [docError, setDocError] = useState<string | null>(null);
   const [docSuccess, setDocSuccess] = useState<string | null>(null);
@@ -137,6 +139,7 @@ export default function SellerKycPage() {
   const load = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
+    setNotFound(false);
     setSaveError(null);
     setSaveSuccess(null);
 
@@ -145,20 +148,22 @@ export default function SellerKycPage() {
     if (!res.ok) {
       setLoading(false);
 
-      // Network failure → genuine error. Any other failure on this endpoint
-      // means no KYC record exists yet (backend throws when none is found),
-      // so we open the submission form.
-      if (res.status === 0) {
-        setLoadError(res.message);
-      } else {
+      // Only HTTP 404 proves that this singleton is absent. The backend maps
+      // its missing-KYC IllegalArgumentException through generic HTTP 500
+      // handling, so every other failure must remain a retryable API error.
+      if (res.status === 404) {
         setKyc(null);
         setForm({ ...EMPTY_FORM });
         setMode("edit");
+        setNotFound(true);
+      } else {
+        setLoadError(res.message);
       }
       return;
     }
 
     setKyc(res.data);
+    setNotFound(false);
     setMode("view");
     setLoading(false);
   }, []);
@@ -232,6 +237,8 @@ export default function SellerKycPage() {
   };
 
   const handleSubmit = async () => {
+    if (saving) return;
+
     const validationError = validate();
     if (validationError) {
       setFormError(validationError);
@@ -290,6 +297,8 @@ export default function SellerKycPage() {
   };
 
   const handleUpload = async () => {
+    if (uploading) return;
+
     const hasAny = Object.values(documents).some(Boolean);
 
     if (!hasAny) {
@@ -311,6 +320,7 @@ export default function SellerKycPage() {
 
     setKyc(res.data);
     setDocuments({});
+    setDocumentsFieldKey((key) => key + 1);
     setUploading(false);
     setDocSuccess("Documents uploaded. Verification is now pending review.");
   };
@@ -343,7 +353,7 @@ export default function SellerKycPage() {
       <Stack spacing={3}>
         {saveSuccess && <Alert severity="success">{saveSuccess}</Alert>}
 
-        {!kyc && mode === "edit" && (
+        {notFound && (
           <Alert severity="info">
             No KYC record was found for your account. Submit your details below
             to begin verification.
@@ -684,6 +694,7 @@ export default function SellerKycPage() {
                 ).map(([key, label]) => (
                   <Grid size={{ xs: 12, sm: 6 }} key={key}>
                     <TextField
+                      key={documentsFieldKey}
                       fullWidth
                       type="file"
                       label={label}

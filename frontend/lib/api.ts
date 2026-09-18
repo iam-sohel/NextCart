@@ -68,6 +68,7 @@ interface BackendErrorEnvelope {
   success?: boolean;
   message?: string;
   errorCode?: string;
+  data?: unknown;
 }
 
 function extractMessage(payload: unknown, fallback: string): string {
@@ -80,7 +81,17 @@ function extractMessage(payload: unknown, fallback: string): string {
 function extractErrorCode(payload: unknown): string | undefined {
   if (!payload || typeof payload !== "object") return undefined;
   const maybe = payload as BackendErrorEnvelope;
-  if (typeof maybe.errorCode === "string" && maybe.errorCode.trim()) return maybe.errorCode;
+  if (typeof maybe.errorCode === "string" && maybe.errorCode.trim()) {
+    return maybe.errorCode;
+  }
+
+  // NextCart error bodies use `{ success, message, data: { errorCode } }`.
+  // Preserve that backend-supplied code without changing status or message.
+  if (maybe.data && typeof maybe.data === "object") {
+    const nested = (maybe.data as { errorCode?: unknown }).errorCode;
+    if (typeof nested === "string" && nested.trim()) return nested;
+  }
+
   return undefined;
 }
 

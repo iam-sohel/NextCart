@@ -6,8 +6,9 @@ import { Chip } from "@mui/material";
  * NEXTCART — Seller status badge.
  *
  * Maps the exact backend status values (KycStatus, BankVerificationStatus,
- * WarehouseStatus, seller verified/active booleans) to a consistent visual
- * tone. No invented states — unknown values fall back to a neutral chip.
+ * WarehouseStatus, OrderStatus, SellerEarningStatus and seller verified/active
+ * booleans) to a consistent visual tone. No invented states — unknown values
+ * fall back to a neutral chip.
  */
 
 export type StatusTone = "success" | "warning" | "error" | "info" | "neutral";
@@ -23,6 +24,7 @@ const TONE_STYLE: Record<StatusTone, { bgcolor: string; color: string }> = {
 export function toneForStatus(status?: string | null): StatusTone {
   switch ((status ?? "").toUpperCase()) {
     case "ACTIVE":
+    case "AVAILABLE":
     case "VERIFIED":
     case "DELIVERED":
     case "PAID":
@@ -33,8 +35,10 @@ export function toneForStatus(status?: string | null): StatusTone {
     case "UNDER_REVIEW":
     case "PROCESSING":
     case "RETURN_REQUESTED":
+    case "RETURNED":
       return "warning";
 
+    case "CONFIRMED":
     case "SHIPPED":
     case "RETURN_APPROVED":
       return "info";

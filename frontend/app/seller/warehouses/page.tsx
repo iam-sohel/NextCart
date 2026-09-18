@@ -148,6 +148,8 @@ export default function SellerWarehousesPage() {
   };
 
   const handleSubmit = async () => {
+    if (saving) return;
+
     const validationError = validate();
     if (validationError) {
       setFormError(validationError);

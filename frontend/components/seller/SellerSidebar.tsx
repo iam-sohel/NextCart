@@ -17,7 +17,10 @@ import {
 } from "@mui/material";
 
 import DashboardIcon from "@mui/icons-material/Dashboard";
+import ShoppingBagIcon from "@mui/icons-material/ShoppingBag";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
+import BarChartIcon from "@mui/icons-material/BarChart";
+import PaymentsIcon from "@mui/icons-material/Payments";
 import WarehouseIcon from "@mui/icons-material/Warehouse";
 import VerifiedUserIcon from "@mui/icons-material/VerifiedUser";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
@@ -46,7 +49,10 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/seller", icon: DashboardIcon, exact: true },
+  { label: "Orders", href: "/seller/orders", icon: ShoppingBagIcon, exact: false },
   { label: "Products", href: "/seller/products", icon: Inventory2Icon, exact: false },
+  { label: "Analytics", href: "/seller/analytics", icon: BarChartIcon, exact: false },
+  { label: "Earnings", href: "/seller/earnings", icon: PaymentsIcon, exact: false },
   { label: "Warehouses", href: "/seller/warehouses", icon: WarehouseIcon, exact: false },
   { label: "KYC / Verification", href: "/seller/kyc", icon: VerifiedUserIcon, exact: false },
   { label: "Bank Account", href: "/seller/bank", icon: AccountBalanceIcon, exact: false },

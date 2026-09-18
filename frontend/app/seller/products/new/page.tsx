@@ -9,6 +9,7 @@ import {
   Button,
   Card,
   CardContent,
+  Chip,
   Divider,
   Grid,
   IconButton,
@@ -84,6 +85,25 @@ function slugify(value: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+const MAX_PRODUCT_IMAGE_BYTES = 5 * 1024 * 1024;
+
+function isActiveOption(status?: string | null): boolean {
+  return !status || status === "ACTIVE";
+}
+
+function validateImageFiles(files: File[]): string | null {
+  for (const file of files) {
+    if (file.size === 0) return "Product images cannot be empty.";
+    if (!file.type.toLowerCase().startsWith("image/")) {
+      return "Only image files are allowed.";
+    }
+    if (file.size > MAX_PRODUCT_IMAGE_BYTES) {
+      return "Each product image must not exceed 5 MB.";
+    }
+  }
+  return null;
+}
+
 export default function NewSellerProductPage() {
   const token = useAuthStore((s) => s.token);
 
@@ -117,6 +137,40 @@ export default function NewSellerProductPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [createdName, setCreatedName] = useState<string | null>(null);
   const [createdId, setCreatedId] = useState<number | null>(null);
+  const [imagesInputKey, setImagesInputKey] = useState(0);
+
+  const activeCategories = categories.filter((category) =>
+    isActiveOption(category.status),
+  );
+  const activeSubCategories = subCategories.filter((subCategory) =>
+    isActiveOption(subCategory.status),
+  );
+  const activeBrands = brands.filter((brand) => isActiveOption(brand.status));
+  const activeWarehouses = warehouses.filter((warehouse) =>
+    isActiveOption(warehouse.status),
+  );
+
+  const startAnotherProduct = () => {
+    setCategoryId("");
+    setSubCategoryId("");
+    setBrandId("");
+    setName("");
+    setSlug("");
+    setSlugTouched(false);
+    setDescription("");
+    setShortDescription("");
+    setLongDescription("");
+    setWarranty("");
+    setManufacturer("");
+    setSpecifications([]);
+    setVariants([emptyVariant()]);
+    setImages([]);
+    setImagesInputKey((key) => key + 1);
+    setFormError(null);
+    setSaveError(null);
+    setCreatedName(null);
+    setCreatedId(null);
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -228,26 +282,86 @@ export default function NewSellerProductPage() {
   };
 
   const validate = (): string | null => {
-    if (!categoryId) return "Category is required.";
-    if (!subCategoryId) return "Subcategory is required.";
-    if (!brandId) return "Brand is required.";
+    if (
+      !activeCategories.some((category) => String(category.id) === categoryId)
+    ) {
+      return "Select an active category.";
+    }
+    if (
+      !activeSubCategories.some(
+        (subCategory) => String(subCategory.id) === subCategoryId,
+      )
+    ) {
+      return "Select an active subcategory for the selected category.";
+    }
+    if (!activeBrands.some((brand) => String(brand.id) === brandId)) {
+      return "Select an active brand.";
+    }
     if (!name.trim()) return "Product name is required.";
     if (name.trim().length > 200) return "Product name must not exceed 200 characters.";
     if (!slug.trim()) return "Product slug is required.";
     if (slug.trim().length > 250) return "Product slug must not exceed 250 characters.";
 
+    if (shortDescription.trim().length > 500) {
+      return "Short description must not exceed 500 characters.";
+    }
+    if (warranty.trim().length > 200) {
+      return "Warranty must not exceed 200 characters.";
+    }
+    if (manufacturer.trim().length > 200) {
+      return "Manufacturer must not exceed 200 characters.";
+    }
+
+    const specificationNames = new Set<string>();
+    for (let i = 0; i < specifications.length; i += 1) {
+      const nameValue = specifications[i].specificationName.trim();
+      const detailValue = specifications[i].specificationValue.trim();
+
+      if (!nameValue && !detailValue) continue;
+      if (!nameValue) return `Specification ${i + 1}: name is required.`;
+      if (!detailValue) return `Specification ${i + 1}: value is required.`;
+
+      const normalized = nameValue.toLowerCase();
+      if (specificationNames.has(normalized)) {
+        return `Specification ${i + 1}: duplicate specification name.`;
+      }
+      specificationNames.add(normalized);
+    }
+
     if (variants.length === 0) return "At least one variant is required.";
 
+    const skus = new Set<string>();
     for (let i = 0; i < variants.length; i += 1) {
       const variant = variants[i];
 
       if (!variant.sku.trim()) return `Variant ${i + 1}: SKU is required.`;
+      const normalizedSku = variant.sku.trim().toLowerCase();
+      if (skus.has(normalizedSku)) {
+        return `Variant ${i + 1}: duplicate SKU.`;
+      }
+      skus.add(normalizedSku);
 
       const attributes = variant.attributes.filter(
         (attr) => attr.attributeName.trim() && attr.attributeValue.trim(),
       );
       if (attributes.length === 0) {
         return `Variant ${i + 1}: at least one attribute is required.`;
+      }
+
+      const attributeNames = new Set<string>();
+      for (const attribute of variant.attributes) {
+        const attributeName = attribute.attributeName.trim();
+        const attributeValue = attribute.attributeValue.trim();
+        if (!attributeName && !attributeValue) continue;
+        if (!attributeName || !attributeValue) {
+          return `Variant ${i + 1}: attribute names and values are required.`;
+        }
+
+        const normalizedAttribute = attributeName.toLowerCase();
+        if (attributeNames.has(normalizedAttribute)) {
+          return `Variant ${i + 1}: duplicate attribute name.`;
+        }
+        attributeNames.add(normalizedAttribute);
       }
 
       const mrp = Number(variant.mrp);
@@ -257,12 +371,23 @@ export default function NewSellerProductPage() {
       if (!(sellingPrice > 0)) {
         return `Variant ${i + 1}: selling price must be greater than 0.`;
       }
+      if (sellingPrice > mrp) {
+        return `Variant ${i + 1}: selling price cannot be greater than MRP.`;
+      }
 
       if (!/^[A-Za-z]{3}$/.test(variant.currency.trim())) {
         return `Variant ${i + 1}: currency must be a 3-letter code.`;
       }
 
       if (variant.warehouseId) {
+        if (
+          !activeWarehouses.some(
+            (warehouse) => String(warehouse.id) === variant.warehouseId,
+          )
+        ) {
+          return `Variant ${i + 1}: select an active warehouse.`;
+        }
+
         const quantity = Number(variant.quantity);
         if (!Number.isInteger(quantity) || quantity < 0) {
           return `Variant ${i + 1}: quantity must be a non-negative whole number.`;
@@ -270,10 +395,12 @@ export default function NewSellerProductPage() {
       }
     }
 
-    return null;
+    return validateImageFiles(images);
   };
 
   const handleSubmit = async () => {
+    if (saving) return;
+
     const validationError = validate();
     if (validationError) {
       setFormError(validationError);
@@ -394,7 +521,7 @@ export default function NewSellerProductPage() {
                   }}
                   disabled={saving}
                 >
-                  {categories.map((c) => (
+                  {activeCategories.map((c) => (
                     <MenuItem key={c.id} value={String(c.id)}>
                       {c.name}
                     </MenuItem>
@@ -413,7 +540,7 @@ export default function NewSellerProductPage() {
                   disabled={saving || !categoryId}
                   helperText={!categoryId ? "Select a category first" : undefined}
                 >
-                  {subCategories.map((sc) => (
+                  {activeSubCategories.map((sc) => (
                     <MenuItem key={sc.id} value={String(sc.id)}>
                       {sc.name}
                     </MenuItem>
@@ -431,7 +558,7 @@ export default function NewSellerProductPage() {
                   onChange={(e) => setBrandId(e.target.value)}
                   disabled={saving}
                 >
-                  {brands.map((b) => (
+                  {activeBrands.map((b) => (
                     <MenuItem key={b.id} value={String(b.id)}>
                       {b.name}
                     </MenuItem>
@@ -828,12 +955,12 @@ export default function NewSellerProductPage() {
                         }
                         disabled={saving}
                         helperText={
-                          warehouses.length === 0
-                            ? "No warehouses available. Add one first."
-                            : undefined
+                          activeWarehouses.length === 0
+                            ? "No active warehouses are available. Add one first."
+                            : "Only active warehouses can receive new inventory."
                         }
                       >
-                        {warehouses.map((w) => (
+                        {activeWarehouses.map((w) => (
                           <MenuItem key={w.id} value={String(w.id)}>
                             {w.warehouseName}
                           </MenuItem>
@@ -869,16 +996,29 @@ export default function NewSellerProductPage() {
               Images
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
-              Optional. Upload one or more product images.
+              Optional. Upload one or more image files, no larger than 5 MB each.
             </Typography>
 
             <TextField
+              key={imagesInputKey}
               fullWidth
               type="file"
               label="Product images"
               onChange={(e) => {
                 const input = e.target as HTMLInputElement;
-                setImages(Array.from(input.files ?? []));
+                const selected = Array.from(input.files ?? []);
+                const imageError = validateImageFiles(selected);
+
+                if (imageError) {
+                  input.value = "";
+                  setImages([]);
+                  setFormError(imageError);
+                  return;
+                }
+
+                setFormError(null);
+                setSaveError(null);
+                setImages(selected);
               }}
               disabled={saving}
               slotProps={{
@@ -888,9 +1028,30 @@ export default function NewSellerProductPage() {
             />
 
             {images.length > 0 && (
-              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
-                {images.length} image{images.length > 1 ? "s" : ""} selected
-              </Typography>
+              <>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
+                  {images.length} image{images.length > 1 ? "s" : ""} selected
+                </Typography>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  useFlexGap
+                  sx={{ flexWrap: "wrap", mt: 1 }}
+                >
+                  {images.map((file, fileIndex) => (
+                    <Chip
+                      key={`${file.name}-${file.size}-${fileIndex}`}
+                      label={file.name}
+                      disabled={saving}
+                      onDelete={() =>
+                        setImages((previous) =>
+                          previous.filter((_, index) => index !== fileIndex),
+                        )
+                      }
+                    />
+                  ))}
+                </Stack>
+              </>
             )}
           </CardContent>
         </Card>
@@ -899,10 +1060,20 @@ export default function NewSellerProductPage() {
           <Button
             variant="contained"
             onClick={() => void handleSubmit()}
-            disabled={saving}
+            disabled={saving || createdId !== null}
           >
             {saving ? "Creating…" : "Create product"}
           </Button>
+
+          {createdId !== null && (
+            <Button
+              variant="outlined"
+              onClick={startAnotherProduct}
+              disabled={saving}
+            >
+              Start another product
+            </Button>
+          )}
 
           <Button component={Link} href="/seller/products" disabled={saving}>
             Back to products
