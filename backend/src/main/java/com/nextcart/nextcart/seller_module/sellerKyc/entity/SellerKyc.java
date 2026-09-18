@@ -4,6 +4,7 @@ import com.nextcart.nextcart.seller_module.seller.entity.Seller;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -80,14 +81,21 @@ public class SellerKyc {
 
 
     // =========================================================
-    // OWNER / AUTHORIZED PERSON DETAILS
-    // =========================================================
+// OWNER / AUTHORIZED PERSON DETAILS
+// =========================================================
 
     /**
      * Owner or authorized person's full name.
      */
     @Column(name = "owner_name", nullable = false, length = 150)
     private String ownerName;
+
+    /**
+     * Date of birth of owner / authorized person.
+     * Required for PAN KYC verification.
+     */
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
 
     /**
      * PAN number of owner / authorized person.

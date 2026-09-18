@@ -1,41 +1,118 @@
 package com.nextcart.nextcart.seller_module.inventory_module.service;
 
 import com.nextcart.nextcart.seller_module.inventory_module.dto.InventoryCreateRequest;
+import com.nextcart.nextcart.seller_module.inventory_module.dto.InventoryItemResponse;
 import com.nextcart.nextcart.seller_module.inventory_module.dto.InventoryResponse;
 import com.nextcart.nextcart.seller_module.inventory_module.dto.InventoryUpdateRequest;
 
+import java.util.List;
+
 public interface InventoryService {
 
-    InventoryResponse createInventory(Long userId, InventoryCreateRequest request);
+    // =========================================================
+    // SELLER INVENTORY MANAGEMENT
+    // =========================================================
 
-    InventoryResponse getInventoryByWarehouse(Long userId, Long warehouseId);
+    InventoryResponse createInventory(
+            Long userId,
+            InventoryCreateRequest request
+    );
 
-    InventoryResponse updateInventoryItem(Long userId, Long inventoryItemId, InventoryUpdateRequest request);
+    InventoryResponse getInventoryByWarehouse(
+            Long userId,
+            Long warehouseId
+    );
 
-    void deleteInventoryItem(Long userId, Long inventoryItemId);
+    InventoryResponse updateInventoryItem(
+            Long userId,
+            Long inventoryItemId,
+            InventoryUpdateRequest request
+    );
 
-    Integer getTotalAvailableStock(Long productVariantId);
+    void deleteInventoryItem(
+            Long userId,
+            Long inventoryItemId
+    );
 
-    // New warehouse-aware stock operations
-    void addStock(Long warehouseId, Long productVariantId, Integer quantity);
+    // =========================================================
+    // INVENTORY LOOKUP
+    // =========================================================
 
-    void reserveStock(Long warehouseId, Long productVariantId, Integer quantity);
+    List<InventoryItemResponse> getInventoryItemsByProductVariantId(
+            Long productVariantId
+    );
 
-    void releaseStock(Long warehouseId, Long productVariantId, Integer quantity);
+    Integer getTotalAvailableStock(
+            Long productVariantId
+    );
 
-    void deductStock(Long warehouseId, Long productVariantId, Integer quantity);
+    // =========================================================
+    // WAREHOUSE-AWARE STOCK OPERATIONS
+    // =========================================================
 
-    void restoreStock(Long warehouseId, Long productVariantId, Integer quantity);
+    void addStock(
+            Long warehouseId,
+            Long productVariantId,
+            Integer quantity
+    );
 
-    // Backward-compatible operations for existing OrderService callers.
-    // These select an inventory item for the variant internally.
-    void addStock(Long productVariantId, Integer quantity);
+    void reserveStock(
+            Long warehouseId,
+            Long productVariantId,
+            Integer quantity
+    );
 
-    void reserveStock(Long productVariantId, Integer quantity);
+    void releaseStock(
+            Long warehouseId,
+            Long productVariantId,
+            Integer quantity
+    );
 
-    void releaseStock(Long productVariantId, Integer quantity);
+    void deductStock(
+            Long warehouseId,
+            Long productVariantId,
+            Integer quantity
+    );
 
-    void deductStock(Long productVariantId, Integer quantity);
+    void restoreStock(
+            Long warehouseId,
+            Long productVariantId,
+            Integer quantity
+    );
 
-    void restoreStock(Long productVariantId, Integer quantity);
+    // =========================================================
+    // BACKWARD-COMPATIBLE METHODS
+    // =========================================================
+    //
+    // Existing OrderService currently uses these methods.
+    // Do NOT remove them yet.
+    //
+    // These methods internally select an appropriate inventory
+    // item for the product variant.
+    // =========================================================
+
+    void addStock(
+            Long productVariantId,
+            Integer quantity
+    );
+
+    void reserveStock(
+            Long productVariantId,
+            Integer quantity
+    );
+
+    void releaseStock(
+            Long productVariantId,
+            Integer quantity
+    );
+
+    void deductStock(
+            Long productVariantId,
+            Integer quantity
+    );
+
+    void restoreStock(
+            Long productVariantId,
+            Integer quantity
+    );
 }
