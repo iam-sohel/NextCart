@@ -1,8 +1,14 @@
 package com.nextcart.nextcart.seller_module.sellerKyc.dto;
 
 import com.nextcart.nextcart.seller_module.sellerKyc.entity.BusinessType;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Past;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.*;
+
+import java.time.LocalDate;
 
 @Getter
 @Setter
@@ -16,24 +22,34 @@ public class SellerKycRequest {
 
     @Size(max = 15, message = "GST number must not exceed 15 characters")
     @Pattern(
-            regexp = "^[0-9A-Z]{15}$",
+            regexp = "(?i)^[0-9A-Z]{15}$",
             message = "Invalid GST number"
     )
     private String gstNumber;
 
-    @Size(max = 100, message = "Registration number must not exceed 100 characters")
+    @Size(
+            max = 100,
+            message = "Registration number must not exceed 100 characters"
+    )
     private String registrationNumber;
 
     @NotBlank(message = "Owner name is required")
-    @Size(max = 150, message = "Owner name must not exceed 150 characters")
+    @Size(
+            max = 150,
+            message = "Owner name must not exceed 150 characters"
+    )
     private String ownerName;
 
     @NotBlank(message = "PAN number is required")
     @Pattern(
-            regexp = "^[A-Z]{5}[0-9]{4}[A-Z]{1}$",
+            regexp = "(?i)^[A-Z]{5}[0-9]{4}[A-Z]$",
             message = "Invalid PAN number"
     )
     private String panNumber;
+
+    @NotNull(message = "Date of birth is required")
+    @Past(message = "Date of birth must be in the past")
+    private LocalDate dateOfBirth;
 
     @Size(max = 12, message = "Aadhaar number must be 12 digits")
     @Pattern(
@@ -43,7 +59,10 @@ public class SellerKycRequest {
     private String aadhaarNumber;
 
     @NotBlank(message = "Business address is required")
-    @Size(max = 500, message = "Business address must not exceed 500 characters")
+    @Size(
+            max = 500,
+            message = "Business address must not exceed 500 characters"
+    )
     private String businessAddress;
 
     @NotBlank(message = "City is required")

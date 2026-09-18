@@ -14,21 +14,28 @@ import java.util.Optional;
 @Repository
 public interface InventoryRepository extends JpaRepository<Inventory, Long> {
 
-    Optional<Inventory> findByWarehouse(Warehouse warehouse);
+    // =========================================================
+    // BASIC LOOKUP
+    // =========================================================
 
-    Optional<Inventory> findByWarehouseId(Long warehouseId);
-
-    boolean existsByWarehouseId(Long warehouseId);
-
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("""
-            SELECT i
-            FROM Inventory i
-            WHERE i.id = :id
-            """)
-    Optional<Inventory> findByIdForUpdate(
-            @Param("id") Long id
+    Optional<Inventory> findByWarehouse(
+            Warehouse warehouse
     );
+
+
+    Optional<Inventory> findByWarehouseId(
+            Long warehouseId
+    );
+
+
+    boolean existsByWarehouseId(
+            Long warehouseId
+    );
+
+
+    // =========================================================
+    // LOCKED LOOKUP
+    // =========================================================
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""

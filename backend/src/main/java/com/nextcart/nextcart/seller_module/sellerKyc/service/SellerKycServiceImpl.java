@@ -35,6 +35,9 @@ public class SellerKycServiceImpl implements SellerKycService {
 
     private final SellerKycRepository sellerKycRepository;
 
+    /*
+     * Used for Supabase Storage API calls.
+     */
     private final RestTemplate restTemplate = new RestTemplate();
 
 
@@ -109,7 +112,9 @@ public class SellerKycServiceImpl implements SellerKycService {
                     )
 
                     .gstNumber(
-                            normalize(request.getGstNumber())
+                            normalize(
+                                    request.getGstNumber()
+                            )
                     )
 
                     .registrationNumber(
@@ -122,6 +127,10 @@ public class SellerKycServiceImpl implements SellerKycService {
                             normalize(
                                     request.getOwnerName()
                             )
+                    )
+
+                    .dateOfBirth(
+                            request.getDateOfBirth()
                     )
 
                     .panNumber(
@@ -202,6 +211,10 @@ public class SellerKycServiceImpl implements SellerKycService {
                     normalize(
                             request.getOwnerName()
                     )
+            );
+
+            kyc.setDateOfBirth(
+                    request.getDateOfBirth()
             );
 
             kyc.setPanNumber(
@@ -391,6 +404,10 @@ public class SellerKycServiceImpl implements SellerKycService {
                 normalize(
                         request.getOwnerName()
                 )
+        );
+
+        kyc.setDateOfBirth(
+                request.getDateOfBirth()
         );
 
         kyc.setPanNumber(
@@ -894,6 +911,10 @@ public class SellerKycServiceImpl implements SellerKycService {
 
                 .ownerName(
                         kyc.getOwnerName()
+                )
+
+                .dateOfBirth(
+                        kyc.getDateOfBirth()
                 )
 
                 .panNumber(

@@ -393,4 +393,21 @@ public class InventoryServiceImpl implements InventoryService {
         }
         return (int) result;
     }
+    @Override
+    @Transactional(readOnly = true)
+    public List<InventoryItemResponse> getInventoryItemsByProductVariantId(
+            Long productVariantId
+    ) {
+
+        validateId(
+                productVariantId,
+                "Product variant id"
+        );
+
+        return inventoryItemRepository
+                .findByProductVariantId(productVariantId)
+                .stream()
+                .map(this::mapItem)
+                .toList();
+    }
 }

@@ -15,6 +15,18 @@ import java.util.Optional;
 public interface InventoryItemRepository
         extends JpaRepository<InventoryItem, Long> {
 
+    // =========================================================
+    // BASIC LOOKUPS
+    // =========================================================
+
+    List<InventoryItem> findByInventoryId(
+            Long inventoryId
+    );
+
+    List<InventoryItem> findByProductVariantId(
+            Long productVariantId
+    );
+
     Optional<InventoryItem> findByInventoryIdAndProductVariantId(
             Long inventoryId,
             Long productVariantId
@@ -25,13 +37,38 @@ public interface InventoryItemRepository
             Long productVariantId
     );
 
-    List<InventoryItem> findByInventoryId(Long inventoryId);
 
-    List<InventoryItem> findByProductVariantId(Long productVariantId);
+    // =========================================================
+    // LOCKED LOOKUPS
+    // =========================================================
 
-    // ============================
-    // Seller Dashboard
-    // ============================
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            SELECT i
+            FROM InventoryItem i
+            WHERE i.id = :inventoryItemId
+            """)
+    Optional<InventoryItem> findByIdForUpdate(
+            @Param("inventoryItemId") Long inventoryItemId
+    );
+
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            SELECT i
+            FROM InventoryItem i
+            WHERE i.inventory.id = :inventoryId
+              AND i.productVariant.id = :productVariantId
+            """)
+    Optional<InventoryItem> findByInventoryIdAndProductVariantIdForUpdate(
+            @Param("inventoryId") Long inventoryId,
+            @Param("productVariantId") Long productVariantId
+    );
+
+
+    // =========================================================
+    // SELLER INVENTORY STATISTICS
+    // =========================================================
 
     @Query("""
             SELECT COUNT(i)
@@ -42,16 +79,18 @@ public interface InventoryItemRepository
             @Param("sellerId") Long sellerId
     );
 
+
     @Query("""
             SELECT COUNT(i)
             FROM InventoryItem i
             WHERE i.productVariant.productEntity.seller.id = :sellerId
-            AND i.availableStock <= :stock
+              AND i.availableStock <= :stock
             """)
     long countBySellerIdAndAvailableStockLessThanEqual(
             @Param("sellerId") Long sellerId,
             @Param("stock") Integer stock
     );
+
 
     @Query("""
             SELECT COALESCE(SUM(i.availableStock), 0)
@@ -62,6 +101,7 @@ public interface InventoryItemRepository
             @Param("sellerId") Long sellerId
     );
 
+
     @Query("""
             SELECT COALESCE(SUM(i.reservedStock), 0)
             FROM InventoryItem i
@@ -69,31 +109,5 @@ public interface InventoryItemRepository
             """)
     long sumReservedStockBySellerId(
             @Param("sellerId") Long sellerId
-    );
-
-    // ============================
-    // Existing Lock Queries
-    // ============================
-
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("""
-            SELECT i
-            FROM InventoryItem i
-            WHERE i.id = :id
-            """)
-    Optional<InventoryItem> findByIdForUpdate(
-            @Param("id") Long id
-    );
-
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("""
-            SELECT i
-            FROM InventoryItem i
-            WHERE i.inventory.id = :inventoryId
-            AND i.productVariant.id = :productVariantId
-            """)
-    Optional<InventoryItem> findByInventoryIdAndProductVariantIdForUpdate(
-            @Param("inventoryId") Long inventoryId,
-            @Param("productVariantId") Long productVariantId
     );
 }
