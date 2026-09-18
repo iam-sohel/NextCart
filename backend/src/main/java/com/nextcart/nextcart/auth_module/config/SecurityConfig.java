@@ -15,6 +15,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -30,6 +35,12 @@ public class SecurityConfig {
     ) throws Exception {
 
         http
+
+                // -------------------------------------------------
+                // CORS
+                // -------------------------------------------------
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
                 // -------------------------------------------------
                 // CSRF
                 // -------------------------------------------------
@@ -48,6 +59,13 @@ public class SecurityConfig {
                 // AUTHORIZATION
                 // -------------------------------------------------
                 .authorizeHttpRequests(auth -> auth
+
+                        // =================================================
+                        // CORS PREFLIGHT
+                        // =================================================
+
+                        .requestMatchers(HttpMethod.OPTIONS, "/**")
+                        .permitAll()
 
                         // =================================================
                         // SWAGGER / OPEN API
@@ -93,7 +111,7 @@ public class SecurityConfig {
                         // =================================================
                         // SELLER SIGNUP OTP APIs
                         // =================================================
-                        // New seller does not have JWT yet.
+                        // New seller has no JWT during signup.
                         // ONLY these two endpoints are public.
                         // =================================================
 
@@ -146,7 +164,8 @@ public class SecurityConfig {
                         // EVERYTHING ELSE
                         // =================================================
 
-                        .anyRequest().authenticated()
+                        .anyRequest()
+                        .authenticated()
                 )
 
                 // -------------------------------------------------
@@ -159,6 +178,54 @@ public class SecurityConfig {
                 );
 
         return http.build();
+    }
+
+    // =============================================================
+    // CORS CONFIGURATION
+    // =============================================================
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        configuration.setAllowedOrigins(List.of(
+                "http://localhost:3000",
+                "http://localhost:5173"
+        ));
+
+        configuration.setAllowedMethods(List.of(
+                "GET",
+                "POST",
+                "PUT",
+                "PATCH",
+                "DELETE",
+                "OPTIONS"
+        ));
+
+        configuration.setAllowedHeaders(List.of(
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "Origin",
+                "X-Requested-With"
+        ));
+
+        configuration.setExposedHeaders(List.of(
+                "Authorization"
+        ));
+
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
+        source.registerCorsConfiguration(
+                "/**",
+                configuration
+        );
+
+        return source;
     }
 
     // =============================================================
