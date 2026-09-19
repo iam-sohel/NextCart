@@ -50,6 +50,10 @@ export interface LoginCredentials {
   password: string;
 }
 
+export type AuthLoginEndpoint =
+  | "/api/v1/auth/login"
+  | "/api/v1/auth/admin/login";
+
 export interface SignupDetails {
   firstName: string;
   lastName: string;
@@ -167,7 +171,8 @@ export const authService = {
   /**
    * POST /api/v1/auth/login
    *
-   * Login using either email OR phone.
+   * Login using either email OR phone. Defaults to the shared login
+   * endpoint; admin callers may explicitly pass the admin login endpoint.
    *
    * Backend returns:
    *   accessToken
@@ -183,6 +188,7 @@ export const authService = {
    */
   async login(
       credentials: LoginCredentials,
+      endpoint: AuthLoginEndpoint = "/api/v1/auth/login",
       signal?: AbortSignal,
   ): Promise<
       ApiResult<{
@@ -193,7 +199,7 @@ export const authService = {
       }>
   > {
     const res = await apiRequest<BackendLoginResponse>(
-        "/api/v1/auth/login",
+        endpoint,
         {
           method: "POST",
           body: {

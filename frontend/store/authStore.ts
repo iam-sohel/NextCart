@@ -30,7 +30,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
-import { authService, type AuthUser } from "@/services/authService";
+import { authService, type AuthLoginEndpoint, type AuthUser } from "@/services/authService";
 
 interface AuthState {
   user: AuthUser | null;
@@ -54,6 +54,7 @@ interface AuthState {
   login: (
       emailOrPhone: string,
       password: string,
+      endpoint?: AuthLoginEndpoint,
   ) => Promise<{ ok: true } | { ok: false; message: string }>;
 
   register: (
@@ -151,7 +152,7 @@ const useAuthStore = create<AuthState>()(
              LOGIN
              ──────────────────────────────────────────────────────────────── */
 
-          async login(emailOrPhone, password) {
+          async login(emailOrPhone, password, endpoint = "/api/v1/auth/login") {
             set({
               loading: true,
               isAuthenticating: true,
@@ -162,12 +163,15 @@ const useAuthStore = create<AuthState>()(
                 emailOrPhone.trim(),
             );
 
-            const result = await authService.login({
-              ...(isPhone
-                  ? { phone: emailOrPhone.trim() }
-                  : { email: emailOrPhone.trim() }),
-              password,
-            });
+            const result = await authService.login(
+              {
+                ...(isPhone
+                    ? { phone: emailOrPhone.trim() }
+                    : { email: emailOrPhone.trim() }),
+                password,
+              },
+              endpoint,
+            );
 
             if (!result.ok) {
               set({
