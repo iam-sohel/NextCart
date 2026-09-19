@@ -24,6 +24,9 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- Security-patched PostgreSQL JDBC Driver -->
+        <postgresql.version>42.7.13</postgresql.version>
     </properties>
 
     <dependencies>
