@@ -4,9 +4,16 @@ on:
   push:
     branches:
       - master
+
   pull_request:
     branches:
       - master
+
+  workflow_dispatch:
+
+# ============================================================
+# GLOBAL PERMISSIONS
+# ============================================================
 
 permissions:
   contents: read
@@ -17,9 +24,71 @@ env:
   ECR_REPOSITORY: nextcart/backend
   AWS_ROLE_ARN: arn:aws:iam::289981265262:role/GitHubActions-NextCart-ECR
 
+
+# ============================================================
+# JOBS
+# ============================================================
+
 jobs:
+
+  # ==========================================================
+  # 1. SECURITY GATE
+  # ==========================================================
+
+  security-scan:
+
+    name: Security & Secrets Scan
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # ------------------------------------------------------
+      # Checkout
+      # ------------------------------------------------------
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+
+      # ------------------------------------------------------
+      # SECRET SCANNING
+      # ------------------------------------------------------
+
+      - name: Scan repository for secrets
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+      # ------------------------------------------------------
+      # DEPENDENCY / FILESYSTEM VULNERABILITY SCAN
+      # ------------------------------------------------------
+
+      - name: Run Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          format: table
+
+
+  # ==========================================================
+  # 2. BACKEND BUILD / TEST / ECR
+  # ==========================================================
+
   backend-build:
+
     name: Backend Build, Test & ECR Publish
+
+    needs:
+      - security-scan
+
     runs-on: ubuntu-latest
 
     defaults:
@@ -27,75 +96,329 @@ jobs:
         working-directory: backend
 
     steps:
+
+      # ------------------------------------------------------
+      # Checkout
+      # ------------------------------------------------------
+
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+
+
+      # ------------------------------------------------------
+      # JAVA 21
+      # ------------------------------------------------------
 
       - name: Set up Java 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
           cache: maven
 
+
+      # ------------------------------------------------------
+      # MAVEN WRAPPER
+      # ------------------------------------------------------
+
       - name: Make Maven Wrapper executable
         run: chmod +x mvnw
+
+
+      # ------------------------------------------------------
+      # BACKEND BUILD + TEST
+      # ------------------------------------------------------
 
       - name: Build and verify backend
         env:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+
           RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
           RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
           RAZORPAY_WEBHOOK_SECRET: ${{ secrets.RAZORPAY_WEBHOOK_SECRET }}
+
           MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
           MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+
           MSG91_AUTH_KEY: ${{ secrets.MSG91_AUTH_KEY }}
+
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
-        run: ./mvnw --batch-mode --no-transfer-progress clean verify
+
+        run: |
+          ./mvnw \
+            --batch-mode \
+            --no-transfer-progress \
+            clean verify
+
+
+      # ======================================================
+      # AWS OIDC
+      # ======================================================
 
       - name: Configure AWS credentials via GitHub OIDC
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        if: >
+          github.event_name == 'push' &&
+          github.ref == 'refs/heads/master'
+
         uses: aws-actions/configure-aws-credentials@v6.2.4
+
         with:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          role-session-name: NextCart-GitHubActions-${{ github.run_id }}
+
+          role-session-name:
+            NextCart-GitHubActions-${{ github.run_id }}
+
           aws-region: ${{ env.AWS_REGION }}
+
           allowed-account-ids: '289981265262'
 
+
+      # ------------------------------------------------------
+      # VERIFY AWS IDENTITY
+      # ------------------------------------------------------
+
       - name: Verify AWS identity
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        if: >
+          github.event_name == 'push' &&
+          github.ref == 'refs/heads/master'
+
         run: aws sts get-caller-identity
+
         working-directory: .
 
+
+      # ======================================================
+      # ECR
+      # ======================================================
+
       - name: Login to Amazon ECR
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        if: >
+          github.event_name == 'push' &&
+          github.ref == 'refs/heads/master'
+
         id: login-ecr
+
         uses: aws-actions/amazon-ecr-login@v2.1.6
 
+
+      # ------------------------------------------------------
+      # DOCKER BUILD
+      # ------------------------------------------------------
+
       - name: Build Docker image
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        if: >
+          github.event_name == 'push' &&
+          github.ref == 'refs/heads/master'
+
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
+
         run: |
           docker build \
             --pull \
             -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" \
             .
 
+
+      # ------------------------------------------------------
+      # DOCKER IMAGE VULNERABILITY SCAN
+      # ------------------------------------------------------
+
+      - name: Scan Docker image
+        if: >
+          github.event_name == 'push' &&
+          github.ref == 'refs/heads/master'
+
+        uses: aquasecurity/trivy-action@v0.36.0
+
+        with:
+          image-ref: '${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}'
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          format: table
+
+
+      # ------------------------------------------------------
+      # PUSH IMAGE TO ECR
+      # ------------------------------------------------------
+
       - name: Push Docker image to Amazon ECR
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        if: >
+          github.event_name == 'push' &&
+          github.ref == 'refs/heads/master'
+
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
+
         run: |
-          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          docker push \
+            "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+
+      # ------------------------------------------------------
+      # PRINT PUBLISHED IMAGE
+      # ------------------------------------------------------
 
       - name: Print published image
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        if: >
+          github.event_name == 'push' &&
+          github.ref == 'refs/heads/master'
+
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
+
         run: |
-          echo "Published image:"
+          echo "=========================================="
+          echo "NextCart Backend Image Published"
+          echo "=========================================="
+
+          echo "Registry:"
+          echo "$ECR_REGISTRY"
+
+          echo "Repository:"
+          echo "$ECR_REPOSITORY"
+
+          echo "Image Tag:"
+          echo "$IMAGE_TAG"
+
+          echo "Full Image:"
           echo "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+          echo "=========================================="
+
+
+  # ==========================================================
+  # 3. FAILURE ALERT
+  # ==========================================================
+
+  failure-alert:
+
+    name: CI/CD Failure Alert
+
+    needs:
+      - security-scan
+      - backend-build
+
+    if: >
+      always() &&
+      (
+        needs.security-scan.result == 'failure' ||
+        needs.backend-build.result == 'failure'
+      )
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # ------------------------------------------------------
+      # SEND EMAIL
+      # ------------------------------------------------------
+
+      - name: Send CI/CD failure email
+        uses: dawidd6/action-send-mail@v18
+
+        with:
+
+          server_address: smtp.gmail.com
+          server_port: 587
+
+          username: ${{ secrets.ALERT_EMAIL_USERNAME }}
+          password: ${{ secrets.ALERT_EMAIL_PASSWORD }}
+
+          secure: true
+
+          from: NextCart CI/CD <${{ secrets.ALERT_EMAIL_USERNAME }}>
+
+          to: ${{ secrets.SECURITY_ALERT_EMAIL }}
+
+          subject: >
+            🚨 NextCart CI/CD FAILED -
+            ${{ github.ref_name }}
+
+          body: |
+
+            ============================================================
+            NEXTCART CI/CD SECURITY ALERT
+            ============================================================
+
+            Repository:
+            ${{ github.repository }}
+
+            Branch:
+            ${{ github.ref_name }}
+
+            Commit:
+            ${{ github.sha }}
+
+            Actor:
+            ${{ github.actor }}
+
+            Workflow:
+            ${{ github.workflow }}
+
+            Run ID:
+            ${{ github.run_id }}
+
+
+            ============================================================
+            JOB STATUS
+            ============================================================
+
+            Security Scan:
+            ${{ needs.security-scan.result }}
+
+            Backend Build / ECR:
+            ${{ needs.backend-build.result }}
+
+
+            ============================================================
+            POSSIBLE REASONS
+            ============================================================
+
+            1. Secret detected by Gitleaks.
+
+            2. HIGH or CRITICAL vulnerability detected by Trivy.
+
+            3. Backend compilation failure.
+
+            4. Backend test failure.
+
+            5. Docker image build failure.
+
+            6. Docker image vulnerability detected.
+
+            7. ECR authentication or push failure.
+
+
+            ============================================================
+            DEPLOYMENT STATUS
+            ============================================================
+
+            The ECR publication pipeline was blocked because
+            the CI/CD pipeline failed.
+
+            No deployment should proceed from this failed run.
+
+
+            ============================================================
+            GITHUB ACTION RUN
+            ============================================================
+
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+
+            ============================================================
+            SECURITY NOTICE
+            ============================================================
+
+            Do NOT expose secrets, credentials, tokens,
+            passwords, or private keys in logs or issues.
+
+            ============================================================
+            END
+            ============================================================

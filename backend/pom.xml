@@ -5,6 +5,9 @@
 
     <modelVersion>4.0.0</modelVersion>
 
+    <!-- =========================================================
+         Spring Boot Parent
+         ========================================================= -->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -12,6 +15,9 @@
         <relativePath/>
     </parent>
 
+    <!-- =========================================================
+         Project Information
+         ========================================================= -->
     <groupId>com.nextcart</groupId>
     <artifactId>nextcart-backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
@@ -19,68 +25,104 @@
     <name>NextCart Backend</name>
     <description>E-commerce platform backend</description>
 
+    <!-- =========================================================
+         Project Properties
+         ========================================================= -->
     <properties>
+
+        <!-- Java -->
         <java.version>21</java.version>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- Security-patched PostgreSQL JDBC Driver -->
+        <postgresql.version>42.7.13</postgresql.version>
+
+        <!-- Security-patched Tomcat -->
+        <tomcat.version>11.0.26</tomcat.version>
+
+        <!-- Secure OkHttp version for Razorpay SDK -->
+        <okhttp.version>4.12.0</okhttp.version>
+
     </properties>
 
+    <!-- =========================================================
+         Dependencies
+         ========================================================= -->
     <dependencies>
 
-        <!-- Swagger / OpenAPI -->
+        <!-- =====================================================
+             Swagger / OpenAPI
+             ===================================================== -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>3.0.3</version>
         </dependency>
 
-        <!-- Spring Boot Web -->
+        <!-- =====================================================
+             Spring Boot Web
+             ===================================================== -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- Spring Dotenv - loads .env file -->
+        <!-- =====================================================
+             Spring Dotenv
+             ===================================================== -->
         <dependency>
             <groupId>me.paulschwarz</groupId>
             <artifactId>springboot4-dotenv</artifactId>
             <version>5.1.0</version>
         </dependency>
 
-        <!-- Spring Data JPA -->
+        <!-- =====================================================
+             Spring Data JPA
+             ===================================================== -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
 
-        <!-- Spring Security -->
+        <!-- =====================================================
+             Spring Security
+             ===================================================== -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
-        <!-- Validation -->
+        <!-- =====================================================
+             Validation
+             ===================================================== -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
-        <!-- PostgreSQL Driver -->
+        <!-- =====================================================
+             PostgreSQL Driver
+             ===================================================== -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
 
-        <!-- JWT API -->
+        <!-- =====================================================
+             JWT API
+             ===================================================== -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
             <version>0.12.3</version>
         </dependency>
 
-        <!-- JWT Implementation -->
+        <!-- =====================================================
+             JWT Implementation
+             ===================================================== -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-impl</artifactId>
@@ -88,7 +130,9 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- JWT Jackson -->
+        <!-- =====================================================
+             JWT Jackson
+             ===================================================== -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-jackson</artifactId>
@@ -96,21 +140,27 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- ModelMapper -->
+        <!-- =====================================================
+             ModelMapper
+             ===================================================== -->
         <dependency>
             <groupId>org.modelmapper</groupId>
             <artifactId>modelmapper</artifactId>
             <version>3.2.0</version>
         </dependency>
 
-        <!-- Lombok -->
+        <!-- =====================================================
+             Lombok
+             ===================================================== -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
 
-        <!-- DevTools -->
+        <!-- =====================================================
+             DevTools
+             ===================================================== -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-devtools</artifactId>
@@ -118,27 +168,52 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- Testing -->
+        <!-- =====================================================
+             Testing
+             ===================================================== -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
 
-        <!-- Email / Gmail SMTP -->
+        <!-- =====================================================
+             Email / Gmail SMTP
+             ===================================================== -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
 
-        <!-- Razorpay Java SDK -->
+        <!-- =====================================================
+             Razorpay Java SDK
+             ===================================================== -->
         <dependency>
             <groupId>com.razorpay</groupId>
             <artifactId>razorpay-java</artifactId>
-            <version>1.4.8</version>
+            <version>1.4.10</version>
         </dependency>
 
-        <!-- Spring Security Testing -->
+        <!-- =====================================================
+             Secure OkHttp Override
+             Razorpay 1.4.10 brings OkHttp 3.10.0.
+             These explicit dependencies force the patched version.
+             ===================================================== -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>${okhttp.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>logging-interceptor</artifactId>
+            <version>${okhttp.version}</version>
+        </dependency>
+
+        <!-- =====================================================
+             Spring Security Testing
+             ===================================================== -->
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>
@@ -147,11 +222,16 @@
 
     </dependencies>
 
+    <!-- =========================================================
+         Build Configuration
+         ========================================================= -->
     <build>
 
         <plugins>
 
-            <!-- Spring Boot Maven Plugin -->
+            <!-- =================================================
+                 Spring Boot Maven Plugin
+                 ================================================= -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
@@ -164,9 +244,12 @@
                         </exclude>
                     </excludes>
                 </configuration>
+
             </plugin>
 
-            <!-- Maven Compiler Plugin -->
+            <!-- =================================================
+                 Maven Compiler Plugin
+                 ================================================= -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -177,13 +260,12 @@
                     <parameters>true</parameters>
 
                     <annotationProcessorPaths>
-
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
                         </path>
-
                     </annotationProcessorPaths>
+
                 </configuration>
 
             </plugin>
