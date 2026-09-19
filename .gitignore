@@ -31,9 +31,3 @@ npm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
-
-# Local-only archives
-NextCart-Frontend.zip.freebuff/
-
-.freebuff/
-.freebuff

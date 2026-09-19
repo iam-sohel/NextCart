@@ -1,8 +1,6 @@
 # Credential rotation — actions for the project owner
 
-These are the steps **you** must take outside this repository. I (the
-assistant) can rewrite config and code, but I cannot reach Supabase or
-Razorpay to actually rotate anything.
+These are the steps **you** must take outside this repository. They require access to Supabase or Razorpay to actually rotate the credentials.
 
 Treat every step as urgent. The credentials were present in commits on
 the public `master` branch, so they should be considered compromised.
