@@ -1,23 +1,13 @@
 "use client";
 
-import Image from "next/image";
-
 import {
-  Box,
   Container,
   Grid,
   Paper,
   Typography,
 } from "@mui/material";
 
-const brands = [
-  { name: "Apple", image: "/logos/apple.png" },
-  { name: "Samsung", image: "/logos/samsung.png" },
-  { name: "Sony", image: "/logos/sony.png" },
-  { name: "Nike", image: "/logos/nike.png" },
-  { name: "Adidas", image: "/logos/adidas.png" },
-  { name: "Dell", image: "/logos/dell.png" },
-];
+const brands = ["Apple", "Samsung", "Sony", "Nike", "Adidas", "Dell"] as const;
 
 export default function BrandSection() {
   return (
@@ -35,7 +25,7 @@ export default function BrandSection() {
       <Grid container spacing={3}>
         {brands.map((brand) => (
           <Grid
-            key={brand.name}
+            key={brand}
             size={{ xs: 6, sm: 4, md: 2 }}
           >
             <Paper
@@ -46,27 +36,15 @@ export default function BrandSection() {
                 justifyContent: "center",
                 alignItems: "center",
                 transition: ".3s",
-
-                "&:hover": {
-                  transform: "translateY(-6px)",
-                  boxShadow: 6,
-                },
+                borderRadius: 2,
               }}
             >
-              <Box
-                sx={{
-                  position: "relative",
-                  width: 100,
-                  height: 50,
-                }}
+              <Typography
+                variant="h6"
+                sx={{ fontWeight: 700, textAlign: "center" }}
               >
-                <Image
-                  src={brand.image}
-                  alt={brand.name}
-                  fill
-                  style={{ objectFit: "contain" }}
-                />
-              </Box>
+                {brand}
+              </Typography>
             </Paper>
           </Grid>
         ))}

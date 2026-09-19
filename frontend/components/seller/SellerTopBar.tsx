@@ -84,7 +84,7 @@ export default function SellerTopBar({ onOpenMobileNav }: SellerTopBarProps) {
   const handleLogout = () => {
     setMenuAnchor(null);
     logout();
-    router.push("/login");
+    router.push("/seller/login");
   };
 
   return (

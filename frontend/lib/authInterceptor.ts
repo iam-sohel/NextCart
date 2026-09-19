@@ -44,7 +44,46 @@ import { refreshAuthSession } from "@/lib/tokenRefresh";
 import useAuthStore from "@/store/authStore";
 
 /** Routes that are themselves the "auth surface" — never redirect on these. */
-const AUTH_ROUTES = new Set<string>(["/login", "/signup", "/forgot-password"]);
+const AUTH_ROUTES = new Set<string>([
+  "/login",
+  "/signup",
+  "/forgot-password",
+  "/seller/login",
+  "/seller/signup",
+  "/admin/login",
+]);
+
+/**
+ * Resolve where a genuinely expired session should resume.
+ *
+ * Only same-origin app paths are preserved. Protocol-relative URLs, absolute
+ * URLs, and auth surfaces are rejected so a `return` parameter can never turn
+ * the session-expired redirect into an open redirect.
+ */
+function safeResumePath(path: string | null): string | null {
+  if (!path || !path.startsWith("/") || path.startsWith("//")) {
+    return null;
+  }
+  if (AUTH_ROUTES.has(path.split("?")[0] ?? "")) {
+    return null;
+  }
+  return path;
+}
+
+/**
+ * Choose the login portal matching the surface the user was on. Sellers and
+ * admins must return to their own login pages; sending them to the customer
+ * login page would strand them outside their portal after re-authentication.
+ */
+function loginPathFor(currentPath: string | null): string {
+  if (currentPath === "/seller" || currentPath?.startsWith("/seller/")) {
+    return "/seller/login";
+  }
+  if (currentPath === "/admin" || currentPath?.startsWith("/admin/")) {
+    return "/admin/login";
+  }
+  return "/login";
+}
 
 /**
  * Mount this once inside `app/layout.tsx`. It registers the failure handler
@@ -82,12 +121,15 @@ export default function AuthClientBootstrap(): null {
       if (inFlight) return;
       inFlight = true;
 
+      const currentPath =
+        typeof window !== "undefined" ? window.location.pathname : pathname;
+      const currentSearch =
+        typeof window !== "undefined" ? window.location.search : "";
+
       // If we are already on an auth route, do nothing — the user is
       // actively trying to authenticate, and bouncing them again would
       // erase any in-flight form state.
-      const current =
-        typeof window !== "undefined" ? window.location.pathname : pathname;
-      if (current && AUTH_ROUTES.has(current)) {
+      if (currentPath && AUTH_ROUTES.has(currentPath)) {
         // Still clear the token so the next successful login starts clean.
         useAuthStore.getState().logout();
         // Defer resetting the flag so a fresh 401 from a *new* session still
@@ -99,7 +141,15 @@ export default function AuthClientBootstrap(): null {
       }
 
       useAuthStore.getState().logout();
-      router.push(`/login?reason=session-expired&status=${status}`);
+      const loginPath = loginPathFor(currentPath);
+      const resumePath = safeResumePath(
+        currentPath ? `${currentPath}${currentSearch}` : null,
+      );
+      const target =
+        resumePath
+          ? `${loginPath}?reason=session-expired&status=${status}&return=${encodeURIComponent(resumePath)}`
+          : `${loginPath}?reason=session-expired&status=${status}`;
+      router.push(target);
 
       requestAnimationFrame(() => {
         inFlight = false;

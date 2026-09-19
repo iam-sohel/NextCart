@@ -16,22 +16,22 @@ const categories = [
   },
   {
     title: "Appliances",
-    image: "/categories/appliances.png",
+    image: "/categories/Appliances.png",
     slug: "appliances",
   },
   {
     title: "Home & Kitchen",
-    image: "/categories/home.png",
+    image: "/categories/Home.png",
     slug: "home-kitchen",
   },
   {
     title: "Beauty",
-    image: "/categories/beauty.png",
+    image: "/categories/Beauty.png",
     slug: "beauty",
   },
   {
     title: "Grocery",
-    image: "/categories/grocery.png",
+    image: "/categories/Grocery.png",
     slug: "grocery",
   },
   {
@@ -51,7 +51,7 @@ const categories = [
   },
   {
     title: "Toys",
-    image: "/categories/toys.png",
+    image: "/categories/Toys.png",
     slug: "toys",
   },
   {

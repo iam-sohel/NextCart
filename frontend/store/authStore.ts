@@ -31,6 +31,9 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 import { authService, type AuthLoginEndpoint, type AuthUser } from "@/services/authService";
+import useAddressStore from "@/store/addressStore";
+import useCartStore from "@/store/cartStore";
+import useWishlistStore from "@/store/wishlistStore";
 
 interface AuthState {
   user: AuthUser | null;
@@ -288,12 +291,47 @@ const useAuthStore = create<AuthState>()(
 
           logout() {
             /**
-             * Backend logout deletes the refresh token server-side.
-             *
-             * The access JWT is stateless and remains valid until expiration,
-             * so client-side removal of both tokens ends the local session.
-             */
+              * Backend logout deletes the refresh token server-side.
+              *
+              * The access JWT is stateless and remains valid until expiration,
+              * so client-side removal of both tokens ends the local session.
+              *
+              * Customer-sensitive local state is also dropped here — centrally —
+              * so every logout path (navbar, seller/admin top bars, terminal
+              * session-expiry interceptor) leaves no previous-user cart,
+              * wishlist, or address data behind. These resets are local-only;
+              * no authenticated backend calls are made after the tokens are
+              * cleared.
+              */
             void authService.logout();
+
+            try {
+              useCartStore.getState().resetLocal();
+            } catch {
+              // Store reset must never break logout.
+            }
+
+            try {
+              useWishlistStore.getState().reset();
+            } catch {
+              // Store reset must never break logout.
+            }
+
+            try {
+              useAddressStore.getState().reset();
+            } catch {
+              // Store reset must never break logout.
+            }
+
+            // Defensive cleanup for the retired legacy local order store
+            // (`nextcart-orders`), which is no longer read by the app.
+            try {
+              if (typeof window !== "undefined") {
+                window.localStorage.removeItem("nextcart-orders");
+              }
+            } catch {
+              // Ignore localStorage failures.
+            }
 
             set({
               user: null,

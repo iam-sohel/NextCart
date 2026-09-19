@@ -23,6 +23,7 @@ import Footer from "@/components/layout/Footer";
 import useWishlistStore from "@/store/wishlistStore";
 import useCartStore from "@/store/cartStore";
 import useAuthStore from "@/store/authStore";
+import { resolveProductImage } from "@/utils/productImages";
 
 export default function WishlistPage() {
   const items = useWishlistStore((s) => s.items);
@@ -195,10 +196,7 @@ export default function WishlistPage() {
                 }}
               >
                 <Image
-                  src={
-                    item.image ||
-                    "/placeholder.png"
-                  }
+                  src={resolveProductImage(item.image)}
                   alt={
                     item.title ||
                     "Wishlist item"

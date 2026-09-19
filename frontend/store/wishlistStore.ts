@@ -118,6 +118,14 @@ interface WishlistStore {
   /** Reset error message after the UI has shown it. */
   clearError: () => void;
 
+  /**
+   * Drop local wishlist state WITHOUT calling the backend.
+   *
+   * Used on logout/session expiry so the next user never sees the previous
+   * user's saved items. Authenticated screens re-fetch via `fetchAll()`.
+   */
+  reset: () => void;
+
   /* ────────────────────────────────────────────────────────────────
      Deprecated shims — kept so existing components compile. New code
      should use `add`, `remove`, and `has` directly.
@@ -252,6 +260,10 @@ const useWishlistStore = create<WishlistStore>((set, get) => ({
 
   clearError() {
     set({ error: null });
+  },
+
+  reset() {
+    set({ items: [], loading: false, error: null });
   },
 
   // ── Deprecated shims ────────────────────────────────────────────────

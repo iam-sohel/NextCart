@@ -49,8 +49,9 @@ const BUSINESS_TYPES: Array<{ value: BusinessType; label: string }> = [
 
 const MAX_DOCUMENT_BYTES = 2 * 1024 * 1024;
 
-const EMPTY_FORM: SellerKycRequest = {
+const EMPTY_FORM = {
   businessType: "PROPRIETORSHIP",
+  dateOfBirth: "",
   gstNumber: "",
   registrationNumber: "",
   ownerName: "",
@@ -61,7 +62,7 @@ const EMPTY_FORM: SellerKycRequest = {
   state: "",
   postalCode: "",
   country: "India",
-};
+} satisfies SellerKycRequest;
 
 function InfoField({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -190,6 +191,7 @@ export default function SellerKycPage() {
 
     setForm({
       businessType: kyc.businessType,
+      dateOfBirth: kyc.dateOfBirth ?? "",
       gstNumber: kyc.gstNumber ?? "",
       registrationNumber: kyc.registrationNumber ?? "",
       ownerName: kyc.ownerName ?? "",
@@ -208,33 +210,65 @@ export default function SellerKycPage() {
     setMode("edit");
   };
 
-  const validate = (): string | null => {
-    if (!form.businessType) return "Business type is required.";
-    if (!form.ownerName.trim()) return "Owner name is required.";
+const validate = (): string | null => {
+  if (!form.businessType) return "Business type is required.";
 
-    const pan = form.panNumber.trim().toUpperCase();
-    if (!pan) return "PAN number is required.";
-    if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) return "Invalid PAN number.";
+  if (!form.dateOfBirth) {
+    return "Date of birth is required.";
+  }
 
-    const gst = form.gstNumber?.trim().toUpperCase() ?? "";
-    if (gst && !/^[0-9A-Z]{15}$/.test(gst)) return "Invalid GST number.";
+  const dateOfBirthPattern = /^\d{4}-\d{2}-\d{2}$/;
 
-    const aadhaar = form.aadhaarNumber?.trim() ?? "";
-    if (aadhaar && !/^\d{12}$/.test(aadhaar)) {
-      return "Aadhaar number must be 12 digits.";
-    }
+  if (!dateOfBirthPattern.test(form.dateOfBirth)) {
+    return "Invalid date of birth.";
+  }
 
-    if (!form.businessAddress.trim()) return "Business address is required.";
-    if (!form.city.trim()) return "City is required.";
-    if (!form.state.trim()) return "State is required.";
-    if (!form.postalCode.trim()) return "Postal code is required.";
-    if (form.postalCode.trim().length > 10) {
-      return "Postal code must not exceed 10 characters.";
-    }
-    if (!form.country.trim()) return "Country is required.";
+  const today = new Date();
 
-    return null;
-  };
+  const todayIso = [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, "0"),
+    String(today.getDate()).padStart(2, "0"),
+  ].join("-");
+
+  if (form.dateOfBirth >= todayIso) {
+    return "Date of birth must be in the past.";
+  }
+
+  if (!form.ownerName.trim()) return "Owner name is required.";
+
+  const pan = form.panNumber.trim().toUpperCase();
+  if (!pan) return "PAN number is required.";
+  if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) {
+    return "Invalid PAN number.";
+  }
+
+  const gst = form.gstNumber?.trim().toUpperCase() ?? "";
+  if (gst && !/^[0-9A-Z]{15}$/.test(gst)) {
+    return "Invalid GST number.";
+  }
+
+  const aadhaar = form.aadhaarNumber?.trim() ?? "";
+  if (aadhaar && !/^\d{12}$/.test(aadhaar)) {
+    return "Aadhaar number must be 12 digits.";
+  }
+
+  if (!form.businessAddress.trim()) {
+    return "Business address is required.";
+  }
+
+  if (!form.city.trim()) return "City is required.";
+  if (!form.state.trim()) return "State is required.";
+  if (!form.postalCode.trim()) return "Postal code is required.";
+
+  if (form.postalCode.trim().length > 10) {
+    return "Postal code must not exceed 10 characters.";
+  }
+
+  if (!form.country.trim()) return "Country is required.";
+
+  return null;
+};
 
   const handleSubmit = async () => {
     if (saving) return;
@@ -252,7 +286,8 @@ export default function SellerKycPage() {
 
     const payload: SellerKycRequest = {
       businessType: form.businessType,
-      gstNumber: form.gstNumber?.trim() || undefined,
+      dateOfBirth: form.dateOfBirth,
+      gstNumber: form.gstNumber?.trim().toUpperCase() || undefined,
       registrationNumber: form.registrationNumber?.trim() || undefined,
       ownerName: form.ownerName.trim(),
       panNumber: form.panNumber.trim().toUpperCase(),
@@ -430,6 +465,12 @@ export default function SellerKycPage() {
                   <InfoField label="Owner name" value={kyc.ownerName || "—"} />
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6 }}>
+                  <InfoField
+                    label="Date of birth"
+                    value={kyc.dateOfBirth || "—"}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <InfoField label="PAN number" value={kyc.panNumber || "—"} />
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6 }}>
@@ -497,162 +538,236 @@ export default function SellerKycPage() {
                 </Alert>
               )}
 
-              <Grid container spacing={2}>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    select
-                    fullWidth
-                    required
-                    label="Business type"
-                    value={form.businessType}
-                    onChange={(e) => setForm({ ...form, businessType: e.target.value as BusinessType })}
-                    disabled={saving}
-                  >
-                    {BUSINESS_TYPES.map((b) => (
-                      <MenuItem key={b.value} value={b.value}>
-                        {b.label}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
+<Grid container spacing={2}>
+  <Grid size={{ xs: 12, sm: 6 }}>
+    <TextField
+      select
+      fullWidth
+      required
+      label="Business type"
+      value={form.businessType}
+      onChange={(e) =>
+        setForm({
+          ...form,
+          businessType: e.target.value as BusinessType,
+        })
+      }
+      disabled={saving}
+    >
+      {BUSINESS_TYPES.map((b) => (
+        <MenuItem key={b.value} value={b.value}>
+          {b.label}
+        </MenuItem>
+      ))}
+    </TextField>
+  </Grid>
 
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    fullWidth
-                    required
-                    label="Owner name"
-                    value={form.ownerName}
-                    onChange={(e) => setForm({ ...form, ownerName: e.target.value })}
-                    disabled={saving}
-                    slotProps={{ htmlInput: { maxLength: 150 } }}
-                  />
-                </Grid>
+  <Grid size={{ xs: 12, sm: 6 }}>
+    <TextField
+      fullWidth
+      required
+      label="Owner name"
+      value={form.ownerName}
+      onChange={(e) => setForm({ ...form, ownerName: e.target.value })}
+      disabled={saving}
+      slotProps={{ htmlInput: { maxLength: 150 } }}
+    />
+  </Grid>
 
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    fullWidth
-                    required
-                    label="PAN number"
-                    value={form.panNumber}
-                    onChange={(e) => setForm({ ...form, panNumber: e.target.value.toUpperCase() })}
-                    disabled={saving}
-                    slotProps={{ htmlInput: { maxLength: 10, style: { textTransform: "uppercase" } } }}
-                  />
-                </Grid>
+  <Grid size={{ xs: 12, sm: 6 }}>
+    <TextField
+      fullWidth
+      required
+      type="date"
+      label="Date of birth"
+      value={form.dateOfBirth}
+      onChange={(e) =>
+        setForm({
+          ...form,
+          dateOfBirth: e.target.value,
+        })
+      }
+      disabled={saving}
+      slotProps={{
+        inputLabel: {
+          shrink: true,
+        },
+        htmlInput: {
+          max: new Date().toISOString().split("T")[0],
+        },
+      }}
+    />
+  </Grid>
 
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    fullWidth
-                    label="Aadhaar number"
-                    helperText={kyc ? "Stored masked. Re-enter 12 digits to keep it, or leave blank." : "Optional"}
-                    value={form.aadhaarNumber}
-                    onChange={(e) => setForm({ ...form, aadhaarNumber: e.target.value.replace(/\D/g, "") })}
-                    disabled={saving}
-                    slotProps={{ htmlInput: { maxLength: 12, inputMode: "numeric" } }}
-                  />
-                </Grid>
+  <Grid size={{ xs: 12, sm: 6 }}>
+    <TextField
+      fullWidth
+      required
+      label="PAN number"
+      value={form.panNumber}
+      onChange={(e) =>
+        setForm({
+          ...form,
+          panNumber: e.target.value.toUpperCase(),
+        })
+      }
+      disabled={saving}
+      slotProps={{
+        htmlInput: {
+          maxLength: 10,
+          style: { textTransform: "uppercase" },
+        },
+      }}
+    />
+  </Grid>
 
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    fullWidth
-                    label="GST number"
-                    helperText="15 characters (optional)"
-                    value={form.gstNumber}
-                    onChange={(e) => setForm({ ...form, gstNumber: e.target.value.toUpperCase() })}
-                    disabled={saving}
-                    slotProps={{ htmlInput: { maxLength: 15 } }}
-                  />
-                </Grid>
+  <Grid size={{ xs: 12, sm: 6 }}>
+    <TextField
+      fullWidth
+      label="Aadhaar number"
+      helperText={
+        kyc
+          ? "Stored masked. Re-enter 12 digits to keep it, or leave blank."
+          : "Optional"
+      }
+      value={form.aadhaarNumber}
+      onChange={(e) =>
+        setForm({
+          ...form,
+          aadhaarNumber: e.target.value.replace(/\D/g, ""),
+        })
+      }
+      disabled={saving}
+      slotProps={{
+        htmlInput: {
+          maxLength: 12,
+          inputMode: "numeric",
+        },
+      }}
+    />
+  </Grid>
 
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    fullWidth
-                    label="Registration number"
-                    value={form.registrationNumber}
-                    onChange={(e) => setForm({ ...form, registrationNumber: e.target.value })}
-                    disabled={saving}
-                    slotProps={{ htmlInput: { maxLength: 100 } }}
-                  />
-                </Grid>
+  <Grid size={{ xs: 12, sm: 6 }}>
+    <TextField
+      fullWidth
+      label="GST number"
+      helperText="15 characters (optional)"
+      value={form.gstNumber}
+      onChange={(e) =>
+        setForm({
+          ...form,
+          gstNumber: e.target.value.toUpperCase(),
+        })
+      }
+      disabled={saving}
+      slotProps={{ htmlInput: { maxLength: 15 } }}
+    />
+  </Grid>
 
-                <Grid size={{ xs: 12 }}>
-                  <TextField
-                    fullWidth
-                    required
-                    label="Business address"
-                    multiline
-                    minRows={2}
-                    value={form.businessAddress}
-                    onChange={(e) => setForm({ ...form, businessAddress: e.target.value })}
-                    disabled={saving}
-                    slotProps={{ htmlInput: { maxLength: 500 } }}
-                  />
-                </Grid>
+  <Grid size={{ xs: 12, sm: 6 }}>
+    <TextField
+      fullWidth
+      label="Registration number"
+      value={form.registrationNumber}
+      onChange={(e) =>
+        setForm({
+          ...form,
+          registrationNumber: e.target.value,
+        })
+      }
+      disabled={saving}
+      slotProps={{ htmlInput: { maxLength: 100 } }}
+    />
+  </Grid>
 
-                <Grid size={{ xs: 12, sm: 5 }}>
-                  <TextField
-                    fullWidth
-                    required
-                    label="City"
-                    value={form.city}
-                    onChange={(e) => setForm({ ...form, city: e.target.value })}
-                    disabled={saving}
-                  />
-                </Grid>
+  <Grid size={{ xs: 12 }}>
+    <TextField
+      fullWidth
+      required
+      label="Business address"
+      multiline
+      minRows={2}
+      value={form.businessAddress}
+      onChange={(e) =>
+        setForm({
+          ...form,
+          businessAddress: e.target.value,
+        })
+      }
+      disabled={saving}
+      slotProps={{ htmlInput: { maxLength: 500 } }}
+    />
+  </Grid>
 
-                <Grid size={{ xs: 12, sm: 4 }}>
-                  <TextField
-                    fullWidth
-                    required
-                    label="State"
-                    value={form.state}
-                    onChange={(e) => setForm({ ...form, state: e.target.value })}
-                    disabled={saving}
-                  />
-                </Grid>
+  <Grid size={{ xs: 12, sm: 5 }}>
+    <TextField
+      fullWidth
+      required
+      label="City"
+      value={form.city}
+      onChange={(e) => setForm({ ...form, city: e.target.value })}
+      disabled={saving}
+    />
+  </Grid>
 
-                <Grid size={{ xs: 12, sm: 3 }}>
-                  <TextField
-                    fullWidth
-                    required
-                    label="Postal code"
-                    value={form.postalCode}
-                    onChange={(e) => setForm({ ...form, postalCode: e.target.value })}
-                    disabled={saving}
-                    slotProps={{ htmlInput: { maxLength: 10 } }}
-                  />
-                </Grid>
+  <Grid size={{ xs: 12, sm: 4 }}>
+    <TextField
+      fullWidth
+      required
+      label="State"
+      value={form.state}
+      onChange={(e) => setForm({ ...form, state: e.target.value })}
+      disabled={saving}
+    />
+  </Grid>
 
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    fullWidth
-                    required
-                    label="Country"
-                    value={form.country}
-                    onChange={(e) => setForm({ ...form, country: e.target.value })}
-                    disabled={saving}
-                  />
-                </Grid>
-              </Grid>
+  <Grid size={{ xs: 12, sm: 3 }}>
+    <TextField
+      fullWidth
+      required
+      label="Postal code"
+      value={form.postalCode}
+      onChange={(e) =>
+        setForm({
+          ...form,
+          postalCode: e.target.value,
+        })
+      }
+      disabled={saving}
+      slotProps={{ htmlInput: { maxLength: 10 } }}
+    />
+  </Grid>
 
-              <Stack direction="row" spacing={1.5} sx={{ mt: 3 }}>
-                <Button
-                  variant="contained"
-                  onClick={() => void handleSubmit()}
-                  disabled={saving}
-                >
-                  {saving ? "Saving…" : kyc ? "Save changes" : "Submit KYC"}
-                </Button>
+  <Grid size={{ xs: 12, sm: 6 }}>
+    <TextField
+      fullWidth
+      required
+      label="Country"
+      value={form.country}
+      onChange={(e) => setForm({ ...form, country: e.target.value })}
+      disabled={saving}
+    />
+  </Grid>
+</Grid>
 
-                {kyc && (
-                  <Button
-                    onClick={() => setMode("view")}
-                    disabled={saving}
-                  >
-                    Cancel
-                  </Button>
-                )}
-              </Stack>
+<Stack direction="row" spacing={1.5} sx={{ mt: 3 }}>
+  <Button
+    variant="contained"
+    onClick={() => void handleSubmit()}
+    disabled={saving}
+  >
+    {saving ? "Saving…" : kyc ? "Save changes" : "Submit KYC"}
+  </Button>
+
+  {kyc && (
+    <Button
+      onClick={() => setMode("view")}
+      disabled={saving}
+    >
+      Cancel
+    </Button>
+  )}
+</Stack>
             </CardContent>
           </Card>
         )}

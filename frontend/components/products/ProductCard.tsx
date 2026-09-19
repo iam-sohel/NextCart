@@ -22,6 +22,8 @@ import FavoriteIcon from "@mui/icons-material/Favorite";
 import useWishlistStore from "@/store/wishlistStore";
 import useAuthStore from "@/store/authStore";
 import { useAuthHydrated } from "@/hooks/useAuthHydrated";
+import { formatPrice } from "@/utils/formatPrice";
+import { formatCount } from "@/utils/formatAmount";
 
 const UNIVERSAL_FALLBACK =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Crect width='400' height='400' fill='%23F3F1EC'/%3E%3Cpath d='M120 280l55-65 40 45 30-35 55 55H120z' fill='%23c8c3b8'/%3E%3Ccircle cx='255' cy='145' r='25' fill='%23c8c3b8'/%3E%3C/svg%3E";
@@ -40,39 +42,6 @@ interface ProductCardProps {
   bestseller?: boolean;
   newArrival?: boolean;
 }
-
-/**
- * Deterministic price formatter.
- *
- * Explicitly uses the Indian locale so the server and browser
- * produce the same result during hydration.
- *
- * Example:
- * 119999 -> 1,19,999
- */
-const formatPrice = (value: number | string): string => {
-  const amount = Number(value);
-
-  if (!Number.isFinite(amount)) {
-    return "0";
-  }
-
-  return new Intl.NumberFormat("en-IN", {
-    maximumFractionDigits: 0,
-    useGrouping: true,
-  }).format(amount);
-};
-
-const formatReviews = (value: number): string => {
-  if (!Number.isFinite(value)) {
-    return "0";
-  }
-
-  return new Intl.NumberFormat("en-IN", {
-    maximumFractionDigits: 0,
-    useGrouping: true,
-  }).format(value);
-};
 
 export default function ProductCard({
   id,
@@ -397,7 +366,7 @@ export default function ProductCard({
               variant="caption"
               color="text.secondary"
             >
-              ({formatReviews(reviews ?? 0)})
+              ({formatCount(reviews ?? 0)})
             </Typography>
           </Box>
         )}
@@ -423,7 +392,7 @@ export default function ProductCard({
               lineHeight: 1.2,
             }}
           >
-            ₹{formatPrice(price)}
+            {formatPrice(Number(price))}
           </Typography>
 
           {originalPrice !== undefined &&
@@ -437,7 +406,7 @@ export default function ProductCard({
                   whiteSpace: "nowrap",
                 }}
               >
-                ₹{formatPrice(originalPrice)}
+                {formatPrice(Number(originalPrice))}
               </Typography>
             )}
         </Box>

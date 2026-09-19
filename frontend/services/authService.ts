@@ -130,6 +130,27 @@ interface BackendCompleteRegistrationRequest {
   phone?: string;
 }
 
+interface BackendForgotPasswordRequest {
+  email?: string;
+  phone?: string;
+}
+
+interface BackendVerifyResetOtpRequest {
+  email?: string;
+  phone?: string;
+  otp: string;
+}
+
+interface BackendVerifyResetOtpResponse {
+  resetToken?: string;
+}
+
+interface BackendResetPasswordRequest {
+  resetToken: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 /* ──────────────────────────────────────────────────────────────────────
    Helpers
    ────────────────────────────────────────────────────────────────────── */
@@ -612,6 +633,140 @@ export const authService = {
         message,
       },
     };
+  },
+
+  /**
+   * POST /api/v1/auth/forgot-password
+   *
+   * Sends a 6-digit reset OTP to the given email OR phone. The backend
+   * answers success even when the account does not exist (to avoid account
+   * enumeration), so callers must not promise that an OTP was definitely
+   * sent — the UI copy says "if the account exists".
+   */
+  async forgotPassword(
+      identifier: { email?: string; phone?: string },
+      signal?: AbortSignal,
+  ): Promise<ApiResult<void>> {
+    const body: BackendForgotPasswordRequest = {
+      email: identifier.email || undefined,
+      phone: identifier.phone || undefined,
+    };
+
+    const res = await apiRequest<void>(
+        "/api/v1/auth/forgot-password",
+        {
+          method: "POST",
+          body,
+          skipAuthRefresh: true,
+          signal,
+        },
+    );
+
+    if (!res.ok) return res;
+    return { ok: true, status: res.status, data: undefined };
+  },
+
+  /**
+   * POST /api/v1/auth/forgot-password/verify-otp
+   *
+   * Verifies the 6-digit reset OTP and returns a single-use reset token for
+   * the final reset call.
+   */
+  async verifyResetOtp(
+      request: { email?: string; phone?: string; otp: string },
+      signal?: AbortSignal,
+  ): Promise<ApiResult<{ resetToken: string }>> {
+    const body: BackendVerifyResetOtpRequest = {
+      email: request.email || undefined,
+      phone: request.phone || undefined,
+      otp: request.otp,
+    };
+
+    const res = await apiRequest<BackendVerifyResetOtpResponse>(
+        "/api/v1/auth/forgot-password/verify-otp",
+        {
+          method: "POST",
+          body,
+          skipAuthRefresh: true,
+          signal,
+        },
+    );
+
+    if (!res.ok) {
+      if (isLikelyBadCredentials(res.status)) {
+        return {
+          ...res,
+          message:
+              "The verification code is invalid or has expired. Please request a new one.",
+        };
+      }
+      return res;
+    }
+
+    const payload = unwrap<BackendVerifyResetOtpResponse | null>(
+        res.data,
+        null,
+    );
+    const resetToken = payload?.resetToken ?? "";
+
+    if (!resetToken) {
+      return {
+        ok: false,
+        status: res.status,
+        message:
+            "The server did not return a reset token. Please request a new code.",
+      };
+    }
+
+    return {
+      ok: true,
+      status: res.status,
+      data: { resetToken },
+    };
+  },
+
+  /**
+   * POST /api/v1/auth/reset-password
+   *
+   * Sets the new password using the single-use reset token. Backend requires
+   * 8–100 characters; the UI enforces the same signup password policy.
+   */
+  async resetPassword(
+      request: {
+        resetToken: string;
+        newPassword: string;
+        confirmPassword: string;
+      },
+      signal?: AbortSignal,
+  ): Promise<ApiResult<void>> {
+    const body: BackendResetPasswordRequest = {
+      resetToken: request.resetToken,
+      newPassword: request.newPassword,
+      confirmPassword: request.confirmPassword,
+    };
+
+    const res = await apiRequest<void>(
+        "/api/v1/auth/reset-password",
+        {
+          method: "POST",
+          body,
+          skipAuthRefresh: true,
+          signal,
+        },
+    );
+
+    if (!res.ok) {
+      if (res.status >= 500) {
+        return {
+          ...res,
+          message:
+              "We couldn't reset your password. The reset link may have expired — please start again.",
+        };
+      }
+      return res;
+    }
+
+    return { ok: true, status: res.status, data: undefined };
   },
 };
 

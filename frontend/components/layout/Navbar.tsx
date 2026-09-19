@@ -36,7 +36,6 @@ import LocationOnIcon from "@mui/icons-material/LocationOn";
 import useCartStore from "@/store/cartStore";
 import useWishlistStore from "@/store/wishlistStore";
 import useAuthStore from "@/store/authStore";
-import useAddressStore from "@/store/addressStore";
 
 /**
  * NEXTCART — Header / Navbar.
@@ -97,9 +96,6 @@ export default function Navbar() {
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const logout = useAuthStore((state) => state.logout);
 
-  const resetAddresses = useAddressStore((s) => s.reset);
-  const clearCart = useCartStore((s) => s.clearCart);
-
   // Gate auth-dependent UI on hydration so the server render
   // matches the first client paint.
   const isAuthenticated = hasHydrated && Boolean(user);
@@ -128,9 +124,10 @@ export default function Navbar() {
   };
 
   const handleLogout = () => {
+    // `logout()` centrally clears auth tokens plus local cart, wishlist,
+    // and address state. No server cart call is made here: the session is
+    // already gone, so this must be a local-only reset.
     logout();
-    resetAddresses();
-    clearCart();
 
     setMobileMenuOpen(false);
 

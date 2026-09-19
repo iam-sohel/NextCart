@@ -40,6 +40,8 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import ProductCard from "@/components/products/ProductCard";
 import useSearchStore from "@/store/searchStore";
+import { formatCount } from "@/utils/formatAmount";
+import { formatPrice } from "@/utils/formatPrice";
 
 /**
  * NEXTCART — Search results page.
@@ -66,13 +68,6 @@ import useSearchStore from "@/store/searchStore";
 const PRICE_MIN = 0;
 const PRICE_MAX = 100000;
 const PRICE_STEP = 1000;
-
-/** Deterministic en-IN formatter — stable across server/client hydration. */
-const formatCount = (value: number): string =>
-  new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value);
-
-/** Mirrors the searchStore's own default range — display helper only. */
-const formatPriceShort = (value: number): string => `₹${formatCount(value)}`;
 
 /* -------------------------------------------------------------------------- */
 /* Page shell                                                                 */
@@ -415,7 +410,7 @@ function SearchPageContent() {
                       priceRange.max !== PRICE_MAX) && (
                       <Chip
                         size="small"
-                        label={`${formatPriceShort(priceRange.min)} – ${formatPriceShort(priceRange.max)}`}
+                        label={`${formatPrice(priceRange.min)} – ${formatPrice(priceRange.max)}`}
                         onDelete={() => setPriceRange(PRICE_MIN, PRICE_MAX)}
                         aria-label="Clear price filter"
                         sx={activeChipSx}
@@ -839,7 +834,7 @@ function FilterPanel({
                 max={PRICE_MAX}
                 step={PRICE_STEP}
                 valueLabelDisplay="auto"
-                valueLabelFormat={(v) => formatPriceShort(v)}
+                valueLabelFormat={(v) => formatPrice(v)}
                 getAriaLabel={() => "Price range"}
                 sx={{
                   "& .MuiSlider-thumb": {
@@ -871,7 +866,7 @@ function FilterPanel({
                     fontVariantNumeric: "tabular-nums",
                   }}
                 >
-                  {formatPriceShort(priceRange.min)}
+                  {formatPrice(priceRange.min)}
                 </Typography>
                 <Typography sx={{ fontSize: "0.75rem", color: "text.secondary" }}>
                   to
@@ -884,7 +879,7 @@ function FilterPanel({
                     fontVariantNumeric: "tabular-nums",
                   }}
                 >
-                  {formatPriceShort(priceRange.max)}
+                  {formatPrice(priceRange.max)}
                 </Typography>
               </Box>
             </FilterSection>

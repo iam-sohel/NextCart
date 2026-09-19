@@ -95,6 +95,15 @@ interface CartStore {
 
   clearCart: () => Promise<void>;
 
+  /**
+   * Drop local cart state WITHOUT calling the backend.
+   *
+   * Used on logout/session expiry, when there is no authenticated session to
+   * clear server-side. Checkout success keeps using `clearCart()`, which
+   * clears the server cart while the session is still valid.
+   */
+  resetLocal: () => void;
+
   fetchCart: () => Promise<void>;
 
   clearError: () => void;
@@ -775,6 +784,30 @@ const useCartStore =
 
         throw error;
       }
+    },
+
+    /* ───────────────────────────────────────────────────────────────
+       Local reset (logout / session expiry — no backend call)
+       ─────────────────────────────────────────────────────────────── */
+
+    resetLocal: () => {
+      if (typeof window !== "undefined") {
+        try {
+          window.localStorage.removeItem(META_STORAGE_KEY);
+        } catch {
+          // Ignore localStorage failures.
+        }
+      }
+
+      set({
+        items: [],
+        serverGrandTotal: 0,
+        serverTotalItems: 0,
+        serverProductPrice: 0,
+        serverTotalDiscount: 0,
+        loading: false,
+        error: null,
+      });
     },
 
     /* ───────────────────────────────────────────────────────────────

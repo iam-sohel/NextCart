@@ -31,6 +31,7 @@ export interface SellerKycResponse {
   id: number;
   sellerId: number;
   businessType: BusinessType;
+  dateOfBirth: string;
   gstNumber?: string | null;
   gstDocumentUrl?: string | null;
   registrationNumber?: string | null;
@@ -57,6 +58,7 @@ export interface SellerKycResponse {
 
 export interface SellerKycRequest {
   businessType: BusinessType;
+  dateOfBirth: string;
   gstNumber?: string;
   registrationNumber?: string;
   ownerName: string;

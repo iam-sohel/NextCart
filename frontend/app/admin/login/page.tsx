@@ -68,6 +68,12 @@ export default function AdminLoginPage() {
   const [passwordTouched, setPasswordTouched] = useState(false);
   const [roleError, setRoleError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [sessionExpiredNotice] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("reason") ===
+        "session-expired",
+  );
 
   useEffect(() => {
     if (!hasHydrated) return;
@@ -147,6 +153,11 @@ export default function AdminLoginPage() {
       }
     >
       <Stack spacing={3}>
+        {sessionExpiredNotice ? (
+          <Alert severity="info">
+            Your administrator session has expired. Please sign in again.
+          </Alert>
+        ) : null}
         {roleError ? <Alert severity="error">{roleError}</Alert> : null}
         {error ? <Alert severity="error">{error}</Alert> : null}
 

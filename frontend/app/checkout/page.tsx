@@ -123,6 +123,12 @@ export default function CheckoutPage() {
 
   /**
    * Populate the checkout form from the selected saved address.
+   *
+   * Justification for the scoped suppression below: the address list loads
+   * asynchronously and the user can switch the selected address at any time,
+   * while the form fields remain user-editable afterwards. There is no
+   * render-time derivation that preserves both behaviors, so syncing on
+   * selection change via an effect is the correct pattern here.
    */
   useEffect(() => {
     if (effectiveSelectedAddressId === null) {

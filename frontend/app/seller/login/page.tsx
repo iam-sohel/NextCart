@@ -59,7 +59,14 @@ export default function SellerLoginPage() {
   const user = useAuthStore((state) => state.user);
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
 
-  const [identifier, setIdentifier] = useState("");
+  const [initialIdentifier] = useState(() => {
+    if (typeof window === "undefined") return "";
+    const value = new URLSearchParams(window.location.search)
+      .get("identifier")
+      ?.trim();
+    return value && !validateIdentifier(value) ? value : "";
+  });
+  const [identifier, setIdentifier] = useState(initialIdentifier);
   const [password, setPassword] = useState("");
   const [identifierError, setIdentifierError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
@@ -67,6 +74,12 @@ export default function SellerLoginPage() {
   const [passwordTouched, setPasswordTouched] = useState(false);
   const [roleError, setRoleError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [sessionExpiredNotice] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("reason") ===
+        "session-expired",
+  );
 
   useEffect(() => {
     if (!hasHydrated) return;
@@ -74,17 +87,6 @@ export default function SellerLoginPage() {
       router.replace(sellerReturnPath());
     }
   }, [hasHydrated, token, user, router]);
-
-  useEffect(() => {
-    const value = new URLSearchParams(window.location.search)
-      .get("identifier")
-      ?.trim();
-
-    if (value && !validateIdentifier(value)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIdentifier(value);
-    }
-  }, []);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -160,6 +162,11 @@ export default function SellerLoginPage() {
       }
     >
       <Stack spacing={3}>
+        {sessionExpiredNotice ? (
+          <Alert severity="info">
+            Your seller session has expired. Please sign in again.
+          </Alert>
+        ) : null}
         {roleError ? <Alert severity="error">{roleError}</Alert> : null}
         {error ? <Alert severity="error">{error}</Alert> : null}
 

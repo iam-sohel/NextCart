@@ -207,9 +207,6 @@ export default function SignupPage() {
   const [termsError, setTermsError] =
       useState<string | null>(null);
 
-  const [identifierError, setIdentifierError] =
-      useState<string | null>(null);
-
   const [emailOtp, setEmailOtp] =
       useState("");
 
@@ -252,16 +249,6 @@ export default function SignupPage() {
     const tokenAuth =
         process.env.NEXT_PUBLIC_MSG91_TOKEN_AUTH?.trim();
 
-    console.log("MSG91 WIDGET ID:", widgetId);
-    console.log(
-        "MSG91 TOKEN EXISTS:",
-        Boolean(tokenAuth),
-    );
-    console.log(
-        "MSG91 INIT FUNCTION:",
-        typeof window.initSendOTP,
-    );
-
     if (!widgetId || !tokenAuth) {
       setPhoneWidgetError(
           "MSG91 configuration is missing. Check NEXT_PUBLIC_MSG91_WIDGET_ID and NEXT_PUBLIC_MSG91_TOKEN_AUTH.",
@@ -283,8 +270,6 @@ export default function SignupPage() {
       exposeMethods: false,
 
       success: async (data: unknown) => {
-        console.log("MSG91 success response:", data);
-
         const accessToken =
             extractMsg91AccessToken(data);
 
@@ -328,11 +313,6 @@ export default function SignupPage() {
       },
 
       failure: (widgetError: unknown) => {
-        console.error(
-            "MSG91 failure:",
-            widgetError,
-        );
-
         setPhoneWidgetError(
             typeof widgetError === "string"
                 ? widgetError
@@ -340,8 +320,6 @@ export default function SignupPage() {
         );
       },
     };
-
-    console.log("Initializing MSG91 widget...");
 
     window.initSendOTP(configuration);
   };
@@ -491,8 +469,6 @@ export default function SignupPage() {
             acceptedTerms,
         );
 
-    const identifierErr: string | null = null;
-
     setFirstNameError(firstErr);
     setLastNameError(lastErr);
     setEmailError(emailErr);
@@ -500,7 +476,6 @@ export default function SignupPage() {
     setPasswordError(passwordErr);
     setConfirmError(confirmErr);
     setTermsError(termsErr);
-    setIdentifierError(identifierErr);
 
     setTouched({
       firstName: true,
@@ -519,8 +494,7 @@ export default function SignupPage() {
         phoneErr ||
         passwordErr ||
         confirmErr ||
-        termsErr ||
-        identifierErr
+        termsErr
     ) {
       return;
     }
@@ -959,7 +933,6 @@ export default function SignupPage() {
                         onChange={(e) => {
                           const method = e.target.value as SignupMethod;
                           setSignupMethod(method);
-                          setIdentifierError(null);
                           setEmailError(null);
                           setPhoneError(null);
                         }}
@@ -976,7 +949,6 @@ export default function SignupPage() {
                           value={email}
                           onChange={(e) => {
                             setEmail(e.target.value);
-                            setIdentifierError(null);
                             if (touched.email) revalidate("email", e.target.value);
                           }}
                           onBlur={() => {
@@ -995,7 +967,6 @@ export default function SignupPage() {
                           onChange={(e) => {
                             const value = e.target.value.replace(/\D/g, "").slice(0, 10);
                             setPhone(value);
-                            setIdentifierError(null);
                             if (touched.phone) revalidate("phone", value);
                           }}
                           onBlur={() => {
@@ -1162,7 +1133,6 @@ export default function SignupPage() {
               <OrDivider />
 
               <Stack spacing={1.5}>
-                <SocialAuthButton />
                 <SocialAuthButton />
               </Stack>
 

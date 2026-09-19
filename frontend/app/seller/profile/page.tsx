@@ -56,12 +56,13 @@ function InfoField({
         {label}
       </Typography>
 
-      <Typography
-        variant="body1"
-        sx={{ mt: 0.25, wordBreak: "break-word" }}
-      >
-        {value}
-      </Typography>
+<Typography
+  component="div"
+  variant="body1"
+  sx={{ mt: 0.25, wordBreak: "break-word" }}
+>
+  {value}
+</Typography>
     </Box>
   );
 }

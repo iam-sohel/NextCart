@@ -152,9 +152,7 @@ export default function OrdersPage() {
       } else {
         setError("Unable to load your orders.");
       }
-    } catch (err) {
-      console.error("Failed to load orders:", err);
-
+    } catch {
       setOrders([]);
       setError("Unable to load your orders. Please try again.");
     } finally {

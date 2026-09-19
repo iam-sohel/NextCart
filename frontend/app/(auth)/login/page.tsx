@@ -33,6 +33,103 @@ import useAuthStore from "@/store/authStore";
 
 type LoginMethod = "email" | "phone";
 
+const CUSTOMER_AUTH_PATHS = new Set(["/login", "/signup", "/forgot-password"]);
+
+/*
+ * Resolve a safe post-login destination for the customer portal.
+ *
+ * Only same-origin app paths are honored. Protocol-relative URLs, absolute
+ * URLs, auth surfaces, and seller/admin portals are rejected so a crafted
+ * `return` parameter cannot redirect a customer elsewhere.
+ */
+function customerReturnPath(): string {
+  if (typeof window === "undefined") return "/";
+
+  const requested = new URLSearchParams(window.location.search).get("return");
+  if (
+    requested &&
+    requested.startsWith("/") &&
+    !requested.startsWith("//") &&
+    !CUSTOMER_AUTH_PATHS.has(requested.split("?")[0] ?? "") &&
+    !requested.startsWith("/seller") &&
+    !requested.startsWith("/admin")
+  ) {
+    return requested;
+  }
+
+  return "/";
+}
+
+interface InitialLoginState {
+  method: LoginMethod;
+  email: string;
+  phone: string;
+  notice: {
+    severity: "success" | "info";
+    text: string;
+  } | null;
+}
+
+/*
+ * Read signup redirect parameters once during initial render.
+ *
+ * Email:
+ * /login?registered=1&method=email&identifier=test@gmail.com
+ *
+ * Phone:
+ * /login?registered=1&method=phone&identifier=9876543210
+ *
+ * Reading them in lazy state initializers keeps the query parameters from
+ * requiring synchronous setState inside an effect.
+ */
+function readInitialLoginState(): InitialLoginState {
+  const initial: InitialLoginState = {
+    method: "email",
+    email: "",
+    phone: "",
+    notice: null,
+  };
+
+  if (typeof window === "undefined") {
+    return initial;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const method = params.get("method");
+  const identifier = params.get("identifier");
+
+  if (method === "phone") {
+    initial.method = "phone";
+    if (identifier) {
+      initial.phone = identifier;
+    }
+  } else {
+    initial.method = "email";
+    if (identifier && method === "email") {
+      initial.email = identifier;
+    }
+  }
+
+  if (params.get("registered") === "1") {
+    initial.notice = {
+      severity: "success",
+      text: "Account created successfully. Please sign in to continue.",
+    };
+  } else if (params.get("reason") === "session-expired") {
+    initial.notice = {
+      severity: "info",
+      text: "Your session has expired. Please sign in again.",
+    };
+  } else if (params.get("reason") === "login-required") {
+    initial.notice = {
+      severity: "info",
+      text: "Please sign in to continue.",
+    };
+  }
+
+  return initial;
+}
+
 export default function LoginPage() {
   const router = useRouter();
 
@@ -43,11 +140,15 @@ export default function LoginPage() {
     clearError,
   } = useAuthStore();
 
-  const [loginMethod, setLoginMethod] =
-      useState<LoginMethod>("email");
+  const [initialLoginState] = useState<InitialLoginState>(
+    readInitialLoginState,
+  );
 
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [loginMethod, setLoginMethod] =
+      useState<LoginMethod>(initialLoginState.method);
+
+  const [email, setEmail] = useState(initialLoginState.email);
+  const [phone, setPhone] = useState(initialLoginState.phone);
   const [password, setPassword] = useState("");
 
   const [emailError, setEmailError] =
@@ -68,86 +169,12 @@ export default function LoginPage() {
   const [passwordTouched, setPasswordTouched] =
       useState(false);
 
-  const [notice, setNotice] = useState<{
-    severity: "success" | "info";
-    text: string;
-  } | null>(null);
+  const [notice] = useState<InitialLoginState["notice"]>(
+    initialLoginState.notice,
+  );
 
-  /*
-   * Read signup redirect parameters.
-   *
-   * Email:
-   * /login?registered=1&method=email&identifier=test@gmail.com
-   *
-   * Phone:
-   * /login?registered=1&method=phone&identifier=9876543210
-   */
   useEffect(() => {
     clearError();
-
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const params = new URLSearchParams(
-        window.location.search,
-    );
-
-    const method = params.get("method");
-    const identifier = params.get("identifier");
-
-    if (method === "email") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLoginMethod("email");
-
-      if (identifier) {
-        setEmail(identifier);
-      }
-    }
-
-    if (method === "phone") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLoginMethod("phone");
-
-      if (identifier) {
-        setPhone(identifier);
-      }
-    }
-
-    let nextNotice:
-        | {
-      severity: "success" | "info";
-      text: string;
-    }
-        | null = null;
-
-    if (params.get("registered") === "1") {
-      nextNotice = {
-        severity: "success",
-        text:
-            "Account created successfully. Please sign in to continue.",
-      };
-    } else if (
-        params.get("reason") === "session-expired"
-    ) {
-      nextNotice = {
-        severity: "info",
-        text:
-            "Your session has expired. Please sign in again.",
-      };
-    } else if (
-        params.get("reason") === "login-required"
-    ) {
-      nextNotice = {
-        severity: "info",
-        text: "Please sign in to continue.",
-      };
-    }
-
-    if (nextNotice) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setNotice(nextNotice);
-    }
   }, [clearError]);
 
   const handleMethodChange = (
@@ -252,7 +279,7 @@ export default function LoginPage() {
     );
 
     if (result.ok) {
-      router.push("/");
+      router.push(customerReturnPath());
     }
   };
 
