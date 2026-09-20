@@ -66,6 +66,8 @@ function InfoField({ label, value }: { label: string; value: React.ReactNode }) 
 
 export default function SellerBankPage() {
   const token = useAuthStore((s) => s.token);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
+  const isAuthenticated = Boolean(token);
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -96,9 +98,8 @@ export default function SellerBankPage() {
     if (!res.ok) {
       setLoading(false);
 
-      // Only HTTP 404 proves that this singleton is absent. The backend maps
-      // its missing-bank IllegalArgumentException through generic HTTP 500
-      // handling, so every other failure must remain a retryable API error.
+      // A missing seller bank account is a normal first-time state and
+      // is represented by HTTP 404. Other failures remain real API errors.
       if (res.status === 404) {
         setBank(null);
         setForm({ ...EMPTY_FORM });
@@ -117,7 +118,9 @@ export default function SellerBankPage() {
   }, []);
 
   useEffect(() => {
-    if (!token) return;
+    if (!hasHydrated || !isAuthenticated) {
+      return;
+    }
 
     let cancelled = false;
 
@@ -131,7 +134,7 @@ export default function SellerBankPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, load]);
+  }, [hasHydrated, isAuthenticated, load]);
 
   const startEditing = () => {
     if (!bank) return;

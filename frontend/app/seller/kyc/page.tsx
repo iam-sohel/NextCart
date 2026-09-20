@@ -117,6 +117,8 @@ function DocumentLink({ label, url }: { label: string; url?: string | null }) {
 
 export default function SellerKycPage() {
   const token = useAuthStore((s) => s.token);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
+  const isAuthenticated = Boolean(token);
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -149,9 +151,8 @@ export default function SellerKycPage() {
     if (!res.ok) {
       setLoading(false);
 
-      // Only HTTP 404 proves that this singleton is absent. The backend maps
-      // its missing-KYC IllegalArgumentException through generic HTTP 500
-      // handling, so every other failure must remain a retryable API error.
+      // A missing seller KYC record is a normal first-time state and is
+      // represented by HTTP 404. Other failures remain real API errors.
       if (res.status === 404) {
         setKyc(null);
         setForm({ ...EMPTY_FORM });
@@ -170,7 +171,9 @@ export default function SellerKycPage() {
   }, []);
 
   useEffect(() => {
-    if (!token) return;
+    if (!hasHydrated || !isAuthenticated) {
+      return;
+    }
 
     let cancelled = false;
 
@@ -184,7 +187,7 @@ export default function SellerKycPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, load]);
+  }, [hasHydrated, isAuthenticated, load]);
 
   const startEditing = () => {
     if (!kyc) return;

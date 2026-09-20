@@ -154,19 +154,16 @@ function notifyAuthFailure(status: number, payload: unknown): void {
 }
 
 /**
- * Statuses we treat as "the access token was not accepted" and therefore as
- * refresh-eligible. This backend does NOT emit a clean 401 for an expired
- * access token: its JWT filter has no try/catch, so an expired/invalid token
- * throws and surfaces as HTTP 500; a missing token surfaces as 403 (no custom
- * entry point). So we consider 401, 403 AND 500 — but only for requests that
- * actually carried an Authorization header (see `apiRequest`). This is safe on
- * this backend because access (24h) and refresh (7d) tokens are always issued
- * and rotated together, so a genuinely valid access token always has a valid
- * refresh token behind it: a genuine 500 with a live session refreshes fine,
- * retries once, and re-surfaces the real error — it never forces a logout.
+ * Only explicit authentication failures are refresh-eligible.
+ *
+ * 401 / 403 indicate that the current access token was not accepted.
+ *
+ * Generic application/server errors such as 404, 409, 422 and 500 must
+ * NEVER trigger token refresh. A 500 can be a genuine backend failure and
+ * refreshing the user's token in response to it can create request loops.
  */
 function isRefreshEligibleStatus(status: number): boolean {
-  return status === 401 || status === 403 || status === 500;
+  return status === 401 || status === 403;
 }
 
 /* ──────────────────────────────────────────────────────────────────────

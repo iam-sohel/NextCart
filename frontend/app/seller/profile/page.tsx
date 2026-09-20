@@ -56,6 +56,7 @@ function InfoField({
         {label}
       </Typography>
 
+<<<<<<< HEAD
 <Typography
   component="div"
   variant="body1"
@@ -63,6 +64,17 @@ function InfoField({
 >
   {value}
 </Typography>
+=======
+      <Box
+        component="div"
+        sx={{
+          mt: 0.25,
+          wordBreak: "break-word",
+        }}
+      >
+        {value}
+      </Box>
+>>>>>>> 1fc831f (fix: harden seller bank and hydration handling)
     </Box>
   );
 }

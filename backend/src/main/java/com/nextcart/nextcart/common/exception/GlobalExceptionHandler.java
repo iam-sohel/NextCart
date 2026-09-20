@@ -17,6 +17,8 @@ import com.nextcart.nextcart.seller_module.inventory_module.exceptions.Insuffici
 import com.nextcart.nextcart.seller_module.inventory_module.exceptions.InventoryAlreadyExistsException;
 import com.nextcart.nextcart.seller_module.inventory_module.exceptions.InventoryNotFoundException;
 import com.nextcart.nextcart.seller_module.inventory_module.exceptions.InventoryValidationException;
+import com.nextcart.nextcart.seller_module.sellerKyc.exception.SellerKycNotFoundException;
+import com.nextcart.nextcart.seller_module.sellerBank.exception.SellerBankNotFoundException;
 import com.nextcart.nextcart.order_module.exceptions.InvalidOrderStatusException;
 import com.nextcart.nextcart.order_module.exceptions.OrderCancellationException;
 import com.nextcart.nextcart.order_module.exceptions.OrderNotFoundException;
@@ -545,6 +547,40 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.CONFLICT, "Request could not be completed because it conflicts with existing data", "DATA_INTEGRITY_VIOLATION");
     }
 
+
+
+
+    // =========================================================
+    // SELLER KYC
+    // =========================================================
+
+    @ExceptionHandler(SellerKycNotFoundException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>> handleSellerKycNotFound(
+            SellerKycNotFoundException exception
+    ) {
+
+        return buildError(
+                HttpStatus.NOT_FOUND,
+                exception.getMessage(),
+                "SELLER_KYC_NOT_FOUND"
+        );
+    }
+
+
+    // =========================================================
+    // SELLER BANK
+    // =========================================================
+
+    @ExceptionHandler(SellerBankNotFoundException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>> handleSellerBankNotFound(
+            SellerBankNotFoundException exception
+    ) {
+        return buildError(
+                HttpStatus.NOT_FOUND,
+                exception.getMessage(),
+                "SELLER_BANK_NOT_FOUND"
+        );
+    }
 
     // =========================================================
     // GENERIC EXCEPTION

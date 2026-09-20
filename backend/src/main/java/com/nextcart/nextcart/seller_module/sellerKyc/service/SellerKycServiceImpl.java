@@ -6,6 +6,7 @@ import com.nextcart.nextcart.seller_module.sellerKyc.dto.SellerKycRequest;
 import com.nextcart.nextcart.seller_module.sellerKyc.dto.SellerKycResponse;
 import com.nextcart.nextcart.seller_module.sellerKyc.entity.KycStatus;
 import com.nextcart.nextcart.seller_module.sellerKyc.entity.SellerKyc;
+import com.nextcart.nextcart.seller_module.sellerKyc.exception.SellerKycNotFoundException;
 import com.nextcart.nextcart.seller_module.sellerKyc.repository.SellerKycRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -306,7 +307,7 @@ public class SellerKycServiceImpl implements SellerKycService {
                                 seller.getId()
                         )
                         .orElseThrow(() ->
-                                new IllegalArgumentException(
+                                new SellerKycNotFoundException(
                                         "KYC details not found"
                                 )
                         );
@@ -334,7 +335,7 @@ public class SellerKycServiceImpl implements SellerKycService {
                                 seller.getId()
                         )
                         .orElseThrow(() ->
-                                new IllegalArgumentException(
+                                new SellerKycNotFoundException(
                                         "KYC details not found"
                                 )
                         );
@@ -362,7 +363,7 @@ public class SellerKycServiceImpl implements SellerKycService {
                                 seller.getId()
                         )
                         .orElseThrow(() ->
-                                new IllegalArgumentException(
+                                new SellerKycNotFoundException(
                                         "KYC details not found"
                                 )
                         );

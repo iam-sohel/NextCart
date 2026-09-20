@@ -6,6 +6,7 @@ import com.nextcart.nextcart.seller_module.sellerBank.dto.SellerBankRequest;
 import com.nextcart.nextcart.seller_module.sellerBank.dto.SellerBankResponse;
 import com.nextcart.nextcart.seller_module.sellerBank.entity.BankVerificationStatus;
 import com.nextcart.nextcart.seller_module.sellerBank.entity.SellerBankAccount;
+import com.nextcart.nextcart.seller_module.sellerBank.exception.SellerBankNotFoundException;
 import com.nextcart.nextcart.seller_module.sellerBank.repository.SellerBankRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -73,9 +74,7 @@ public class SellerBankServiceImpl implements SellerBankService {
                 sellerBankRepository
                         .findBySellerId(seller.getId())
                         .orElseThrow(() ->
-                                new IllegalArgumentException(
-                                        "Bank account not found"
-                                )
+                                new SellerBankNotFoundException("Bank account not found")
                         );
 
         return mapToResponse(bankAccount);
@@ -93,9 +92,7 @@ public class SellerBankServiceImpl implements SellerBankService {
                 sellerBankRepository
                         .findBySellerId(seller.getId())
                         .orElseThrow(() ->
-                                new IllegalArgumentException(
-                                        "Bank account not found"
-                                )
+                                new SellerBankNotFoundException("Bank account not found")
                         );
 
         if (bankAccount.getVerificationStatus()
@@ -145,9 +142,7 @@ public class SellerBankServiceImpl implements SellerBankService {
                 sellerBankRepository
                         .findBySellerId(seller.getId())
                         .orElseThrow(() ->
-                                new IllegalArgumentException(
-                                        "Bank account not found"
-                                )
+                                new SellerBankNotFoundException("Bank account not found")
                         );
 
         bankAccount.setActive(false);
