@@ -1144,7 +1144,7 @@ const handleReview = async () => {
             ) : null}
 
           </CardContent>
-        </Card>    �
+        </Card>
         <Card sx={{ borderRadius: 3 }}>
           <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
             <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
