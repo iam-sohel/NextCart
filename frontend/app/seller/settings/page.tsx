@@ -20,6 +20,7 @@ import {
   SellerErrorState,
   SellerPageSkeleton,
 } from "@/components/seller/SellerStates";
+import PageHeader from "@/components/ops/PageHeader";
 
 import {
   getSellerDashboard,
@@ -44,10 +45,22 @@ function Row({
         py: 1.25,
       }}
     >
-      <Typography variant="body2" color="text.secondary">
+      <Typography
+        variant="body2"
+        color="text.secondary"
+        sx={{ flexShrink: 0 }}
+      >
         {label}
       </Typography>
-      {children}
+      <Box
+        sx={{
+          minWidth: 0,
+          textAlign: "right",
+          overflowWrap: "anywhere",
+        }}
+      >
+        {children}
+      </Box>
     </Stack>
   );
 }
@@ -111,17 +124,14 @@ export default function SellerSettingsPage() {
 
   return (
     <Box>
-      <Typography variant="h3" component="h2" sx={{ fontWeight: 700, mb: 0.5 }}>
-        Settings
-      </Typography>
-
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        The status of your seller account.
-      </Typography>
+      <PageHeader
+        title="Settings"
+        subtitle="The status of your seller account."
+      />
 
       <Stack spacing={3}>
-        <Card sx={{ borderRadius: 3 }}>
-          <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+        <Card>
+          <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
             <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
               Account status
             </Typography>
@@ -169,8 +179,8 @@ export default function SellerSettingsPage() {
           </CardContent>
         </Card>
 
-        <Card sx={{ borderRadius: 3 }}>
-          <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+        <Card>
+          <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
             <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
               Manage
             </Typography>
@@ -182,6 +192,7 @@ export default function SellerSettingsPage() {
                   href="/seller/profile"
                   variant="outlined"
                   fullWidth
+                  sx={{ minHeight: 44 }}
                 >
                   Edit business profile
                 </Button>
@@ -192,6 +203,7 @@ export default function SellerSettingsPage() {
                   href="/seller/kyc"
                   variant="outlined"
                   fullWidth
+                  sx={{ minHeight: 44 }}
                 >
                   Manage KYC
                 </Button>
@@ -202,6 +214,7 @@ export default function SellerSettingsPage() {
                   href="/seller/bank"
                   variant="outlined"
                   fullWidth
+                  sx={{ minHeight: 44 }}
                 >
                   Manage bank account
                 </Button>
@@ -212,6 +225,7 @@ export default function SellerSettingsPage() {
                   href="/seller/warehouses"
                   variant="outlined"
                   fullWidth
+                  sx={{ minHeight: 44 }}
                 >
                   Manage warehouses
                 </Button>

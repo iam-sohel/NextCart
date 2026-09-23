@@ -26,6 +26,7 @@ import {
   SellerErrorState,
   SellerPageSkeleton,
 } from "@/components/seller/SellerStates";
+import PageHeader from "@/components/ops/PageHeader";
 import {
   getSellerOrder,
   type SellerOrder,
@@ -176,25 +177,13 @@ export default function SellerOrderDetailPage() {
         Back to orders
       </Button>
 
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        spacing={1.5}
-        sx={{
-          alignItems: { xs: "flex-start", sm: "center" },
-          justifyContent: "space-between",
-          mb: 0.5,
-        }}
-      >
-        <Typography variant="h3" component="h2" sx={{ fontWeight: 700 }}>
-          Order {order.orderNumber}
-        </Typography>
-        <StatusChip status={order.status} />
-      </Stack>
-
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        Placed {formatDateTime(order.createdAt)} · Payment{" "}
-        {order.paymentStatus ? humanizeStatus(order.paymentStatus) : "—"}
-      </Typography>
+      <PageHeader
+        title={`Order ${order.orderNumber}`}
+        subtitle={`Placed ${formatDateTime(order.createdAt)} · Payment ${
+          order.paymentStatus ? humanizeStatus(order.paymentStatus) : "—"
+        }`}
+        actions={<StatusChip status={order.status} />}
+      />
 
       <Stack spacing={3}>
         <Alert severity="info">
@@ -203,7 +192,7 @@ export default function SellerOrderDetailPage() {
           order-status changes are not available in the current backend.
         </Alert>
 
-        <Card sx={{ borderRadius: 3 }}>
+        <Card>
           <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
             <Typography variant="h5" sx={{ fontWeight: 700, mb: 2.5 }}>
               Your items
@@ -248,7 +237,7 @@ export default function SellerOrderDetailPage() {
           </CardContent>
         </Card>
 
-        <Card sx={{ borderRadius: 3 }}>
+        <Card>
           <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
             <Typography variant="h5" sx={{ fontWeight: 700, mb: 2.5 }}>
               Fulfilment and payment
@@ -298,7 +287,7 @@ export default function SellerOrderDetailPage() {
           </CardContent>
         </Card>
 
-        <Card sx={{ borderRadius: 3 }}>
+        <Card>
           <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
             <Stack
               direction={{ xs: "column", sm: "row" }}
@@ -317,6 +306,7 @@ export default function SellerOrderDetailPage() {
                 href="/seller/earnings"
                 size="small"
                 variant="outlined"
+                sx={{ minHeight: 44 }}
               >
                 Open earnings
               </Button>

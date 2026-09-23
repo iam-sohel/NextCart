@@ -30,6 +30,7 @@ import {
   SellerErrorState,
   SellerPageSkeleton,
 } from "@/components/seller/SellerStates";
+import PageHeader from "@/components/ops/PageHeader";
 
 import {
   createWarehouse,
@@ -227,28 +228,20 @@ export default function SellerWarehousesPage() {
 
   return (
     <Box>
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        spacing={2}
-        sx={{
-          justifyContent: "space-between",
-          alignItems: { xs: "flex-start", sm: "center" },
-          mb: 3,
-        }}
-      >
-        <Box>
-          <Typography variant="h3" component="h2" sx={{ fontWeight: 700, mb: 0.5 }}>
-            Warehouses
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Manage the locations you ship from.
-          </Typography>
-        </Box>
-
-        <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
-          Add warehouse
-        </Button>
-      </Stack>
+      <PageHeader
+        title="Warehouses"
+        subtitle="Manage the locations you ship from."
+        actions={
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={openCreate}
+            sx={{ minHeight: 44 }}
+          >
+            Add warehouse
+          </Button>
+        }
+      />
 
       <Stack spacing={3}>
         {success && (
@@ -262,17 +255,22 @@ export default function SellerWarehousesPage() {
             title="No warehouses yet"
             description="Add a warehouse to start storing inventory and fulfilling orders."
             action={
-              <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={openCreate}
+                sx={{ minHeight: 44 }}
+              >
                 Add warehouse
               </Button>
             }
           />
         ) : (
-          <Grid container spacing={3}>
+          <Grid container spacing={2}>
             {warehouses.map((warehouse) => (
               <Grid size={{ xs: 12, md: 6 }} key={warehouse.id}>
-                <Card sx={{ borderRadius: 3, height: "100%" }}>
-                  <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+                <Card sx={{ height: "100%" }}>
+                  <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
                     <Stack
                       direction="row"
                       spacing={2}
@@ -282,28 +280,49 @@ export default function SellerWarehousesPage() {
                         mb: 1.5,
                       }}
                     >
-                      <Typography variant="h5" sx={{ fontWeight: 700, wordBreak: "break-word" }}>
+                      <Typography
+                        variant="h5"
+                        sx={{
+                          fontWeight: 700,
+                          minWidth: 0,
+                          overflowWrap: "anywhere",
+                        }}
+                      >
                         {warehouse.warehouseName}
                       </Typography>
                       <StatusChip status={warehouse.status} />
                     </Stack>
 
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ overflowWrap: "anywhere" }}
+                    >
                       {warehouse.contactPerson} · {warehouse.phoneNumber}
                     </Typography>
 
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mt: 1, overflowWrap: "anywhere" }}
+                    >
                       {[warehouse.streetAddress, warehouse.landmark, warehouse.city, warehouse.state, warehouse.postalCode, warehouse.country]
                         .filter(Boolean)
                         .join(", ")}
                     </Typography>
 
-                    <Stack direction="row" spacing={1.5} sx={{ mt: 2.5 }}>
+                    <Stack
+                      direction={{ xs: "column", sm: "row" }}
+                      spacing={1.5}
+                      sx={{ mt: 2.5, alignItems: { xs: "stretch", sm: "center" } }}
+                    >
                       <Button
                         size="small"
                         variant="outlined"
                         startIcon={<EditIcon />}
                         onClick={() => openEdit(warehouse)}
+                        aria-label={`Edit ${warehouse.warehouseName}`}
+                        sx={{ minHeight: 44 }}
                       >
                         Edit
                       </Button>
@@ -318,6 +337,8 @@ export default function SellerWarehousesPage() {
                             setDeactivateError(null);
                             setDeactivateTarget(warehouse);
                           }}
+                          aria-label={`Deactivate ${warehouse.warehouseName}`}
+                          sx={{ minHeight: 44 }}
                         >
                           Deactivate
                         </Button>
@@ -472,10 +493,19 @@ export default function SellerWarehousesPage() {
         </DialogContent>
 
         <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button onClick={() => setDialogOpen(false)} disabled={saving}>
+          <Button
+            onClick={() => setDialogOpen(false)}
+            disabled={saving}
+            sx={{ minHeight: 44 }}
+          >
             Cancel
           </Button>
-          <Button variant="contained" onClick={() => void handleSubmit()} disabled={saving}>
+          <Button
+            variant="contained"
+            onClick={() => void handleSubmit()}
+            disabled={saving}
+            sx={{ minHeight: 44 }}
+          >
             {saving ? "Saving…" : editing ? "Save changes" : "Create warehouse"}
           </Button>
         </DialogActions>
@@ -503,7 +533,11 @@ export default function SellerWarehousesPage() {
         </DialogContent>
 
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
-          <Button onClick={() => setDeactivateTarget(null)} disabled={deactivating}>
+          <Button
+            onClick={() => setDeactivateTarget(null)}
+            disabled={deactivating}
+            sx={{ minHeight: 44 }}
+          >
             Cancel
           </Button>
           <Button
@@ -511,6 +545,7 @@ export default function SellerWarehousesPage() {
             variant="contained"
             onClick={() => void handleDeactivate()}
             disabled={deactivating}
+            sx={{ minHeight: 44 }}
           >
             {deactivating ? "Deactivating…" : "Deactivate warehouse"}
           </Button>

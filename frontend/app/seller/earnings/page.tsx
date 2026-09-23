@@ -27,6 +27,8 @@ import {
   SellerErrorState,
   SellerPageSkeleton,
 } from "@/components/seller/SellerStates";
+import PageHeader from "@/components/ops/PageHeader";
+import StatCard from "@/components/ops/StatCard";
 import {
   getSellerEarning,
   getSellerEarningsSummary,
@@ -44,19 +46,6 @@ const SORTS: Array<{ value: SellerEarningSort; label: string }> = [
   { value: "createdAt,desc", label: "Newest first" },
   { value: "createdAt,asc", label: "Oldest first" },
 ];
-
-function SummaryStat({ label, value }: { label: string; value: string }) {
-  return (
-    <Grid size={{ xs: 6, md: 3 }}>
-      <Typography variant="h5" sx={{ fontWeight: 700 }}>
-        {value}
-      </Typography>
-      <Typography variant="caption" color="text.secondary">
-        {label}
-      </Typography>
-    </Grid>
-  );
-}
 
 function EarningDetailDialog({
   earningId,
@@ -203,11 +192,12 @@ function EarningDetailDialog({
             component={Link}
             href={`/seller/orders/${earning.orderId}`}
             onClick={onClose}
+            sx={{ minHeight: 44 }}
           >
             View order
           </Button>
         ) : null}
-        <Button onClick={onClose} variant="contained">
+        <Button onClick={onClose} variant="contained" sx={{ minHeight: 44 }}>
           Close
         </Button>
       </DialogActions>
@@ -297,14 +287,10 @@ export default function SellerEarningsPage() {
 
   return (
     <div>
-      <Typography variant="h3" component="h2" sx={{ fontWeight: 700, mb: 0.5 }}>
-        Earnings
-      </Typography>
-
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        Backend-calculated gross, commission and net earnings. Payout actions
-        are not available in the current backend.
-      </Typography>
+      <PageHeader
+        title="Earnings"
+        subtitle="Backend-calculated gross, commission and net earnings. Payout actions are not available in the current backend."
+      />
 
       <Stack spacing={3}>
         {summaryError ? (
@@ -314,52 +300,60 @@ export default function SellerEarningsPage() {
         ) : null}
 
         {summary ? (
-          <Card sx={{ borderRadius: 3 }}>
-            <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
-              <Typography variant="h5" sx={{ fontWeight: 700, mb: 2.5 }}>
-                Summary
-              </Typography>
-
-              <Grid container spacing={3}>
-                <SummaryStat
-                  label="Net earnings"
-                  value={formatAmount(summary.totalNetAmount)}
-                />
-                <SummaryStat
-                  label="Available"
-                  value={formatAmount(summary.availableAmount)}
-                />
-                <SummaryStat
-                  label="Pending"
-                  value={formatAmount(summary.pendingAmount)}
-                />
-                <SummaryStat
-                  label="Paid"
-                  value={formatAmount(summary.paidAmount)}
-                />
-                <SummaryStat
-                  label="Gross"
-                  value={formatAmount(summary.totalGrossAmount)}
-                />
-                <SummaryStat
-                  label="Commission"
-                  value={formatAmount(summary.totalCommissionAmount)}
-                />
-                <SummaryStat
-                  label="Refunded"
-                  value={formatAmount(summary.refundedAmount)}
-                />
-                <SummaryStat
-                  label="Records"
-                  value={formatCount(summary.totalEarningRecords)}
-                />
-              </Grid>
-            </CardContent>
-          </Card>
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 6, sm: 4, md: 3 }}>
+              <StatCard
+                label="Net earnings"
+                value={formatAmount(summary.totalNetAmount)}
+              />
+            </Grid>
+            <Grid size={{ xs: 6, sm: 4, md: 3 }}>
+              <StatCard
+                label="Available"
+                value={formatAmount(summary.availableAmount)}
+              />
+            </Grid>
+            <Grid size={{ xs: 6, sm: 4, md: 3 }}>
+              <StatCard
+                label="Pending"
+                value={formatAmount(summary.pendingAmount)}
+              />
+            </Grid>
+            <Grid size={{ xs: 6, sm: 4, md: 3 }}>
+              <StatCard
+                label="Paid"
+                value={formatAmount(summary.paidAmount)}
+              />
+            </Grid>
+            <Grid size={{ xs: 6, sm: 4, md: 3 }}>
+              <StatCard
+                label="Gross"
+                value={formatAmount(summary.totalGrossAmount)}
+              />
+            </Grid>
+            <Grid size={{ xs: 6, sm: 4, md: 3 }}>
+              <StatCard
+                label="Commission"
+                value={formatAmount(summary.totalCommissionAmount)}
+              />
+            </Grid>
+            <Grid size={{ xs: 6, sm: 4, md: 3 }}>
+              <StatCard
+                label="Refunded"
+                value={formatAmount(summary.refundedAmount)}
+              />
+            </Grid>
+            <Grid size={{ xs: 6, sm: 4, md: 3 }}>
+              <StatCard
+                label="Records"
+                value={formatCount(summary.totalEarningRecords)}
+              />
+            </Grid>
+          </Grid>
         ) : null}
 
-        <Card sx={{ borderRadius: 3 }}>
-          <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+        <Card>
+          <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
             <Grid container spacing={2}>
               <Grid size={{ xs: 6, sm: 6 }}>
                 <TextField
@@ -410,18 +404,25 @@ export default function SellerEarningsPage() {
         ) : (
           <Stack spacing={2}>
             {earningsPage.content.map((earning) => (
-              <Card key={earning.id} sx={{ borderRadius: 3 }}>
-                <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+              <Card key={earning.id}>
+                <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
                   <Stack
                     direction={{ xs: "column", sm: "row" }}
                     spacing={1}
                     sx={{
                       alignItems: { xs: "flex-start", sm: "center" },
                       justifyContent: "space-between",
-                      mb: 1.5,
+                      mb: 1,
                     }}
                   >
-                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 700,
+                        minWidth: 0,
+                        overflowWrap: "anywhere",
+                      }}
+                    >
                       {earning.productName || "Product"}
                       {earning.sku ? ` · ${earning.sku}` : ""}
                     </Typography>
@@ -465,6 +466,7 @@ export default function SellerEarningsPage() {
                           href={`/seller/orders/${earning.orderId}`}
                           size="small"
                           variant="text"
+                          sx={{ minHeight: 44 }}
                         >
                           View order
                         </Button>
@@ -473,6 +475,8 @@ export default function SellerEarningsPage() {
                         size="small"
                         variant="outlined"
                         onClick={() => setSelectedEarningId(earning.id)}
+                        aria-label={`View details for earning ${earning.id}`}
+                        sx={{ minHeight: 44 }}
                       >
                         View details
                       </Button>
@@ -487,13 +491,14 @@ export default function SellerEarningsPage() {
               spacing={1.5}
               sx={{ alignItems: { xs: "stretch", sm: "center" } }}
             >
-              <Button
-                variant="outlined"
-                disabled={page <= 0 || earningsPage.first}
-                onClick={() => setPage((current) => Math.max(0, current - 1))}
-              >
-                Previous
-              </Button>
+            <Button
+              variant="outlined"
+              disabled={page <= 0 || earningsPage.first}
+              onClick={() => setPage((current) => Math.max(0, current - 1))}
+              sx={{ minHeight: 44 }}
+            >
+              Previous
+            </Button>
               <Typography
                 variant="body2"
                 color="text.secondary"
@@ -505,13 +510,14 @@ export default function SellerEarningsPage() {
                 {earningsPage.totalElements} record
                 {earningsPage.totalElements === 1 ? "" : "s"}
               </Typography>
-              <Button
-                variant="outlined"
-                disabled={earningsPage.last}
-                onClick={() => setPage((current) => current + 1)}
-              >
-                Next
-              </Button>
+            <Button
+              variant="outlined"
+              disabled={earningsPage.last}
+              onClick={() => setPage((current) => current + 1)}
+              sx={{ minHeight: 44 }}
+            >
+              Next
+            </Button>
             </Stack>
           </Stack>
         )}

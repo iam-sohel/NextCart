@@ -21,6 +21,7 @@ import {
   SellerErrorState,
   SellerPageSkeleton,
 } from "@/components/seller/SellerStates";
+import PageHeader from "@/components/ops/PageHeader";
 import {
   SELLER_ORDER_STATUSES,
   listSellerOrders,
@@ -115,17 +116,21 @@ export default function SellerOrdersPage() {
 
   return (
     <div>
-      <Typography variant="h3" component="h2" sx={{ fontWeight: 700, mb: 0.5 }}>
-        Orders
+      <PageHeader
+        title="Orders"
+        subtitle="Orders that contain at least one of your products."
+      />
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ display: "block", mt: -2, mb: 3 }}
+      >
+        Order totals are the complete customer order; only the listed items
+        belong to you.
       </Typography>
 
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        Orders that contain at least one of your products. Order totals are the
-        complete customer order; only the listed items belong to you.
-      </Typography>
-
-      <Card sx={{ borderRadius: 3, mb: 3 }}>
-        <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+      <Card sx={{ mb: 3 }}>
+        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, sm: 4 }}>
               <TextField
@@ -217,18 +222,25 @@ export default function SellerOrdersPage() {
                     : "");
 
             return (
-              <Card key={order.id} sx={{ borderRadius: 3 }}>
-                <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+              <Card key={order.id}>
+                <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
                   <Stack
                     direction={{ xs: "column", sm: "row" }}
                     spacing={1}
                     sx={{
                       justifyContent: "space-between",
                       alignItems: { xs: "flex-start", sm: "center" },
-                      mb: 1.5,
+                      mb: 1,
                     }}
                   >
-                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 700,
+                        minWidth: 0,
+                        overflowWrap: "anywhere",
+                      }}
+                    >
                       Order {order.orderNumber}
                     </Typography>
                     <StatusChip status={order.status} />
@@ -239,7 +251,10 @@ export default function SellerOrdersPage() {
                     seller item{order.items.length === 1 ? "" : "s"}
                   </Typography>
 
-                  <Typography variant="body2" sx={{ mb: 1.5 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ mb: 1.5, overflowWrap: "anywhere" }}
+                  >
                     {itemSummary}
                   </Typography>
 
@@ -263,7 +278,8 @@ export default function SellerOrdersPage() {
                       component={Link}
                       href={`/seller/orders/${order.id}`}
                       variant="outlined"
-                      size="small"
+                      aria-label={`View details for order ${order.orderNumber}`}
+                      sx={{ minHeight: 44 }}
                     >
                       View details
                     </Button>
@@ -282,6 +298,7 @@ export default function SellerOrdersPage() {
               variant="outlined"
               disabled={page <= 0 || ordersPage.first}
               onClick={() => setPage((current) => Math.max(0, current - 1))}
+              sx={{ minHeight: 44 }}
             >
               Previous
             </Button>
@@ -300,6 +317,7 @@ export default function SellerOrdersPage() {
               variant="outlined"
               disabled={ordersPage.last}
               onClick={() => setPage((current) => current + 1)}
+              sx={{ minHeight: 44 }}
             >
               Next
             </Button>

@@ -27,6 +27,7 @@ import {
   SellerErrorState,
   SellerPageSkeleton,
 } from "@/components/seller/SellerStates";
+import PageHeader from "@/components/ops/PageHeader";
 
 import {
   listBrands,
@@ -480,13 +481,10 @@ export default function NewSellerProductPage() {
 
   return (
     <Box>
-      <Typography variant="h3" component="h2" sx={{ fontWeight: 700, mb: 0.5 }}>
-        Add Product
-      </Typography>
-
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        Create a new product in your catalogue.
-      </Typography>
+      <PageHeader
+        title="Add Product"
+        subtitle="Create a new product in your catalogue."
+      />
 
       <Stack spacing={3}>
         {createdName !== null && (
@@ -501,8 +499,8 @@ export default function NewSellerProductPage() {
         {formError && <Alert severity="error">{formError}</Alert>}
 
         {/* ── Basics ────────────────────────────────────────────────── */}
-        <Card sx={{ borderRadius: 3 }}>
-          <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+        <Card>
+          <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
             <Typography variant="h5" sx={{ fontWeight: 700, mb: 2.5 }}>
               Basics
             </Typography>
@@ -614,8 +612,8 @@ export default function NewSellerProductPage() {
         </Card>
 
         {/* ── Information ───────────────────────────────────────────── */}
-        <Card sx={{ borderRadius: 3 }}>
-          <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+        <Card>
+          <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
             <Typography variant="h5" sx={{ fontWeight: 700, mb: 2.5 }}>
               Information
             </Typography>
@@ -670,8 +668,8 @@ export default function NewSellerProductPage() {
         </Card>
 
         {/* ── Specifications ────────────────────────────────────────── */}
-        <Card sx={{ borderRadius: 3 }}>
-          <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+        <Card>
+          <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
             <Stack
               direction="row"
               sx={{
@@ -693,6 +691,7 @@ export default function NewSellerProductPage() {
                   ])
                 }
                 disabled={saving}
+                sx={{ minHeight: 44 }}
               >
                 Add
               </Button>
@@ -746,6 +745,7 @@ export default function NewSellerProductPage() {
                           setSpecifications((prev) => prev.filter((_, i) => i !== index))
                         }
                         disabled={saving}
+                        sx={{ width: 44, height: 44 }}
                       >
                         <DeleteIcon />
                       </IconButton>
@@ -758,8 +758,8 @@ export default function NewSellerProductPage() {
         </Card>
 
         {/* ── Variants ──────────────────────────────────────────────── */}
-        <Card sx={{ borderRadius: 3 }}>
-          <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+        <Card>
+          <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
             <Stack
               direction="row"
               sx={{
@@ -776,6 +776,7 @@ export default function NewSellerProductPage() {
                 startIcon={<AddIcon />}
                 onClick={() => setVariants((prev) => [...prev, emptyVariant()])}
                 disabled={saving}
+                sx={{ minHeight: 44 }}
               >
                 Add variant
               </Button>
@@ -802,6 +803,7 @@ export default function NewSellerProductPage() {
                           setVariants((prev) => prev.filter((_, i) => i !== vIndex))
                         }
                         disabled={saving}
+                        sx={{ width: 44, height: 44 }}
                       >
                         <DeleteIcon />
                       </IconButton>
@@ -884,6 +886,7 @@ export default function NewSellerProductPage() {
                       startIcon={<AddIcon />}
                       onClick={() => addAttribute(vIndex)}
                       disabled={saving}
+                      sx={{ minHeight: 44 }}
                     >
                       Add attribute
                     </Button>
@@ -926,6 +929,7 @@ export default function NewSellerProductPage() {
                               aria-label="Remove attribute"
                               onClick={() => removeAttribute(vIndex, aIndex)}
                               disabled={saving}
+                              sx={{ width: 44, height: 44 }}
                             >
                               <DeleteIcon />
                             </IconButton>
@@ -990,8 +994,8 @@ export default function NewSellerProductPage() {
         </Card>
 
         {/* ── Images ────────────────────────────────────────────────── */}
-        <Card sx={{ borderRadius: 3 }}>
-          <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+        <Card>
+          <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
             <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
               Images
             </Typography>
@@ -1061,6 +1065,7 @@ export default function NewSellerProductPage() {
             variant="contained"
             onClick={() => void handleSubmit()}
             disabled={saving || createdId !== null}
+            sx={{ minHeight: 44 }}
           >
             {saving ? "Creating…" : "Create product"}
           </Button>
@@ -1070,12 +1075,18 @@ export default function NewSellerProductPage() {
               variant="outlined"
               onClick={startAnotherProduct}
               disabled={saving}
+              sx={{ minHeight: 44 }}
             >
               Start another product
             </Button>
           )}
 
-          <Button component={Link} href="/seller/products" disabled={saving}>
+          <Button
+            component={Link}
+            href="/seller/products"
+            disabled={saving}
+            sx={{ minHeight: 44 }}
+          >
             Back to products
           </Button>
         </Stack>

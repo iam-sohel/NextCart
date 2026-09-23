@@ -25,6 +25,7 @@ import {
   SellerErrorState,
   SellerPageSkeleton,
 } from "@/components/seller/SellerStates";
+import PageHeader from "@/components/ops/PageHeader";
 
 import {
   addBankAccount,
@@ -242,13 +243,10 @@ export default function SellerBankPage() {
 
   return (
     <Box>
-      <Typography variant="h3" component="h2" sx={{ fontWeight: 700, mb: 0.5 }}>
-        Bank Account
-      </Typography>
-
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        Manage the bank account used for your payouts.
-      </Typography>
+      <PageHeader
+        title="Bank Account"
+        subtitle="Manage the bank account used for your payouts."
+      />
 
       <Stack spacing={3}>
         {saveSuccess && <Alert severity="success">{saveSuccess}</Alert>}
@@ -261,8 +259,8 @@ export default function SellerBankPage() {
 
         {/* ── View ──────────────────────────────────────────────────── */}
         {bank && mode === "view" && (
-          <Card sx={{ borderRadius: 3 }}>
-            <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+          <Card>
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
               <Stack
                 direction={{ xs: "column", sm: "row" }}
                 spacing={2}
@@ -286,8 +284,17 @@ export default function SellerBankPage() {
                 </Box>
 
                 {!isVerified && (
-                  <Stack direction="row" spacing={1.5}>
-                    <Button variant="contained" onClick={startEditing} disabled={!bank.active}>
+                  <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    spacing={1.5}
+                    sx={{ alignItems: { xs: "stretch", sm: "center" } }}
+                  >
+                    <Button
+                      variant="contained"
+                      onClick={startEditing}
+                      disabled={!bank.active}
+                      sx={{ minHeight: 44 }}
+                    >
                       Edit
                     </Button>
                     {bank.active && (
@@ -298,6 +305,7 @@ export default function SellerBankPage() {
                           setDeactivateError(null);
                           setConfirmOpen(true);
                         }}
+                        sx={{ minHeight: 44 }}
                       >
                         Deactivate
                       </Button>
@@ -345,8 +353,8 @@ export default function SellerBankPage() {
 
         {/* ── Add / edit form ───────────────────────────────────────── */}
         {mode === "form" && (
-          <Card sx={{ borderRadius: 3 }}>
-            <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+          <Card>
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
               <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
                 {bank ? "Edit bank account" : "Add bank account"}
               </Typography>
@@ -423,13 +431,26 @@ export default function SellerBankPage() {
                 </Grid>
               </Grid>
 
-              <Stack direction="row" spacing={1.5} sx={{ mt: 3 }}>
-                <Button variant="contained" onClick={() => void handleSubmit()} disabled={saving}>
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={1.5}
+                sx={{ mt: 3, alignItems: { xs: "stretch", sm: "center" } }}
+              >
+                <Button
+                  variant="contained"
+                  onClick={() => void handleSubmit()}
+                  disabled={saving}
+                  sx={{ minHeight: 44 }}
+                >
                   {saving ? "Saving…" : bank ? "Save changes" : "Add bank account"}
                 </Button>
 
                 {bank && (
-                  <Button onClick={() => setMode("view")} disabled={saving}>
+                  <Button
+                    onClick={() => setMode("view")}
+                    disabled={saving}
+                    sx={{ minHeight: 44 }}
+                  >
                     Cancel
                   </Button>
                 )}
@@ -461,7 +482,11 @@ export default function SellerBankPage() {
         </DialogContent>
 
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
-          <Button onClick={() => setConfirmOpen(false)} disabled={deactivating}>
+          <Button
+            onClick={() => setConfirmOpen(false)}
+            disabled={deactivating}
+            sx={{ minHeight: 44 }}
+          >
             Cancel
           </Button>
           <Button
@@ -469,6 +494,7 @@ export default function SellerBankPage() {
             variant="contained"
             onClick={() => void handleDeactivate()}
             disabled={deactivating}
+            sx={{ minHeight: 44 }}
           >
             {deactivating ? "Deactivating…" : "Deactivate bank account"}
           </Button>

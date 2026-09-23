@@ -7,6 +7,8 @@ import { Alert, Box, Button, Card, CardContent, Stack, Typography } from "@mui/m
 import AddIcon from "@mui/icons-material/Add";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 
+import PageHeader from "@/components/ops/PageHeader";
+
 /**
  * NEXTCART — Seller products.
  *
@@ -17,17 +19,25 @@ import Inventory2Icon from "@mui/icons-material/Inventory2";
 export default function SellerProductsPage() {
   return (
     <Box>
-      <Typography variant="h3" component="h2" sx={{ fontWeight: 700, mb: 0.5 }}>
-        Products
-      </Typography>
-
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        Create products for your NextCart catalogue.
-      </Typography>
+      <PageHeader
+        title="Products"
+        subtitle="Create products for your NextCart catalogue."
+        actions={
+          <Button
+            component={Link}
+            href="/seller/products/new"
+            variant="contained"
+            startIcon={<AddIcon />}
+            sx={{ minHeight: 44 }}
+          >
+            Add product
+          </Button>
+        }
+      />
 
       <Stack spacing={3}>
-        <Card sx={{ borderRadius: 3 }}>
-          <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+        <Card>
+          <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
             <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 1 }}>
               <Inventory2Icon color="primary" />
               <Typography variant="h5" sx={{ fontWeight: 700 }}>
@@ -44,6 +54,7 @@ export default function SellerProductsPage() {
               href="/seller/products/new"
               variant="contained"
               startIcon={<AddIcon />}
+              sx={{ minHeight: 44 }}
             >
               Add product
             </Button>

@@ -26,6 +26,8 @@ import {
   SellerErrorState,
   SellerPageSkeleton,
 } from "@/components/seller/SellerStates";
+import PageHeader from "@/components/ops/PageHeader";
+import StatCard from "@/components/ops/StatCard";
 import {
   getSellerDashboard,
   type SellerDashboardResponse,
@@ -102,153 +104,127 @@ export default function SellerDashboardPage() {
   const seller = dashboard.seller;
   const generatedAt = formatDateTime(dashboard.generatedAt);
 
+  const orderStatuses: Array<[string, number | null | undefined]> = [
+    ["Total", dashboard.orders?.total],
+    ["Pending", dashboard.orders?.pending],
+    ["Confirmed", dashboard.orders?.confirmed],
+    ["Processing", dashboard.orders?.processing],
+    ["Shipped", dashboard.orders?.shipped],
+    ["Delivered", dashboard.orders?.delivered],
+    ["Cancelled", dashboard.orders?.cancelled],
+    ["Return requested", dashboard.orders?.returnRequested],
+    ["Return approved", dashboard.orders?.returnApproved],
+    ["Returned", dashboard.orders?.returned],
+    ["Refunded", dashboard.orders?.refunded],
+  ];
+
+  const inventoryStats: Array<[string, number | null | undefined]> = [
+    ["Products", dashboard.products?.total],
+    ["Active products", dashboard.products?.active],
+    ["Inactive products", dashboard.products?.inactive],
+    ["Inventory items", dashboard.inventory?.totalItems],
+    ["Low-stock items", dashboard.inventory?.lowStockItems],
+    ["Out-of-stock items", dashboard.inventory?.outOfStockItems],
+  ];
+
   return (
     <Box>
-      <Typography variant="h3" component="h2" sx={{ fontWeight: 700, mb: 0.5 }}>
-        Seller Dashboard
-      </Typography>
-
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
-        Overview of your NextCart seller account.
-      </Typography>
-
-      <Typography variant="caption" color="text.secondary" sx={{ mb: 4, display: "block" }}>
+      <PageHeader
+        title="Seller Dashboard"
+        subtitle="Overview of your NextCart seller account."
+      />
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ display: "block", mt: -2, mb: 3 }}
+      >
         Generated {generatedAt}
       </Typography>
 
       <Stack spacing={3}>
-        {/* ── Business overview ─────────────────────────────────────── */}
-        <Card sx={{ borderRadius: 3 }}>
+        {/* ── Sales KPIs ──────────────────────────────────────────── */}
+        <Grid container spacing={2}>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <StatCard
+              icon={<PaymentsIcon />}
+              value={formatAmount(dashboard.sales?.totalSalesAmount)}
+              label="Total sales"
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 4 }}>
+            <StatCard
+              icon={<ShoppingBagIcon />}
+              value={formatAmount(dashboard.sales?.deliveredSalesAmount)}
+              label="Delivered sales"
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 4 }}>
+            <StatCard
+              value={formatAmount(dashboard.sales?.refundedSalesAmount)}
+              label="Refunded sales"
+            />
+          </Grid>
+        </Grid>
+
+        {/* ── Business ────────────────────────────────────────────── */}
+        <Card>
           <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
-            <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
-              Business
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={1.5}
+              sx={{
+                alignItems: { xs: "flex-start", sm: "center" },
+                justifyContent: "space-between",
+                mb: 2,
+              }}
+            >
+              <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                {seller?.businessName || "Your business"}
+              </Typography>
+              <Stack direction="row" spacing={1}>
+                <StatusChip
+                  status={seller?.verified ? "VERIFIED" : "PENDING"}
+                  label={seller?.verified ? "Verified" : "Not verified"}
+                />
+                <StatusChip
+                  status={seller?.active ? "ACTIVE" : "INACTIVE"}
+                  label={seller?.active ? "Active" : "Inactive"}
+                />
+              </Stack>
+            </Stack>
+            <Typography variant="body2" color="text.secondary">
+              Keep your verification, bank details and inventory up to date to
+              avoid payout or fulfilment delays.
             </Typography>
-
-            <Grid container spacing={3}>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    display: "block",
-                    color: "text.secondary",
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.04em",
-                  }}
-                >
-                  Business name
-                </Typography>
-                <Typography variant="body1" sx={{ mt: 0.25 }}>
-                  {seller?.businessName || "—"}
-                </Typography>
-              </Grid>
-
-              <Grid size={{ xs: 6, sm: 3 }}>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    display: "block",
-                    color: "text.secondary",
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.04em",
-                  }}
-                >
-                  Verified
-                </Typography>
-                <Box sx={{ mt: 0.5 }}>
-                  <StatusChip
-                    status={seller?.verified ? "VERIFIED" : "PENDING"}
-                    label={seller?.verified ? "Verified" : "Not verified"}
-                  />
-                </Box>
-              </Grid>
-
-              <Grid size={{ xs: 6, sm: 3 }}>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    display: "block",
-                    color: "text.secondary",
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.04em",
-                  }}
-                >
-                  Account
-                </Typography>
-                <Box sx={{ mt: 0.5 }}>
-                  <StatusChip
-                    status={seller?.active ? "ACTIVE" : "INACTIVE"}
-                    label={seller?.active ? "Active" : "Inactive"}
-                  />
-                </Box>
-              </Grid>
-            </Grid>
           </CardContent>
         </Card>
 
-        {/* ── Sales ─────────────────────────────────────────────────── */}
-        <Card sx={{ borderRadius: 3 }}>
-          <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
-            <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
-              Sales
-            </Typography>
-
-            <Grid container spacing={3}>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                  {formatAmount(dashboard.sales?.totalSalesAmount)}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Total sales
-                </Typography>
-              </Grid>
-              <Grid size={{ xs: 6, sm: 4 }}>
-                <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                  {formatAmount(dashboard.sales?.deliveredSalesAmount)}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Delivered sales
-                </Typography>
-              </Grid>
-              <Grid size={{ xs: 6, sm: 4 }}>
-                <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                  {formatAmount(dashboard.sales?.refundedSalesAmount)}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Refunded sales
-                </Typography>
-              </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
-
-        {/* ── Orders ────────────────────────────────────────────────── */}
-        <Card sx={{ borderRadius: 3 }}>
+        {/* ── Orders ──────────────────────────────────────────────── */}
+        <Card>
           <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
             <Stack
               direction="row"
               spacing={1}
-              sx={{ alignItems: "center", mb: 2 }}
+              sx={{ alignItems: "center", justifyContent: "space-between", mb: 2 }}
             >
-              <ShoppingBagIcon color="primary" />
-              <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                Orders
-              </Typography>
+              <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                <ShoppingBagIcon color="primary" />
+                <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                  Orders
+                </Typography>
+              </Stack>
+              <Button
+                component={Link}
+                href="/seller/orders"
+                variant="text"
+                size="small"
+              >
+                View orders
+              </Button>
             </Stack>
 
-            <Grid container spacing={2} sx={{ mb: 2 }}>
-              {(
-                [
-                  ["Total", dashboard.orders?.total],
-                  ["Pending", dashboard.orders?.pending],
-                  ["Confirmed", dashboard.orders?.confirmed],
-                  ["Processing", dashboard.orders?.processing],
-                  ["Shipped", dashboard.orders?.shipped],
-                  ["Delivered", dashboard.orders?.delivered],
-                ] as Array<[string, number | null | undefined]>
-              ).map(([label, value]) => (
+            <Grid container spacing={2}>
+              {orderStatuses.map(([label, value]) => (
                 <Grid size={{ xs: 6, sm: 4, md: 2 }} key={label}>
                   <Typography variant="h6" sx={{ fontWeight: 700 }}>
                     {formatCount(value)}
@@ -259,63 +235,35 @@ export default function SellerDashboardPage() {
                 </Grid>
               ))}
             </Grid>
-
-            <Grid container spacing={2} sx={{ mb: 3 }}>
-              {(
-                [
-                  ["Cancelled", dashboard.orders?.cancelled],
-                  ["Return requested", dashboard.orders?.returnRequested],
-                  ["Return approved", dashboard.orders?.returnApproved],
-                  ["Returned", dashboard.orders?.returned],
-                  ["Refunded", dashboard.orders?.refunded],
-                ] as Array<[string, number | null | undefined]>
-              ).map(([label, value]) => (
-                <Grid size={{ xs: 6, sm: 4, md: 2 }} key={label}>
-                  <Typography variant="body1" sx={{ fontWeight: 700 }}>
-                    {formatCount(value)}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {label}
-                  </Typography>
-                </Grid>
-              ))}
-            </Grid>
-
-            <Button
-              component={Link}
-              href="/seller/orders"
-              variant="outlined"
-            >
-              View orders
-            </Button>
           </CardContent>
         </Card>
 
-        {/* ── Products and inventory ────────────────────────────────── */}
-        <Card sx={{ borderRadius: 3 }}>
+        {/* ── Products and inventory ──────────────────────────────── */}
+        <Card>
           <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
             <Stack
               direction="row"
               spacing={1}
-              sx={{ alignItems: "center", mb: 2 }}
+              sx={{ alignItems: "center", justifyContent: "space-between", mb: 2 }}
             >
-              <Inventory2Icon color="primary" />
-              <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                Products and inventory
-              </Typography>
+              <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                <Inventory2Icon color="primary" />
+                <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                  Products and inventory
+                </Typography>
+              </Stack>
+              <Button
+                component={Link}
+                href="/seller/products/new"
+                variant="text"
+                size="small"
+              >
+                Add product
+              </Button>
             </Stack>
 
-            <Grid container spacing={2} sx={{ mb: 3 }}>
-              {(
-                [
-                  ["Products", dashboard.products?.total],
-                  ["Active products", dashboard.products?.active],
-                  ["Inactive products", dashboard.products?.inactive],
-                  ["Inventory items", dashboard.inventory?.totalItems],
-                  ["Low-stock items", dashboard.inventory?.lowStockItems],
-                  ["Out-of-stock items", dashboard.inventory?.outOfStockItems],
-                ] as Array<[string, number | null | undefined]>
-              ).map(([label, value]) => (
+            <Grid container spacing={2}>
+              {inventoryStats.map(([label, value]) => (
                 <Grid size={{ xs: 6, sm: 4, md: 2 }} key={label}>
                   <Typography variant="h6" sx={{ fontWeight: 700 }}>
                     {formatCount(value)}
@@ -326,19 +274,11 @@ export default function SellerDashboardPage() {
                 </Grid>
               ))}
             </Grid>
-
-            <Button
-              component={Link}
-              href="/seller/products/new"
-              variant="outlined"
-            >
-              Add product
-            </Button>
           </CardContent>
         </Card>
 
-        {/* ── Verification ──────────────────────────────────────────── */}
-        <Card sx={{ borderRadius: 3 }}>
+        {/* ── Verification ────────────────────────────────────────── */}
+        <Card>
           <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
             <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
               Verification
@@ -414,81 +354,60 @@ export default function SellerDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* ── Warehouses ────────────────────────────────────────────── */}
-        <Card sx={{ borderRadius: 3 }}>
+        {/* ── Warehouses ──────────────────────────────────────────── */}
+        <Card>
           <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
             <Stack
               direction="row"
               spacing={1}
-              sx={{ alignItems: "center", mb: 2 }}
+              sx={{ alignItems: "center", justifyContent: "space-between", mb: 2 }}
             >
-              <AddBusinessIcon color="primary" />
-              <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                Warehouses
-              </Typography>
+              <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                <AddBusinessIcon color="primary" />
+                <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                  Warehouses
+                </Typography>
+              </Stack>
+              <Button
+                component={Link}
+                href="/seller/warehouses"
+                variant="text"
+                size="small"
+              >
+                {dashboard.warehouses?.total === 0 ? "Add warehouse" : "Manage"}
+              </Button>
             </Stack>
 
             {dashboard.warehouses?.total === 0 ? (
-              <>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ mb: 2 }}
-                >
-                  You have no warehouses yet. Add one to start fulfilling
-                  orders.
-                </Typography>
-                <Button
-                  component={Link}
-                  href="/seller/warehouses"
-                  variant="contained"
-                >
-                  Add warehouse
-                </Button>
-              </>
+              <Typography variant="body2" color="text.secondary">
+                You have no warehouses yet. Add one to start fulfilling
+                orders.
+              </Typography>
             ) : (
-              <>
-                <Grid container spacing={3} sx={{ mb: 2 }}>
-                  <Grid size={{ xs: 4 }}>
+              <Grid container spacing={2}>
+                {(
+                  [
+                    ["Total", dashboard.warehouses?.total],
+                    ["Active", dashboard.warehouses?.active],
+                    ["Inactive", dashboard.warehouses?.inactive],
+                  ] as Array<[string, number | null | undefined]>
+                ).map(([label, value]) => (
+                  <Grid size={{ xs: 4 }} key={label}>
                     <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                      {formatCount(dashboard.warehouses?.total)}
+                      {formatCount(value)}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      Total
+                      {label}
                     </Typography>
                   </Grid>
-                  <Grid size={{ xs: 4 }}>
-                    <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                      {formatCount(dashboard.warehouses?.active)}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Active
-                    </Typography>
-                  </Grid>
-                  <Grid size={{ xs: 4 }}>
-                    <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                      {formatCount(dashboard.warehouses?.inactive)}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Inactive
-                    </Typography>
-                  </Grid>
-                </Grid>
-
-                <Button
-                  component={Link}
-                  href="/seller/warehouses"
-                  variant="outlined"
-                >
-                  Manage warehouses
-                </Button>
-              </>
+                ))}
+              </Grid>
             )}
           </CardContent>
         </Card>
 
-        {/* ── Quick actions ─────────────────────────────────────────── */}
-        <Card sx={{ borderRadius: 3 }}>
+        {/* ── Quick actions ───────────────────────────────────────── */}
+        <Card>
           <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
             <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
               Quick actions

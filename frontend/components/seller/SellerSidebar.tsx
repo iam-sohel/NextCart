@@ -47,17 +47,37 @@ interface NavItem {
   exact: boolean;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard", href: "/seller", icon: DashboardIcon, exact: true },
-  { label: "Orders", href: "/seller/orders", icon: ShoppingBagIcon, exact: false },
-  { label: "Products", href: "/seller/products", icon: Inventory2Icon, exact: false },
-  { label: "Analytics", href: "/seller/analytics", icon: BarChartIcon, exact: false },
-  { label: "Earnings", href: "/seller/earnings", icon: PaymentsIcon, exact: false },
-  { label: "Warehouses", href: "/seller/warehouses", icon: WarehouseIcon, exact: false },
-  { label: "KYC / Verification", href: "/seller/kyc", icon: VerifiedUserIcon, exact: false },
-  { label: "Bank Account", href: "/seller/bank", icon: AccountBalanceIcon, exact: false },
-  { label: "Profile", href: "/seller/profile", icon: StorefrontIcon, exact: false },
-  { label: "Settings", href: "/seller/settings", icon: SettingsIcon, exact: false },
+interface NavSection {
+  label: string;
+  items: NavItem[];
+}
+
+const NAV_SECTIONS: NavSection[] = [
+  {
+    label: "Operate",
+    items: [
+      { label: "Dashboard", href: "/seller", icon: DashboardIcon, exact: true },
+      { label: "Orders", href: "/seller/orders", icon: ShoppingBagIcon, exact: false },
+      { label: "Products", href: "/seller/products", icon: Inventory2Icon, exact: false },
+    ],
+  },
+  {
+    label: "Insights",
+    items: [
+      { label: "Analytics", href: "/seller/analytics", icon: BarChartIcon, exact: false },
+      { label: "Earnings", href: "/seller/earnings", icon: PaymentsIcon, exact: false },
+    ],
+  },
+  {
+    label: "Setup",
+    items: [
+      { label: "Warehouses", href: "/seller/warehouses", icon: WarehouseIcon, exact: false },
+      { label: "KYC / Verification", href: "/seller/kyc", icon: VerifiedUserIcon, exact: false },
+      { label: "Bank Account", href: "/seller/bank", icon: AccountBalanceIcon, exact: false },
+      { label: "Profile", href: "/seller/profile", icon: StorefrontIcon, exact: false },
+      { label: "Settings", href: "/seller/settings", icon: SettingsIcon, exact: false },
+    ],
+  },
 ];
 
 function isActive(pathname: string, href: string, exact: boolean): boolean {
@@ -111,54 +131,77 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <List
         component="nav"
         aria-label="Seller navigation"
-        sx={{ px: 1.5, py: 2 }}
+        sx={{ px: 1.5, py: 1, overflowY: "auto" }}
       >
-        {NAV_ITEMS.map((item) => {
-          const Icon = item.icon;
-          const active = isActive(pathname, item.href, item.exact);
-
-          return (
-            <ListItemButton
-              key={item.href}
-              component={Link}
-              href={item.href}
-              onClick={onNavigate}
-              selected={active}
-              aria-current={active ? "page" : undefined}
+        {NAV_SECTIONS.map((section) => (
+          <Box component="li" key={section.label} sx={{ listStyle: "none" }}>
+            <Typography
+              variant="caption"
+              component="div"
               sx={{
-                borderRadius: 2,
-                minHeight: 46,
                 px: 1.5,
-                mb: 0.5,
-                "&.Mui-selected": {
-                  bgcolor: "action.selected",
-                  "&:hover": { bgcolor: "action.selected" },
-                },
+                pt: 1.5,
+                pb: 0.5,
+                color: "text.secondary",
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                fontSize: "0.6875rem",
               }}
             >
-              <ListItemIcon
-                sx={{
-                  minWidth: 40,
-                  color: active ? "primary.main" : "text.secondary",
-                }}
-              >
-                <Icon fontSize="small" />
-              </ListItemIcon>
+              {section.label}
+            </Typography>
+            {section.items.map((item) => {
+              const Icon = item.icon;
+              const active = isActive(pathname, item.href, item.exact);
 
-              <ListItemText
-                primary={item.label}
-                slotProps={{
-                  primary: {
-                    sx: {
-                      fontSize: "0.875rem",
-                      fontWeight: active ? 700 : 500,
+              return (
+                <ListItemButton
+                  key={item.href}
+                  component={Link}
+                  href={item.href}
+                  onClick={onNavigate}
+                  selected={active}
+                  aria-current={active ? "page" : undefined}
+                  sx={{
+                    borderRadius: 2,
+                    minHeight: 44,
+                    px: 1.5,
+                    mb: 0.25,
+                    "&.Mui-selected": {
+                      bgcolor: "action.selected",
+                      "&:hover": { bgcolor: "action.selected" },
+                      "& .MuiListItemText-primary": {
+                        color: "primary.dark",
+                      },
                     },
-                  },
-                }}
-              />
-            </ListItemButton>
-          );
-        })}
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      minWidth: 40,
+                      color: active ? "primary.main" : "text.secondary",
+                    }}
+                  >
+                    <Icon fontSize="small" />
+                  </ListItemIcon>
+
+                  <ListItemText
+                    primary={item.label}
+                    slotProps={{
+                      primary: {
+                        sx: {
+                          fontSize: "0.875rem",
+                          fontWeight: active ? 700 : 500,
+                        },
+                      },
+                    }}
+                  />
+                </ListItemButton>
+              );
+            })}
+          </Box>
+        ))}
       </List>
     </Box>
   );

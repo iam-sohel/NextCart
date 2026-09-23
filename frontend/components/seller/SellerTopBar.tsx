@@ -119,7 +119,11 @@ export default function SellerTopBar({ onOpenMobileNav }: SellerTopBarProps) {
           <MenuIcon />
         </IconButton>
 
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={{ fontWeight: 700, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flexShrink: 1 }}
+        >
           {pageTitle}
         </Typography>
 

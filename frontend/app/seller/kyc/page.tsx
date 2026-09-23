@@ -23,6 +23,7 @@ import {
   SellerErrorState,
   SellerPageSkeleton,
 } from "@/components/seller/SellerStates";
+import PageHeader from "@/components/ops/PageHeader";
 
 import {
   getMyKyc,
@@ -380,13 +381,10 @@ const validate = (): string | null => {
 
   return (
     <Box>
-      <Typography variant="h3" component="h2" sx={{ fontWeight: 700, mb: 0.5 }}>
-        KYC / Verification
-      </Typography>
-
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        Submit your business and identity details for verification.
-      </Typography>
+      <PageHeader
+        title="KYC / Verification"
+        subtitle="Submit your business and identity details for verification."
+      />
 
       <Stack spacing={3}>
         {saveSuccess && <Alert severity="success">{saveSuccess}</Alert>}
@@ -400,8 +398,8 @@ const validate = (): string | null => {
 
         {/* ── Status ────────────────────────────────────────────────── */}
         {kyc && (
-          <Card sx={{ borderRadius: 3 }}>
-            <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+          <Card>
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
               <Stack
                 direction={{ xs: "column", sm: "row" }}
                 spacing={2}
@@ -420,7 +418,11 @@ const validate = (): string | null => {
 
                 {!isVerified && mode === "view" && (
                   <Stack direction="row" spacing={1.5}>
-                    <Button variant="contained" onClick={startEditing}>
+                    <Button
+                      variant="contained"
+                      onClick={startEditing}
+                      sx={{ minHeight: 44 }}
+                    >
                       Edit details
                     </Button>
                   </Stack>
@@ -454,8 +456,8 @@ const validate = (): string | null => {
 
         {/* ── View details ──────────────────────────────────────────── */}
         {kyc && mode === "view" && (
-          <Card sx={{ borderRadius: 3 }}>
-            <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+          <Card>
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
               <Typography variant="h5" sx={{ fontWeight: 700, mb: 2.5 }}>
                 Submitted information
               </Typography>
@@ -519,8 +521,8 @@ const validate = (): string | null => {
 
         {/* ── Edit / submit form ────────────────────────────────────── */}
         {mode === "edit" && (
-          <Card sx={{ borderRadius: 3 }}>
-            <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+          <Card>
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
               <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
                 {kyc ? "Edit KYC details" : "Submit KYC details"}
               </Typography>
@@ -753,11 +755,16 @@ const validate = (): string | null => {
   </Grid>
 </Grid>
 
-<Stack direction="row" spacing={1.5} sx={{ mt: 3 }}>
+<Stack
+  direction={{ xs: "column", sm: "row" }}
+  spacing={1.5}
+  sx={{ mt: 3, alignItems: { xs: "stretch", sm: "center" } }}
+>
   <Button
     variant="contained"
     onClick={() => void handleSubmit()}
     disabled={saving}
+    sx={{ minHeight: 44 }}
   >
     {saving ? "Saving…" : kyc ? "Save changes" : "Submit KYC"}
   </Button>
@@ -766,6 +773,7 @@ const validate = (): string | null => {
     <Button
       onClick={() => setMode("view")}
       disabled={saving}
+      sx={{ minHeight: 44 }}
     >
       Cancel
     </Button>
@@ -777,8 +785,8 @@ const validate = (): string | null => {
 
         {/* ── Document upload ───────────────────────────────────────── */}
         {kyc && !isVerified && mode === "view" && (
-          <Card sx={{ borderRadius: 3 }}>
-            <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+          <Card>
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
               <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
                 Upload documents
               </Typography>
@@ -835,6 +843,7 @@ const validate = (): string | null => {
                   variant="contained"
                   onClick={() => void handleUpload()}
                   disabled={uploading}
+                  sx={{ minHeight: 44 }}
                 >
                   {uploading ? "Uploading…" : "Upload documents"}
                 </Button>
