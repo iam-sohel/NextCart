@@ -65,6 +65,20 @@ function unwrap<T>(response: any): T {
   return response as T;
 }
 
+/**
+ * Throw on transport/API failure so a failed request can never be mistaken
+ * for an empty dataset. All existing consumers already handle thrown errors
+ * with try/catch, so signatures stay unchanged.
+ */
+function throwIfFailed(
+  response: { ok: boolean; message?: string },
+  fallback: string,
+): void {
+  if (!response.ok) {
+    throw new Error(response.message || fallback);
+  }
+}
+
 function toNumber(value: any): number {
   const numberValue = Number(value ?? 0);
 
@@ -193,6 +207,8 @@ export async function listAdminOrders(
     }
   );
 
+  throwIfFailed(response, "Unable to load orders.");
+
   return normalizePage(
     unwrap<any>(response)
   );
@@ -207,6 +223,8 @@ export async function getAdminOrder(
       method: "GET",
     }
   );
+
+  throwIfFailed(response, "Unable to load order.");
 
   return normalizeOrder(
     unwrap<any>(response)
@@ -227,6 +245,8 @@ export async function updateAdminOrderStatus(
       method: "PUT",
     }
   );
+
+  throwIfFailed(response, "Unable to update order status.");
 
   return normalizeOrder(
     unwrap<any>(response)

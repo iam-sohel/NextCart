@@ -10,6 +10,14 @@ export interface AdminDashboardSummary {
   pendingKyc: number;
 }
 
+/**
+ * Failure contract: every underlying call either resolves with real data
+ * or throws. `listAdminCustomers`, `listAdminOrders` and `listAdminKyc`
+ * throw on transport/API failure (they never resolve failure as empty
+ * data), and the seller call is checked below — so a rejection here always
+ * means "could not load", never "zero". Callers must treat a throw as an
+ * error state, not an empty dashboard.
+ */
 export async function getAdminDashboardSummary(): Promise<AdminDashboardSummary> {
   const [
     sellersResult,

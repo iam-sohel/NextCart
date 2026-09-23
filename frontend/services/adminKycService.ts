@@ -73,6 +73,20 @@ function unwrap<T>(response: any): T {
   return response as T;
 }
 
+/**
+ * Throw on transport/API failure so a failed request can never be mistaken
+ * for an empty dataset. All existing consumers already handle thrown errors
+ * with try/catch, so signatures stay unchanged.
+ */
+function throwIfFailed(
+  response: { ok: boolean; message?: string },
+  fallback: string,
+): void {
+  if (!response.ok) {
+    throw new Error(response.message || fallback);
+  }
+}
+
 function normaliseKyc(value: any): AdminSellerKyc {
   return {
     id: Number(value?.id ?? 0),
@@ -191,6 +205,8 @@ export async function listAdminKyc(
     },
   );
 
+  throwIfFailed(response, "Unable to load seller KYC.");
+
   return normalisePage(
     unwrap<any>(response),
   );
@@ -206,6 +222,8 @@ export async function getAdminKyc(
     },
   );
 
+  throwIfFailed(response, "Unable to load seller KYC.");
+
   return normaliseKyc(
     unwrap<any>(response),
   );
@@ -214,12 +232,14 @@ export async function getAdminKyc(
 export async function approveAdminKyc(
   sellerId: number | string,
 ): Promise<void> {
-  await apiRequest(
+  const response = await apiRequest(
     `/api/v1/admin/sellers/${sellerId}/kyc/approve`,
     {
       method: "PUT",
     },
   );
+
+  throwIfFailed(response, "Unable to approve seller KYC.");
 }
 
 export async function rejectAdminKyc(
@@ -234,7 +254,7 @@ export async function rejectAdminKyc(
     );
   }
 
-  await apiRequest(
+  const response = await apiRequest(
     `/api/v1/admin/sellers/${sellerId}/kyc/reject`,
     {
       method: "PUT",
@@ -243,4 +263,6 @@ export async function rejectAdminKyc(
       },
     },
   );
+
+  throwIfFailed(response, "Unable to reject seller KYC.");
 }

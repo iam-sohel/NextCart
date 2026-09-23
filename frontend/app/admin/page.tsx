@@ -7,11 +7,9 @@ import {
   Box,
   Button,
   Card,
+  CardActionArea,
   CardContent,
-  CircularProgress,
-  Grid,
-  Paper,
-  Stack,
+  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -38,6 +36,10 @@ import {
 
 import type { AdminOrder } from "@/services/adminOrderService";
 
+import {
+  AdminErrorState,
+} from "@/components/admin/AdminStates";
+
 interface MetricCardProps {
   title: string;
   value: number;
@@ -45,6 +47,16 @@ interface MetricCardProps {
   description: string;
   loading: boolean;
   onClick?: () => void;
+  actionLabel: string;
+}
+
+/** Backend totals are rendered verbatim; only non-finite values fall back. */
+function formatMetric(value: number): string {
+  if (!Number.isFinite(value)) {
+    return "—";
+  }
+
+  return value.toLocaleString("en-IN");
 }
 
 function MetricCard({
@@ -54,7 +66,74 @@ function MetricCard({
   description,
   loading,
   onClick,
+  actionLabel,
 }: MetricCardProps) {
+  const body = (
+    <CardContent sx={{ p: 2.5, height: "100%" }}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 2,
+        }}
+      >
+        <Box sx={{ minWidth: 0 }}>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ fontWeight: 600 }}
+          >
+            {title}
+          </Typography>
+
+          {loading ? (
+            <Skeleton
+              variant="text"
+              width={96}
+              height={44}
+              sx={{ mt: 1 }}
+            />
+          ) : (
+            <Typography
+              variant="h4"
+              sx={{
+                mt: 1,
+                fontWeight: 800,
+                overflowWrap: "anywhere",
+              }}
+            >
+              {formatMetric(value)}
+            </Typography>
+          )}
+
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ mt: 0.5 }}
+          >
+            {description}
+          </Typography>
+        </Box>
+
+        <Box
+          sx={{
+            width: 48,
+            height: 48,
+            borderRadius: 2,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            bgcolor: "action.hover",
+            flexShrink: 0,
+          }}
+        >
+          {icon}
+        </Box>
+      </Box>
+    </CardContent>
+  );
+
   return (
     <Card
       elevation={0}
@@ -62,77 +141,19 @@ function MetricCard({
         height: "100%",
         border: "1px solid",
         borderColor: "divider",
-        borderRadius: 3,
-        cursor: onClick ? "pointer" : "default",
-        transition: "0.2s ease",
-        "&:hover": onClick
-          ? {
-              transform: "translateY(-2px)",
-              boxShadow: 3,
-            }
-          : undefined,
       }}
-      onClick={onClick}
     >
-      <CardContent sx={{ p: 3 }}>
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            gap: 2,
-          }}
+      {onClick ? (
+        <CardActionArea
+          onClick={onClick}
+          aria-label={actionLabel}
+          sx={{ height: "100%" }}
         >
-          <Box>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ fontWeight: 600 }}
-            >
-              {title}
-            </Typography>
-
-            {loading ? (
-              <CircularProgress
-                size={28}
-                sx={{ mt: 1.5 }}
-              />
-            ) : (
-              <Typography
-                variant="h4"
-                sx={{
-                  mt: 1,
-                  fontWeight: 800,
-                }}
-              >
-                {value.toLocaleString("en-IN")}
-              </Typography>
-            )}
-
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ mt: 0.5 }}
-            >
-              {description}
-            </Typography>
-          </Box>
-
-          <Box
-            sx={{
-              width: 48,
-              height: 48,
-              borderRadius: 2,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              bgcolor: "action.hover",
-            }}
-          >
-            {icon}
-          </Box>
-        </Box>
-      </CardContent>
+          {body}
+        </CardActionArea>
+      ) : (
+        body
+      )}
     </Card>
   );
 }
@@ -181,6 +202,22 @@ function getOrderStatusColor(status: string) {
   return "text.primary";
 }
 
+function OrderTableSkeletonRows() {
+  return (
+    <>
+      {Array.from({ length: 5 }).map((_, rowIndex) => (
+        <TableRow key={rowIndex}>
+          {Array.from({ length: 6 }).map((_, cellIndex) => (
+            <TableCell key={cellIndex}>
+              <Skeleton variant="text" width="80%" />
+            </TableCell>
+          ))}
+        </TableRow>
+      ))}
+    </>
+  );
+}
+
 export default function AdminDashboardPage() {
   const router = useRouter();
 
@@ -198,10 +235,10 @@ export default function AdminDashboardPage() {
 
   const loadDashboard = useCallback(
     async () => {
-      try {
-        setLoading(true);
-        setError("");
+      setLoading(true);
+      setError("");
 
+      try {
         const [
           dashboardSummary,
           orders,
@@ -212,15 +249,16 @@ export default function AdminDashboardPage() {
 
         setSummary(dashboardSummary);
         setRecentOrders(orders);
-      } catch (err: any) {
-        console.error(
-          "Failed to load admin dashboard:",
-          err
-        );
+      } catch (err) {
+        // Any rejection means "could not load" — the services never
+        // resolve failure as empty data, so this is a real error state.
+        setSummary(null);
+        setRecentOrders([]);
 
         setError(
-          err?.message ||
-            "Unable to load admin dashboard."
+          err instanceof Error
+            ? err.message
+            : "Unable to load admin dashboard."
         );
       } finally {
         setLoading(false);
@@ -230,7 +268,18 @@ export default function AdminDashboardPage() {
   );
 
   useEffect(() => {
-    loadDashboard();
+    let cancelled = false;
+
+    const run = async () => {
+      if (cancelled) return;
+      await loadDashboard();
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
   }, [loadDashboard]);
 
   return (
@@ -252,7 +301,7 @@ export default function AdminDashboardPage() {
           gap: 2,
         }}
       >
-        <Box>
+        <Box sx={{ minWidth: 0 }}>
           <Typography
             variant="h3"
             component="h2"
@@ -268,196 +317,136 @@ export default function AdminDashboardPage() {
             variant="body1"
             color="text.secondary"
           >
-            Real-time administration overview
-            from the connected backend modules.
+            Operational overview of the NextCart marketplace.
           </Typography>
         </Box>
 
         <Button
           variant="outlined"
           startIcon={<RefreshIcon />}
-          onClick={loadDashboard}
+          onClick={() => void loadDashboard()}
           disabled={loading}
+          sx={{ minHeight: 44, flexShrink: 0 }}
         >
           Refresh
         </Button>
       </Box>
 
-      {/* Error */}
+      {/* Error — a failed request is never shown as zero data */}
       {error && (
-        <Alert
-          severity="error"
-          sx={{ mb: 3 }}
-          onClose={() => setError("")}
-        >
-          {error}
-        </Alert>
+        <Box sx={{ mb: 3 }}>
+          <AdminErrorState
+            message={error}
+            onRetry={() => void loadDashboard()}
+          />
+        </Box>
       )}
 
-      {/* Metrics */}
-      <Grid
-        container
-        spacing={2}
-        sx={{ mb: 3 }}
+      {/* Metrics: 1 column on phones, 2 columns from 440px, 4 on desktop */}
+      <Box
+        sx={{
+          display: "grid",
+          gap: 2,
+          mb: 3,
+          gridTemplateColumns: "1fr",
+          "@media (min-width:440px)": {
+            gridTemplateColumns: "repeat(2, 1fr)",
+          },
+          "@media (min-width:1200px)": {
+            gridTemplateColumns: "repeat(4, 1fr)",
+          },
+        }}
       >
-        <Grid
-          size={{
-            xs: 12,
-            sm: 6,
-            lg: 3,
-          }}
-        >
-          <MetricCard
-            title="Customers"
-            value={
-              summary?.totalCustomers ?? 0
-            }
-            icon={
-              <PeopleIcon color="primary" />
-            }
-            description="Registered customers"
-            loading={loading}
-            onClick={() =>
-              router.push(
-                "/admin/customers"
-              )
-            }
-          />
-        </Grid>
+        <MetricCard
+          title="Customers"
+          value={summary?.totalCustomers ?? 0}
+          icon={<PeopleIcon color="primary" />}
+          description="Registered customers"
+          loading={loading}
+          onClick={() => router.push("/admin/customers")}
+          actionLabel="View customers"
+        />
 
-        <Grid
-          size={{
-            xs: 12,
-            sm: 6,
-            lg: 3,
-          }}
-        >
-          <MetricCard
-            title="Sellers"
-            value={
-              summary?.totalSellers ?? 0
-            }
-            icon={
-              <StoreIcon color="primary" />
-            }
-            description="Registered sellers"
-            loading={loading}
-            onClick={() =>
-              router.push(
-                "/admin/sellers"
-              )
-            }
-          />
-        </Grid>
+        <MetricCard
+          title="Sellers"
+          value={summary?.totalSellers ?? 0}
+          icon={<StoreIcon color="primary" />}
+          description="Registered sellers"
+          loading={loading}
+          onClick={() => router.push("/admin/sellers")}
+          actionLabel="View sellers"
+        />
 
-        <Grid
-          size={{
-            xs: 12,
-            sm: 6,
-            lg: 3,
-          }}
-        >
-          <MetricCard
-            title="Orders"
-            value={
-              summary?.totalOrders ?? 0
-            }
-            icon={
-              <ShoppingBagIcon color="primary" />
-            }
-            description="Orders in the system"
-            loading={loading}
-            onClick={() =>
-              router.push(
-                "/admin/orders"
-              )
-            }
-          />
-        </Grid>
+        <MetricCard
+          title="Orders"
+          value={summary?.totalOrders ?? 0}
+          icon={<ShoppingBagIcon color="primary" />}
+          description="Orders in the system"
+          loading={loading}
+          onClick={() => router.push("/admin/orders")}
+          actionLabel="View orders"
+        />
 
-        <Grid
-          size={{
-            xs: 12,
-            sm: 6,
-            lg: 3,
-          }}
-        >
-          <MetricCard
-            title="Pending KYC"
-            value={
-              summary?.pendingKyc ?? 0
-            }
-            icon={
-              <VerifiedUserIcon color="warning" />
-            }
-            description="Seller KYC awaiting review"
-            loading={loading}
-            onClick={() =>
-              router.push(
-                "/admin/kyc"
-              )
-            }
-          />
-        </Grid>
-      </Grid>
+        <MetricCard
+          title="Pending KYC"
+          value={summary?.pendingKyc ?? 0}
+          icon={<VerifiedUserIcon color="warning" />}
+          description="Seller KYC awaiting review"
+          loading={loading}
+          onClick={() => router.push("/admin/kyc")}
+          actionLabel="Review seller KYC"
+        />
+      </Box>
 
-      {/* Pending KYC alert */}
+      {/* Pending KYC attention — only when the backend reports pending items */}
       {!loading &&
+        !error &&
         summary &&
         summary.pendingKyc > 0 && (
           <Alert
             severity="warning"
-            sx={{ mb: 3 }}
+            sx={{ mb: 3, alignItems: "center" }}
             action={
               <Button
                 color="inherit"
-                size="small"
-                endIcon={
-                  <ArrowForwardIcon />
-                }
-                onClick={() =>
-                  router.push(
-                    "/admin/kyc"
-                  )
-                }
+                endIcon={<ArrowForwardIcon />}
+                onClick={() => router.push("/admin/kyc")}
+                sx={{ minHeight: 44, flexShrink: 0 }}
               >
                 Review KYC
               </Button>
             }
           >
-            There are{" "}
-            <strong>
-              {summary.pendingKyc.toLocaleString(
-                "en-IN"
-              )}
-            </strong>{" "}
-            seller KYC record
-            {summary.pendingKyc === 1
-              ? ""
-              : "s"} awaiting review.
+            <Box sx={{ overflowWrap: "anywhere" }}>
+              There are{" "}
+              <strong>
+                {formatMetric(summary.pendingKyc)}
+              </strong>{" "}
+              seller KYC record
+              {summary.pendingKyc === 1 ? "" : "s"} awaiting review.
+            </Box>
           </Alert>
         )}
 
       {/* Recent Orders */}
-      <Paper
-        elevation={0}
+      <Box
         sx={{
           border: "1px solid",
           borderColor: "divider",
-          borderRadius: 3,
+          borderRadius: 2,
           overflow: "hidden",
+          bgcolor: "background.paper",
         }}
       >
         <Box
           sx={{
-            p: 3,
+            p: { xs: 2, sm: 3 },
             display: "flex",
             flexDirection: {
               xs: "column",
               sm: "row",
             },
-            justifyContent:
-              "space-between",
+            justifyContent: "space-between",
             alignItems: {
               xs: "flex-start",
               sm: "center",
@@ -465,7 +454,7 @@ export default function AdminDashboardPage() {
             gap: 1,
           }}
         >
-          <Box>
+          <Box sx={{ minWidth: 0 }}>
             <Typography
               variant="h5"
               sx={{ fontWeight: 700 }}
@@ -478,66 +467,45 @@ export default function AdminDashboardPage() {
               color="text.secondary"
               sx={{ mt: 0.5 }}
             >
-              Latest orders returned by the
-              admin order API.
+              Latest orders returned by the admin order API.
             </Typography>
           </Box>
 
           <Button
             variant="text"
-            endIcon={
-              <ArrowForwardIcon />
-            }
-            onClick={() =>
-              router.push(
-                "/admin/orders"
-              )
-            }
+            endIcon={<ArrowForwardIcon />}
+            onClick={() => router.push("/admin/orders")}
+            sx={{ minHeight: 44, flexShrink: 0 }}
           >
             View all
           </Button>
         </Box>
 
-        <TableContainer
-          sx={{ overflowX: "auto" }}
-        >
-          <Table sx={{ minWidth: 700 }}>
+        <TableContainer sx={{ overflowX: "auto" }}>
+          <Table sx={{ minWidth: 700 }} aria-label="Recent orders">
             <TableHead>
               <TableRow>
-                <TableCell
-                  sx={{ fontWeight: 700 }}
-                >
+                <TableCell sx={{ fontWeight: 700 }}>
                   Order
                 </TableCell>
 
-                <TableCell
-                  sx={{ fontWeight: 700 }}
-                >
+                <TableCell sx={{ fontWeight: 700 }}>
                   Customer
                 </TableCell>
 
-                <TableCell
-                  sx={{ fontWeight: 700 }}
-                >
+                <TableCell sx={{ fontWeight: 700 }}>
                   Status
                 </TableCell>
 
-                <TableCell
-                  sx={{ fontWeight: 700 }}
-                >
+                <TableCell sx={{ fontWeight: 700 }}>
                   Payment
                 </TableCell>
 
-                <TableCell
-                  align="right"
-                  sx={{ fontWeight: 700 }}
-                >
+                <TableCell align="right" sx={{ fontWeight: 700 }}>
                   Total
                 </TableCell>
 
-                <TableCell
-                  sx={{ fontWeight: 700 }}
-                >
+                <TableCell sx={{ fontWeight: 700 }}>
                   Created
                 </TableCell>
               </TableRow>
@@ -545,35 +513,13 @@ export default function AdminDashboardPage() {
 
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6}>
-                    <Box
-                      sx={{
-                        py: 6,
-                        display: "flex",
-                        justifyContent:
-                          "center",
-                      }}
-                    >
-                      <CircularProgress />
-                    </Box>
-                  </TableCell>
-                </TableRow>
+                <OrderTableSkeletonRows />
               ) : recentOrders.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6}>
-                    <Box
-                      sx={{
-                        py: 6,
-                        textAlign: "center",
-                      }}
-                    >
-                      <Typography
-                        sx={{
-                          fontWeight: 600,
-                        }}
-                      >
-                        No orders found
+                    <Box sx={{ py: 6, textAlign: "center" }}>
+                      <Typography sx={{ fontWeight: 600 }}>
+                        No recent orders
                       </Typography>
 
                       <Typography
@@ -581,35 +527,53 @@ export default function AdminDashboardPage() {
                         color="text.secondary"
                         sx={{ mt: 0.5 }}
                       >
-                        The backend returned
-                        no orders.
+                        The backend returned no recent orders.
                       </Typography>
                     </Box>
                   </TableCell>
                 </TableRow>
               ) : (
-                recentOrders.map(
-                  (order) => (
+                recentOrders.map((order) => {
+                  const orderLabel =
+                    order.orderNumber || `#${order.id}`;
+
+                  const openOrder = () =>
+                    router.push(`/admin/orders/${order.id}`);
+
+                  return (
                     <TableRow
                       key={order.id}
                       hover
+                      tabIndex={0}
+                      role="link"
+                      aria-label={`Open order ${orderLabel}`}
+                      onClick={openOrder}
+                      onKeyDown={(event) => {
+                        if (
+                          event.key === "Enter" ||
+                          event.key === " "
+                        ) {
+                          event.preventDefault();
+                          openOrder();
+                        }
+                      }}
                       sx={{
                         cursor: "pointer",
+                        "&:focus-visible": {
+                          outline: "2px solid",
+                          outlineColor: "primary.main",
+                          outlineOffset: -2,
+                        },
                       }}
-                      onClick={() =>
-                        router.push(
-                          `/admin/orders/${order.id}`
-                        )
-                      }
                     >
                       <TableCell>
                         <Typography
                           sx={{
                             fontWeight: 700,
+                            overflowWrap: "anywhere",
                           }}
                         >
-                          {order.orderNumber ||
-                            `#${order.id}`}
+                          {orderLabel}
                         </Typography>
                       </TableCell>
 
@@ -618,18 +582,21 @@ export default function AdminDashboardPage() {
                           variant="body2"
                           sx={{
                             fontWeight: 600,
+                            overflowWrap: "anywhere",
                           }}
                         >
-                          {order.shippingFullName ||
-                            "—"}
+                          {order.shippingFullName || "—"}
                         </Typography>
 
                         <Typography
                           variant="caption"
                           color="text.secondary"
+                          sx={{
+                            display: "block",
+                            overflowWrap: "anywhere",
+                          }}
                         >
-                          {order.shippingCity ||
-                            "—"}
+                          {order.shippingCity || "—"}
                         </Typography>
                       </TableCell>
 
@@ -638,31 +605,23 @@ export default function AdminDashboardPage() {
                           variant="body2"
                           sx={{
                             fontWeight: 700,
-                            color:
-                              getOrderStatusColor(
-                                order.status
-                              ),
+                            color: getOrderStatusColor(order.status),
                           }}
                         >
-                          {order.status ||
-                            "—"}
+                          {order.status || "—"}
                         </Typography>
                       </TableCell>
 
                       <TableCell>
-                        <Typography
-                          variant="body2"
-                        >
-                          {order.paymentMethod ||
-                            "—"}
+                        <Typography variant="body2">
+                          {order.paymentMethod || "—"}
                         </Typography>
 
                         <Typography
                           variant="caption"
                           color="text.secondary"
                         >
-                          {order.paymentStatus ||
-                            "—"}
+                          {order.paymentStatus || "—"}
                         </Typography>
                       </TableCell>
 
@@ -670,33 +629,28 @@ export default function AdminDashboardPage() {
                         <Typography
                           sx={{
                             fontWeight: 700,
+                            whiteSpace: "nowrap",
                           }}
                         >
-                          {order.currency ||
-                            "INR"}{" "}
-                          {order.totalAmount.toLocaleString(
-                            "en-IN",
-                            {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            }
-                          )}
+                          {order.currency || "INR"}{" "}
+                          {order.totalAmount.toLocaleString("en-IN", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
                         </Typography>
                       </TableCell>
 
                       <TableCell>
-                        {formatDate(
-                          order.createdAt
-                        )}
+                        {formatDate(order.createdAt)}
                       </TableCell>
                     </TableRow>
-                  )
-                )
+                  );
+                })
               )}
             </TableBody>
           </Table>
         </TableContainer>
-      </Paper>
+      </Box>
     </Box>
   );
 }
