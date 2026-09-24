@@ -133,8 +133,14 @@ export default function AdminLoginPage() {
         title="Admin sign in"
         subtitle="Checking your administrator session"
       >
-        <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center" }}>
-          Loading…
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          role="status"
+          aria-live="polite"
+          sx={{ textAlign: "center" }}
+        >
+          Checking your administrator session…
         </Typography>
       </AuthCard>
     );
@@ -214,6 +220,7 @@ export default function AdminLoginPage() {
               variant="contained"
               size="large"
               disabled={loading || submitting || formIsIncomplete}
+              sx={{ minHeight: 44 }}
             >
               {loading || submitting ? "Signing in…" : "Sign In"}
             </Button>
