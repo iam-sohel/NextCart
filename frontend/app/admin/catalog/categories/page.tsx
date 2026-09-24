@@ -5,7 +5,6 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -13,6 +12,7 @@ import {
   DialogTitle,
   IconButton,
   Paper,
+  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -30,6 +30,8 @@ import EditIcon from "@mui/icons-material/Edit";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import BlockIcon from "@mui/icons-material/Block";
 import RestoreIcon from "@mui/icons-material/Restore";
+
+import AdminStatusChip from "@/components/admin/AdminStatusChip";
 
 import {
   createAdminCategory,
@@ -66,12 +68,11 @@ export default function AdminCategoriesPage() {
 
       setCategories(result.content);
       setTotalElements(result.totalElements);
-    } catch (err: any) {
-      console.error("Failed to load categories:", err);
-
+    } catch (err) {
       setError(
-        err?.message ||
-          "Unable to load categories. Please try again."
+        err instanceof Error
+          ? err.message
+          : "Unable to load categories. Please try again."
       );
     } finally {
       setLoading(false);
@@ -79,7 +80,18 @@ export default function AdminCategoriesPage() {
   }, [page, rowsPerPage]);
 
   useEffect(() => {
-    loadCategories();
+    let cancelled = false;
+
+    const run = async () => {
+      if (cancelled) return;
+      await loadCategories();
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
   }, [loadCategories]);
 
   const openCreateDialog = () => {
@@ -129,12 +141,11 @@ export default function AdminCategoriesPage() {
 
       closeDialog();
       await loadCategories();
-    } catch (err: any) {
-      console.error("Failed to save category:", err);
-
+    } catch (err) {
       setError(
-        err?.message ||
-          "Unable to save category. Please try again."
+        err instanceof Error
+          ? err.message
+          : "Unable to save category. Please try again."
       );
     } finally {
       setSaving(false);
@@ -157,15 +168,11 @@ export default function AdminCategoriesPage() {
       }
 
       await loadCategories();
-    } catch (err: any) {
-      console.error(
-        "Failed to update category status:",
-        err
-      );
-
+    } catch (err) {
       setError(
-        err?.message ||
-          "Unable to update category status."
+        err instanceof Error
+          ? err.message
+          : "Unable to update category status."
       );
     } finally {
       setActionLoading(null);
@@ -191,9 +198,10 @@ export default function AdminCategoriesPage() {
           gap: 2,
         }}
       >
-        <Box>
+        <Box sx={{ minWidth: 0 }}>
           <Typography
-            variant="h4"
+            variant="h3"
+            component="h2"
             sx={{ fontWeight: 700 }}
           >
             Categories
@@ -219,8 +227,10 @@ export default function AdminCategoriesPage() {
           <Button
             variant="outlined"
             startIcon={<RefreshIcon />}
-            onClick={loadCategories}
+            onClick={() => void loadCategories()}
             disabled={loading}
+            aria-label="Refresh category list"
+            sx={{ minHeight: 44 }}
           >
             Refresh
           </Button>
@@ -229,6 +239,7 @@ export default function AdminCategoriesPage() {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={openCreateDialog}
+            sx={{ minHeight: 44 }}
           >
             Add Category
           </Button>
@@ -254,21 +265,28 @@ export default function AdminCategoriesPage() {
           overflow: "hidden",
         }}
       >
-        <Box sx={{ p: 2 }}>
+        <Box sx={{ p: { xs: 2, sm: 3 } }}>
           <TextField
             fullWidth
             size="small"
+            label="Search categories"
             placeholder="Search categories..."
+            helperText="Search applies to the currently loaded page."
             value={search}
             onChange={(event) => {
               setSearch(event.target.value);
               setPage(0);
             }}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                minHeight: 44,
+              },
+            }}
           />
         </Box>
 
-        <TableContainer>
-          <Table>
+        <TableContainer sx={{ overflowX: "auto" }}>
+          <Table sx={{ minWidth: 760 }} aria-label="Product categories">
             <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 700 }}>
@@ -298,19 +316,24 @@ export default function AdminCategoriesPage() {
 
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5}>
-                    <Box
-                      sx={{
-                        py: 7,
-                        display: "flex",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <CircularProgress />
-                    </Box>
-                  </TableCell>
-                </TableRow>
+                <>
+                  {Array.from({ length: 5 }).map(
+                    (_, rowIndex) => (
+                      <TableRow key={rowIndex}>
+                        {Array.from({ length: 5 }).map(
+                          (_, cellIndex) => (
+                            <TableCell key={cellIndex}>
+                              <Skeleton
+                                variant="text"
+                                width="80%"
+                              />
+                            </TableCell>
+                          )
+                        )}
+                      </TableRow>
+                    )
+                  )}
+                </>
               ) : filteredCategories.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5}>
@@ -323,7 +346,9 @@ export default function AdminCategoriesPage() {
                       <Typography
                         sx={{ fontWeight: 600 }}
                       >
-                        No categories found
+                        {categories.length === 0
+                          ? "No categories found"
+                          : "No matching categories on this page"}
                       </Typography>
 
                       <Typography
@@ -331,8 +356,9 @@ export default function AdminCategoriesPage() {
                         color="text.secondary"
                         sx={{ mt: 0.5 }}
                       >
-                        Try another search or create a new
-                        category.
+                        {categories.length === 0
+                          ? "Try another search or create a new category."
+                          : "Search applies to the currently loaded page only. Try a different search."}
                       </Typography>
                     </Box>
                   </TableCell>
@@ -351,28 +377,27 @@ export default function AdminCategoriesPage() {
                       key={category.id}
                       hover
                     >
-                      <TableCell>
+                      <TableCell sx={{ whiteSpace: "nowrap" }}>
                         #{category.id}
                       </TableCell>
 
                       <TableCell>
                         <Typography
-                          sx={{ fontWeight: 600 }}
+                          sx={{
+                            fontWeight: 600,
+                            overflowWrap: "anywhere",
+                          }}
                         >
                           {category.name}
                         </Typography>
                       </TableCell>
 
                       <TableCell>
-                        <Chip
-                          size="small"
-                          label={
-                            category.status || "UNKNOWN"
-                          }
-                          color={
-                            isActive
-                              ? "success"
-                              : "default"
+                        <AdminStatusChip
+                          status={category.status || "UNKNOWN"}
+                          label={category.status || "UNKNOWN"}
+                          tone={
+                            isActive ? "success" : "neutral"
                           }
                         />
                       </TableCell>
@@ -389,10 +414,12 @@ export default function AdminCategoriesPage() {
                         <Tooltip title="Edit category">
                           <IconButton
                             size="small"
+                            aria-label={`Edit category ${category.id}`}
                             onClick={() =>
                               openEditDialog(category)
                             }
                             disabled={isActionLoading}
+                            sx={{ width: 44, height: 44 }}
                           >
                             <EditIcon fontSize="small" />
                           </IconButton>
@@ -412,12 +439,18 @@ export default function AdminCategoriesPage() {
                                 ? "error"
                                 : "success"
                             }
+                            aria-label={`${
+                              isActive
+                                ? "Deactivate"
+                                : "Restore"
+                            } category ${category.id}`}
                             onClick={() =>
                               handleToggleStatus(
                                 category
                               )
                             }
                             disabled={isActionLoading}
+                            sx={{ width: 44, height: 44 }}
                           >
                             {isActionLoading ? (
                               <CircularProgress size={18} />
@@ -452,6 +485,16 @@ export default function AdminCategoriesPage() {
             setPage(0);
           }}
           rowsPerPageOptions={[10, 20, 50]}
+          sx={{
+            "& .MuiTablePagination-toolbar": {
+              flexWrap: "wrap",
+              rowGap: 1,
+            },
+            "& .MuiTablePagination-actions .MuiIconButton-root": {
+              width: 44,
+              height: 44,
+            },
+          }}
         />
       </Paper>
 
@@ -460,8 +503,9 @@ export default function AdminCategoriesPage() {
         onClose={closeDialog}
         fullWidth
         maxWidth="sm"
+        aria-labelledby="category-dialog-title"
       >
-        <DialogTitle>
+        <DialogTitle id="category-dialog-title">
           {editingCategory
             ? "Edit Category"
             : "Create Category"}
@@ -491,10 +535,11 @@ export default function AdminCategoriesPage() {
           />
         </DialogContent>
 
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button
             onClick={closeDialog}
             disabled={saving}
+            sx={{ minHeight: 44 }}
           >
             Cancel
           </Button>
@@ -507,6 +552,7 @@ export default function AdminCategoriesPage() {
               categoryName.trim().length < 2 ||
               categoryName.trim().length > 100
             }
+            sx={{ minHeight: 44 }}
           >
             {saving
               ? "Saving..."

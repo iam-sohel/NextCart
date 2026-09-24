@@ -5,7 +5,6 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -13,6 +12,7 @@ import {
   DialogTitle,
   IconButton,
   Paper,
+  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -30,6 +30,8 @@ import EditIcon from "@mui/icons-material/Edit";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import BlockIcon from "@mui/icons-material/Block";
 import RestoreIcon from "@mui/icons-material/Restore";
+
+import AdminStatusChip from "@/components/admin/AdminStatusChip";
 
 import {
   createAdminBrand,
@@ -65,10 +67,11 @@ export default function AdminBrandsPage() {
 
       setBrands(result.content);
       setTotalElements(result.totalElements);
-    } catch (err: any) {
-      console.error("Failed to load brands:", err);
+    } catch (err) {
       setError(
-        err?.message || "Unable to load brands. Please try again."
+        err instanceof Error
+          ? err.message
+          : "Unable to load brands. Please try again."
       );
     } finally {
       setLoading(false);
@@ -76,7 +79,18 @@ export default function AdminBrandsPage() {
   }, [page, rowsPerPage]);
 
   useEffect(() => {
-    loadBrands();
+    let cancelled = false;
+
+    const run = async () => {
+      if (cancelled) return;
+      await loadBrands();
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
   }, [loadBrands]);
 
   const openCreateDialog = () => {
@@ -121,10 +135,11 @@ export default function AdminBrandsPage() {
 
       closeDialog();
       await loadBrands();
-    } catch (err: any) {
-      console.error("Failed to save brand:", err);
+    } catch (err) {
       setError(
-        err?.message || "Unable to save brand. Please try again."
+        err instanceof Error
+          ? err.message
+          : "Unable to save brand. Please try again."
       );
     } finally {
       setSaving(false);
@@ -143,10 +158,11 @@ export default function AdminBrandsPage() {
       }
 
       await loadBrands();
-    } catch (err: any) {
-      console.error("Failed to update brand status:", err);
+    } catch (err) {
       setError(
-        err?.message || "Unable to update brand status."
+        err instanceof Error
+          ? err.message
+          : "Unable to update brand status."
       );
     } finally {
       setActionLoading(null);
@@ -169,8 +185,12 @@ export default function AdminBrandsPage() {
           gap: 2,
         }}
       >
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography
+            variant="h3"
+            component="h2"
+            sx={{ fontWeight: 700 }}
+          >
             Brands
           </Typography>
 
@@ -193,8 +213,10 @@ export default function AdminBrandsPage() {
           <Button
             variant="outlined"
             startIcon={<RefreshIcon />}
-            onClick={loadBrands}
+            onClick={() => void loadBrands()}
             disabled={loading}
+            aria-label="Refresh brand list"
+            sx={{ minHeight: 44 }}
           >
             Refresh
           </Button>
@@ -203,6 +225,7 @@ export default function AdminBrandsPage() {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={openCreateDialog}
+            sx={{ minHeight: 44 }}
           >
             Add Brand
           </Button>
@@ -228,21 +251,28 @@ export default function AdminBrandsPage() {
           overflow: "hidden",
         }}
       >
-        <Box sx={{ p: 2 }}>
+        <Box sx={{ p: { xs: 2, sm: 3 } }}>
           <TextField
             fullWidth
             size="small"
+            label="Search brands"
             placeholder="Search brands..."
+            helperText="Search applies to the currently loaded page."
             value={search}
             onChange={(event) => {
               setSearch(event.target.value);
               setPage(0);
             }}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                minHeight: 44,
+              },
+            }}
           />
         </Box>
 
-        <TableContainer>
-          <Table>
+        <TableContainer sx={{ overflowX: "auto" }}>
+          <Table sx={{ minWidth: 680 }} aria-label="Product brands">
             <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 700 }}>
@@ -265,25 +295,32 @@ export default function AdminBrandsPage() {
 
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={4}>
-                    <Box
-                      sx={{
-                        py: 7,
-                        display: "flex",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <CircularProgress />
-                    </Box>
-                  </TableCell>
-                </TableRow>
+                <>
+                  {Array.from({ length: 5 }).map(
+                    (_, rowIndex) => (
+                      <TableRow key={rowIndex}>
+                        {Array.from({ length: 4 }).map(
+                          (_, cellIndex) => (
+                            <TableCell key={cellIndex}>
+                              <Skeleton
+                                variant="text"
+                                width="80%"
+                              />
+                            </TableCell>
+                          )
+                        )}
+                      </TableRow>
+                    )
+                  )}
+                </>
               ) : filteredBrands.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4}>
                     <Box sx={{ py: 7, textAlign: "center" }}>
                       <Typography sx={{ fontWeight: 600 }}>
-                        No brands found
+                        {brands.length === 0
+                          ? "No brands found"
+                          : "No matching brands on this page"}
                       </Typography>
 
                       <Typography
@@ -291,7 +328,9 @@ export default function AdminBrandsPage() {
                         color="text.secondary"
                         sx={{ mt: 0.5 }}
                       >
-                        Try another search or create a new brand.
+                        {brands.length === 0
+                          ? "Try another search or create a new brand."
+                          : "Search applies to the currently loaded page only. Try a different search."}
                       </Typography>
                     </Box>
                   </TableCell>
@@ -306,19 +345,26 @@ export default function AdminBrandsPage() {
 
                   return (
                     <TableRow key={brand.id} hover>
-                      <TableCell>#{brand.id}</TableCell>
+                      <TableCell sx={{ whiteSpace: "nowrap" }}>
+                        #{brand.id}
+                      </TableCell>
 
                       <TableCell>
-                        <Typography sx={{ fontWeight: 600 }}>
+                        <Typography
+                          sx={{
+                            fontWeight: 600,
+                            overflowWrap: "anywhere",
+                          }}
+                        >
                           {brand.name}
                         </Typography>
                       </TableCell>
 
                       <TableCell>
-                        <Chip
-                          size="small"
+                        <AdminStatusChip
+                          status={brand.status || "UNKNOWN"}
                           label={brand.status || "UNKNOWN"}
-                          color={isActive ? "success" : "default"}
+                          tone={isActive ? "success" : "neutral"}
                         />
                       </TableCell>
 
@@ -326,8 +372,10 @@ export default function AdminBrandsPage() {
                         <Tooltip title="Edit brand">
                           <IconButton
                             size="small"
+                            aria-label={`Edit brand ${brand.id}`}
                             onClick={() => openEditDialog(brand)}
                             disabled={isActionLoading}
+                            sx={{ width: 44, height: 44 }}
                           >
                             <EditIcon fontSize="small" />
                           </IconButton>
@@ -343,10 +391,14 @@ export default function AdminBrandsPage() {
                           <IconButton
                             size="small"
                             color={isActive ? "error" : "success"}
+                            aria-label={`${
+                              isActive ? "Deactivate" : "Restore"
+                            } brand ${brand.id}`}
                             onClick={() =>
                               handleToggleStatus(brand)
                             }
                             disabled={isActionLoading}
+                            sx={{ width: 44, height: 44 }}
                           >
                             {isActionLoading ? (
                               <CircularProgress size={18} />
@@ -379,6 +431,16 @@ export default function AdminBrandsPage() {
             setPage(0);
           }}
           rowsPerPageOptions={[10, 20, 50]}
+          sx={{
+            "& .MuiTablePagination-toolbar": {
+              flexWrap: "wrap",
+              rowGap: 1,
+            },
+            "& .MuiTablePagination-actions .MuiIconButton-root": {
+              width: 44,
+              height: 44,
+            },
+          }}
         />
       </Paper>
 
@@ -387,8 +449,9 @@ export default function AdminBrandsPage() {
         onClose={closeDialog}
         fullWidth
         maxWidth="sm"
+        aria-labelledby="brand-dialog-title"
       >
-        <DialogTitle>
+        <DialogTitle id="brand-dialog-title">
           {editingBrand ? "Edit Brand" : "Create Brand"}
         </DialogTitle>
 
@@ -413,8 +476,12 @@ export default function AdminBrandsPage() {
           />
         </DialogContent>
 
-        <DialogActions>
-          <Button onClick={closeDialog} disabled={saving}>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button
+            onClick={closeDialog}
+            disabled={saving}
+            sx={{ minHeight: 44 }}
+          >
             Cancel
           </Button>
 
@@ -426,6 +493,7 @@ export default function AdminBrandsPage() {
               !brandName.trim() ||
               brandName.trim().length > 100
             }
+            sx={{ minHeight: 44 }}
           >
             {saving
               ? "Saving..."

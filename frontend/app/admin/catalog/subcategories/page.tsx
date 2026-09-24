@@ -5,7 +5,6 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -15,6 +14,7 @@ import {
   MenuItem,
   Paper,
   Select,
+  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -32,6 +32,8 @@ import EditIcon from "@mui/icons-material/Edit";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import BlockIcon from "@mui/icons-material/Block";
 import RestoreIcon from "@mui/icons-material/Restore";
+
+import AdminStatusChip from "@/components/admin/AdminStatusChip";
 
 import { apiRequest } from "@/lib/api";
 
@@ -255,15 +257,11 @@ export default function AdminSubCategoriesPage() {
       );
 
       setCategories(categoryResult);
-    } catch (err: any) {
-      console.error(
-        "Failed to load subcategories:",
-        err
-      );
-
+    } catch (err) {
       setError(
-        err?.message ||
-          "Unable to load subcategories. Please try again."
+        err instanceof Error
+          ? err.message
+          : "Unable to load subcategories. Please try again."
       );
     } finally {
       setLoading(false);
@@ -271,7 +269,18 @@ export default function AdminSubCategoriesPage() {
   }, [page, rowsPerPage]);
 
   useEffect(() => {
-    loadData();
+    let cancelled = false;
+
+    const run = async () => {
+      if (cancelled) return;
+      await loadData();
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
   }, [loadData]);
 
   const openCreateDialog = () => {
@@ -342,15 +351,11 @@ export default function AdminSubCategoriesPage() {
 
       closeDialog();
       await loadData();
-    } catch (err: any) {
-      console.error(
-        "Failed to save subcategory:",
-        err
-      );
-
+    } catch (err) {
       setError(
-        err?.message ||
-          "Unable to save subcategory. Please try again."
+        err instanceof Error
+          ? err.message
+          : "Unable to save subcategory. Please try again."
       );
     } finally {
       setSaving(false);
@@ -377,15 +382,11 @@ export default function AdminSubCategoriesPage() {
       }
 
       await loadData();
-    } catch (err: any) {
-      console.error(
-        "Failed to update subcategory status:",
-        err
-      );
-
+    } catch (err) {
       setError(
-        err?.message ||
-          "Unable to update subcategory status."
+        err instanceof Error
+          ? err.message
+          : "Unable to update subcategory status."
       );
     } finally {
       setActionLoading(null);
@@ -426,9 +427,10 @@ export default function AdminSubCategoriesPage() {
           gap: 2,
         }}
       >
-        <Box>
+        <Box sx={{ minWidth: 0 }}>
           <Typography
-            variant="h4"
+            variant="h3"
+            component="h2"
             sx={{ fontWeight: 700 }}
           >
             Subcategories
@@ -454,8 +456,10 @@ export default function AdminSubCategoriesPage() {
           <Button
             variant="outlined"
             startIcon={<RefreshIcon />}
-            onClick={loadData}
+            onClick={() => void loadData()}
             disabled={loading}
+            aria-label="Refresh subcategory list"
+            sx={{ minHeight: 44 }}
           >
             Refresh
           </Button>
@@ -464,6 +468,7 @@ export default function AdminSubCategoriesPage() {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={openCreateDialog}
+            sx={{ minHeight: 44 }}
           >
             Add Subcategory
           </Button>
@@ -489,21 +494,31 @@ export default function AdminSubCategoriesPage() {
           overflow: "hidden",
         }}
       >
-        <Box sx={{ p: 2 }}>
+        <Box sx={{ p: { xs: 2, sm: 3 } }}>
           <TextField
             fullWidth
             size="small"
+            label="Search subcategories"
             placeholder="Search subcategories or categories..."
+            helperText="Search applies to the currently loaded page."
             value={search}
             onChange={(event) => {
               setSearch(event.target.value);
               setPage(0);
             }}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                minHeight: 44,
+              },
+            }}
           />
         </Box>
 
-        <TableContainer>
-          <Table>
+        <TableContainer sx={{ overflowX: "auto" }}>
+          <Table
+            sx={{ minWidth: 820 }}
+            aria-label="Product subcategories"
+          >
             <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 700 }}>
@@ -533,19 +548,24 @@ export default function AdminSubCategoriesPage() {
 
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5}>
-                    <Box
-                      sx={{
-                        py: 7,
-                        display: "flex",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <CircularProgress />
-                    </Box>
-                  </TableCell>
-                </TableRow>
+                <>
+                  {Array.from({ length: 5 }).map(
+                    (_, rowIndex) => (
+                      <TableRow key={rowIndex}>
+                        {Array.from({ length: 5 }).map(
+                          (_, cellIndex) => (
+                            <TableCell key={cellIndex}>
+                              <Skeleton
+                                variant="text"
+                                width="80%"
+                              />
+                            </TableCell>
+                          )
+                        )}
+                      </TableRow>
+                    )
+                  )}
+                </>
               ) : filteredSubCategories.length ===
                 0 ? (
                 <TableRow>
@@ -559,7 +579,9 @@ export default function AdminSubCategoriesPage() {
                       <Typography
                         sx={{ fontWeight: 600 }}
                       >
-                        No subcategories found
+                        {subCategories.length === 0
+                          ? "No subcategories found"
+                          : "No matching subcategories on this page"}
                       </Typography>
 
                       <Typography
@@ -567,8 +589,9 @@ export default function AdminSubCategoriesPage() {
                         color="text.secondary"
                         sx={{ mt: 0.5 }}
                       >
-                        Try another search or create a
-                        new subcategory.
+                        {subCategories.length === 0
+                          ? "Try another search or create a new subcategory."
+                          : "Search applies to the currently loaded page only. Try a different search."}
                       </Typography>
                     </Box>
                   </TableCell>
@@ -589,35 +612,31 @@ export default function AdminSubCategoriesPage() {
                         key={subCategory.id}
                         hover
                       >
-                        <TableCell>
+                        <TableCell sx={{ whiteSpace: "nowrap" }}>
                           #{subCategory.id}
                         </TableCell>
 
                         <TableCell>
                           <Typography
-                            sx={{ fontWeight: 600 }}
+                            sx={{
+                              fontWeight: 600,
+                              overflowWrap: "anywhere",
+                            }}
                           >
                             {subCategory.name}
                           </Typography>
                         </TableCell>
 
-                        <TableCell>
+                        <TableCell sx={{ overflowWrap: "anywhere" }}>
                           {subCategory.categoryName ||
                             `Category #${subCategory.categoryId}`}
                         </TableCell>
 
                         <TableCell>
-                          <Chip
-                            size="small"
-                            label={
-                              subCategory.status ||
-                              "UNKNOWN"
-                            }
-                            color={
-                              isActive
-                                ? "success"
-                                : "default"
-                            }
+                          <AdminStatusChip
+                            status={subCategory.status || "UNKNOWN"}
+                            label={subCategory.status || "UNKNOWN"}
+                            tone={isActive ? "success" : "neutral"}
                           />
                         </TableCell>
 
@@ -625,6 +644,7 @@ export default function AdminSubCategoriesPage() {
                           <Tooltip title="Edit subcategory">
                             <IconButton
                               size="small"
+                              aria-label={`Edit subcategory ${subCategory.id}`}
                               onClick={() =>
                                 openEditDialog(
                                   subCategory
@@ -633,6 +653,7 @@ export default function AdminSubCategoriesPage() {
                               disabled={
                                 isActionLoading
                               }
+                              sx={{ width: 44, height: 44 }}
                             >
                               <EditIcon fontSize="small" />
                             </IconButton>
@@ -652,6 +673,11 @@ export default function AdminSubCategoriesPage() {
                                   ? "error"
                                   : "success"
                               }
+                              aria-label={`${
+                                isActive
+                                  ? "Deactivate"
+                                  : "Restore"
+                              } subcategory ${subCategory.id}`}
                               onClick={() =>
                                 handleToggleStatus(
                                   subCategory
@@ -660,6 +686,7 @@ export default function AdminSubCategoriesPage() {
                               disabled={
                                 isActionLoading
                               }
+                              sx={{ width: 44, height: 44 }}
                             >
                               {isActionLoading ? (
                                 <CircularProgress
@@ -697,6 +724,16 @@ export default function AdminSubCategoriesPage() {
             setPage(0);
           }}
           rowsPerPageOptions={[10, 20, 50]}
+          sx={{
+            "& .MuiTablePagination-toolbar": {
+              flexWrap: "wrap",
+              rowGap: 1,
+            },
+            "& .MuiTablePagination-actions .MuiIconButton-root": {
+              width: 44,
+              height: 44,
+            },
+          }}
         />
       </Paper>
 
@@ -705,8 +742,9 @@ export default function AdminSubCategoriesPage() {
         onClose={closeDialog}
         fullWidth
         maxWidth="sm"
+        aria-labelledby="subcategory-dialog-title"
       >
-        <DialogTitle>
+        <DialogTitle id="subcategory-dialog-title">
           {editingSubCategory
             ? "Edit Subcategory"
             : "Create Subcategory"}
@@ -737,11 +775,12 @@ export default function AdminSubCategoriesPage() {
           <Select
             fullWidth
             displayEmpty
+            aria-label="Parent category"
             value={categoryId}
-onChange={(event) =>
-  setCategoryId(Number(event.target.value))
-}
-            sx={{ mt: 1 }}
+            onChange={(event) =>
+              setCategoryId(Number(event.target.value))
+            }
+            sx={{ mt: 1, minHeight: 44 }}
           >
             <MenuItem value="">
               <em>Select Category</em>
@@ -758,10 +797,11 @@ onChange={(event) =>
           </Select>
         </DialogContent>
 
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button
             onClick={closeDialog}
             disabled={saving}
+            sx={{ minHeight: 44 }}
           >
             Cancel
           </Button>
@@ -775,6 +815,7 @@ onChange={(event) =>
               !categoryId ||
               name.trim().length > 100
             }
+            sx={{ minHeight: 44 }}
           >
             {saving
               ? "Saving..."
