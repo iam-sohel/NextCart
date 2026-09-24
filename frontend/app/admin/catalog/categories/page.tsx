@@ -360,6 +360,16 @@ export default function AdminCategoriesPage() {
                           ? "Try another search or create a new category."
                           : "Search applies to the currently loaded page only. Try a different search."}
                       </Typography>
+
+                      {categories.length > 0 && (
+                        <Button
+                          size="small"
+                          onClick={() => setSearch("")}
+                          sx={{ mt: 1.5, minHeight: 44 }}
+                        >
+                          Clear search
+                        </Button>
+                      )}
                     </Box>
                   </TableCell>
                 </TableRow>
