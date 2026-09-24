@@ -393,6 +393,7 @@ export default function AdminProductDetailsPage() {
               variant="body1"
               sx={{
                 whiteSpace: "pre-wrap",
+                overflowWrap: "anywhere",
                 lineHeight: 1.7,
               }}
             >
@@ -717,6 +718,7 @@ export default function AdminProductDetailsPage() {
                       <Typography
                         sx={{
                           fontWeight: 600,
+                          overflowWrap: "anywhere",
                         }}
                       >
                         {String(
@@ -808,6 +810,7 @@ export default function AdminProductDetailsPage() {
                         <Typography
                           sx={{
                             fontWeight: 700,
+                            overflowWrap: "anywhere",
                           }}
                         >
                           {getVariantName(
@@ -841,6 +844,7 @@ export default function AdminProductDetailsPage() {
                         <Typography
                           sx={{
                             fontWeight: 600,
+                            overflowWrap: "anywhere",
                           }}
                         >
                           {getVariantSku(

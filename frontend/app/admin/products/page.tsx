@@ -7,6 +7,7 @@ import {
   Alert,
   Box,
   Button,
+  IconButton,
   Paper,
   Skeleton,
   Table,
@@ -20,6 +21,7 @@ import {
   Typography,
 } from "@mui/material";
 
+import ClearIcon from "@mui/icons-material/Clear";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import SearchIcon from "@mui/icons-material/Search";
 
@@ -226,6 +228,17 @@ export default function AdminProductsPage() {
                 startAdornment: (
                   <SearchIcon sx={{ mr: 1, color: "text.secondary" }} />
                 ),
+                endAdornment: search ? (
+                  <IconButton
+                    size="small"
+                    edge="end"
+                    aria-label="Clear search"
+                    onClick={() => setSearch("")}
+                    sx={{ width: 36, height: 36 }}
+                  >
+                    <ClearIcon fontSize="small" />
+                  </IconButton>
+                ) : undefined,
               },
             }}
             sx={{
