@@ -8,7 +8,7 @@ import {
   Chip,
   CircularProgress,
   Paper,
-  Stack,
+  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -51,10 +51,11 @@ export default function AdminCustomersPage() {
 
       setCustomers(result.content);
       setTotalElements(result.totalElements);
-    } catch (err: any) {
-      console.error("Failed to load customers:", err);
+    } catch (err) {
       setError(
-        err?.message || "Unable to load customers. Please try again."
+        err instanceof Error
+          ? err.message
+          : "Unable to load customers. Please try again."
       );
     } finally {
       setLoading(false);
@@ -62,7 +63,18 @@ export default function AdminCustomersPage() {
   }, [page, rowsPerPage]);
 
   useEffect(() => {
-    loadCustomers();
+    let cancelled = false;
+
+    const run = async () => {
+      if (cancelled) return;
+      await loadCustomers();
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
   }, [loadCustomers]);
 
   const handleToggleStatus = async (customer: AdminCustomer) => {
@@ -77,10 +89,11 @@ export default function AdminCustomersPage() {
       }
 
       await loadCustomers();
-    } catch (err: any) {
-      console.error("Failed to update customer status:", err);
+    } catch (err) {
       setError(
-        err?.message || "Unable to update customer status."
+        err instanceof Error
+          ? err.message
+          : "Unable to update customer status."
       );
     } finally {
       setActionLoading(null);
@@ -118,8 +131,12 @@ export default function AdminCustomersPage() {
     gap: 2,
   }}
 >
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography
+            variant="h3"
+            component="h2"
+            sx={{ fontWeight: 700 }}
+          >
             Customers
           </Typography>
 
@@ -135,8 +152,9 @@ export default function AdminCustomersPage() {
         <Button
           variant="outlined"
           startIcon={<RefreshIcon />}
-          onClick={loadCustomers}
+          onClick={() => void loadCustomers()}
           disabled={loading}
+          sx={{ minHeight: 44, flexShrink: 0 }}
         >
           Refresh
         </Button>
@@ -161,23 +179,40 @@ export default function AdminCustomersPage() {
           overflow: "hidden",
         }}
       >
-        <Box sx={{ p: 2 }}>
+        <Box sx={{ p: { xs: 2, sm: 3 } }}>
           <TextField
             fullWidth
             size="small"
-            placeholder="Search by name, email, phone, customer ID..."
+            label="Search customers"
+            placeholder="Search name, email, phone, or customer ID"
+            helperText="Search matches customers on this loaded page."
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             slotProps={{
               input: {
-                startAdornment: <SearchIcon sx={{ mr: 1, color: "text.secondary" }} />,
+                startAdornment: (
+                  <SearchIcon
+                    sx={{ mr: 1, color: "text.secondary" }}
+                  />
+                ),
+              },
+              htmlInput: {
+                "aria-label": "Search customers on this page",
+              },
+            }}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                minHeight: 44,
               },
             }}
           />
         </Box>
 
-        <TableContainer>
-          <Table>
+        <TableContainer sx={{ overflowX: "auto" }}>
+          <Table
+            sx={{ minWidth: 980 }}
+            aria-label="Registered customers"
+          >
             <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 700 }}>
@@ -215,19 +250,24 @@ export default function AdminCustomersPage() {
 
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={7}>
-                    <Box
-                      sx={{
-                        py: 7,
-                        display: "flex",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <CircularProgress />
-                    </Box>
-                  </TableCell>
-                </TableRow>
+                <>
+                  {Array.from({ length: 5 }).map(
+                    (_, rowIndex) => (
+                      <TableRow key={rowIndex}>
+                        {Array.from({ length: 7 }).map(
+                          (_, cellIndex) => (
+                            <TableCell key={cellIndex}>
+                              <Skeleton
+                                variant="text"
+                                width="80%"
+                              />
+                            </TableCell>
+                          )
+                        )}
+                      </TableRow>
+                    )
+                  )}
+                </>
               ) : filteredCustomers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7}>
@@ -236,7 +276,9 @@ export default function AdminCustomersPage() {
                         variant="body1"
                         sx={{ fontWeight: 600 }}
                       >
-                        No customers found
+                        {customers.length === 0
+                          ? "No customers found"
+                          : "No matching customers on this page"}
                       </Typography>
 
                       <Typography
@@ -244,7 +286,9 @@ export default function AdminCustomersPage() {
                         color="text.secondary"
                         sx={{ mt: 0.5 }}
                       >
-                        Try changing your search or refresh the list.
+                        {customers.length === 0
+                          ? "Try changing your search or refresh the list."
+                          : "Search covers the currently loaded page only. Try a different search."}
                       </Typography>
                     </Box>
                   </TableCell>
@@ -266,25 +310,28 @@ export default function AdminCustomersPage() {
                       <TableCell>
                         <Typography
                           variant="body2"
-                          sx={{ fontWeight: 600 }}
+                          sx={{
+                            fontWeight: 600,
+                            overflowWrap: "anywhere",
+                          }}
                         >
                           {fullName}
                         </Typography>
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell sx={{ whiteSpace: "nowrap" }}>
                         #{customer.customerId}
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell sx={{ whiteSpace: "nowrap" }}>
                         #{customer.userId}
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell sx={{ overflowWrap: "anywhere" }}>
                         {customer.email || "—"}
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell sx={{ whiteSpace: "nowrap" }}>
                         {customer.phone || "—"}
                       </TableCell>
 
@@ -330,9 +377,15 @@ export default function AdminCustomersPage() {
                             )
                           }
                           disabled={isActionLoading}
+                          aria-label={`${
+                            customer.active
+                              ? "Deactivate"
+                              : "Activate"
+                          } customer ${fullName} (#${customer.customerId})`}
                           onClick={() =>
                             handleToggleStatus(customer)
                           }
+                          sx={{ minHeight: 44 }}
                         >
                           {isActionLoading
                             ? "Updating..."
@@ -362,6 +415,16 @@ export default function AdminCustomersPage() {
             setPage(0);
           }}
           rowsPerPageOptions={[10, 20, 50]}
+          sx={{
+            "& .MuiTablePagination-toolbar": {
+              flexWrap: "wrap",
+              rowGap: 1,
+            },
+            "& .MuiTablePagination-actions .MuiIconButton-root": {
+              width: 44,
+              height: 44,
+            },
+          }}
         />
       </Paper>
     </Box>

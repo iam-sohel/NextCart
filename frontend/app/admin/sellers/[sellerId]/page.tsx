@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import {
   Alert,
   Box,
+  Breadcrumbs,
   Button,
   Card,
   CardContent,
@@ -13,6 +14,7 @@ import {
   DialogContent,
   DialogTitle,
   Grid,
+  Link as MuiLink,
   Stack,
   TextField,
   Typography,
@@ -35,6 +37,9 @@ import {
 } from "@/components/admin/AdminStates";
 
 import ConfirmActionDialog from "@/components/admin/ConfirmActionDialog";
+
+import HomeIcon from "@mui/icons-material/Home";
+import RefreshIcon from "@mui/icons-material/Refresh";
 
 import useAuthStore from "@/store/authStore";
 
@@ -694,21 +699,38 @@ const handleReview = async () => {
 
     <Box>
 
-      <Button
-
-        component={Link}
-
-        href="/admin/sellers"
-
-        variant="text"
-
-        sx={{ mb: 2, px: 0 }}
-
-      >
-
-        Back to sellers
-
-      </Button>
+      <Breadcrumbs
+        sx={{
+          mb: 2,
+          "& .MuiBreadcrumbs-ol": { flexWrap: "wrap", rowGap: 0.5 },
+        }}
+        aria-label="Seller location"
+      >
+        <MuiLink
+          component={Link}
+          href="/admin"
+          underline="hover"
+          color="inherit"
+          sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+        >
+          <HomeIcon fontSize="small" />
+          Admin
+        </MuiLink>
+        <MuiLink
+          component={Link}
+          href="/admin/sellers"
+          underline="hover"
+          color="inherit"
+        >
+          Sellers
+        </MuiLink>
+        <Typography
+          color="text.primary"
+          sx={{ overflowWrap: "anywhere" }}
+        >
+          {seller.businessName || detailName}
+        </Typography>
+      </Breadcrumbs>
 
 
 
@@ -730,11 +752,13 @@ const handleReview = async () => {
 
       >
 
-        <Typography variant="h3" component="h2" sx={{ fontWeight: 700 }}>
-
-          {seller.businessName || detailName}
-
-        </Typography>
+        <Typography
+          variant="h3"
+          component="h2"
+          sx={{ fontWeight: 700, minWidth: 0, overflowWrap: "anywhere" }}
+        >
+          {seller.businessName || detailName}
+        </Typography>
 
         <Stack direction="row" spacing={1}>
 
@@ -764,11 +788,37 @@ const handleReview = async () => {
 
 
 
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+      <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
 
-        Seller #{seller.sellerId} · User #{seller.userId}
+        Seller #{seller.sellerId} · User #{seller.userId}
 
-      </Typography>
+      </Typography>
+
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        spacing={1.5}
+        sx={{ mt: 2, mb: 3, alignItems: { xs: "stretch", sm: "center" } }}
+      >
+        <Button
+          variant="outlined"
+          startIcon={<RefreshIcon />}
+          onClick={() => void load()}
+          disabled={loading}
+          aria-label="Refresh seller details"
+          sx={{ minHeight: 44 }}
+        >
+          Refresh
+        </Button>
+
+        <Button
+          component={Link}
+          href="/admin/sellers"
+          variant="text"
+          sx={{ minHeight: 44 }}
+        >
+          Back to sellers
+        </Button>
+      </Stack>
 
 
 
@@ -798,9 +848,9 @@ const handleReview = async () => {
 
 
 
-        <Card sx={{ borderRadius: 3 }}>
+        <Card>
 
-          <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+          <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
 
             <Typography variant="h5" sx={{ fontWeight: 700, mb: 2.5 }}>
 
@@ -864,37 +914,41 @@ const handleReview = async () => {
 
               {seller.active ? (
 
-                <Button
+                <Button
 
-                  variant="outlined"
+                  variant="outlined"
 
-                  color="error"
+                  color="error"
 
-                  onClick={() => openConfirm("deactivate")}
+                  onClick={() => openConfirm("deactivate")}
 
-                  aria-label={`Deactivate ${detailName}`}
+                  aria-label={`Deactivate ${detailName}`}
 
-                >
+                  sx={{ minHeight: 44 }}
 
-                  Deactivate
+                >
 
-                </Button>
+                  Deactivate
+
+                </Button>
 
               ) : (
 
-                <Button
+                <Button
 
-                  variant="contained"
+                  variant="contained"
 
-                  onClick={() => openConfirm("activate")}
+                  onClick={() => openConfirm("activate")}
 
-                  aria-label={`Activate ${detailName}`}
+                  aria-label={`Activate ${detailName}`}
 
-                >
+                  sx={{ minHeight: 44 }}
 
-                  Activate
+                >
 
-                </Button>
+                  Activate
+
+                </Button>
 
               )}
 
@@ -908,9 +962,9 @@ const handleReview = async () => {
 
 
 
-        <Card sx={{ borderRadius: 3 }}>
+        <Card>
 
-          <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+          <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
 
             <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
 
@@ -1125,6 +1179,7 @@ const handleReview = async () => {
                     variant="contained"
                     onClick={() => openReview("verification-approve")}
                     disabled={reviewing}
+                    sx={{ minHeight: 44 }}
                   >
                     Approve Verification
                   </Button>
@@ -1134,6 +1189,7 @@ const handleReview = async () => {
                     color="error"
                     onClick={() => openReview("verification-reject")}
                     disabled={reviewing}
+                    sx={{ minHeight: 44 }}
                   >
                     Reject Verification
                   </Button>
@@ -1145,14 +1201,14 @@ const handleReview = async () => {
 
           </CardContent>
         </Card>
-        <Card sx={{ borderRadius: 3 }}>
-          <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+        <Card>
+          <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
             <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
               Seller KYC
             </Typography>
 
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
-              Review the seller's submitted KYC information and supporting documents.
+              Review the seller&apos;s submitted KYC information and supporting documents.
             </Typography>
 
             {kycWarning ? (
@@ -1277,7 +1333,7 @@ const handleReview = async () => {
                         target="_blank"
                         rel="noopener noreferrer"
                         variant="outlined"
-                        sx={{ alignSelf: "flex-start" }}
+                        sx={{ alignSelf: "flex-start", minHeight: 44 }}
                       >
                         View {label}
                       </Button>
@@ -1294,6 +1350,7 @@ const handleReview = async () => {
                     variant="contained"
                     onClick={() => openReview("kyc-approve")}
                     disabled={reviewing}
+                    sx={{ minHeight: 44 }}
                   >
                     Approve KYC
                   </Button>
@@ -1303,6 +1360,7 @@ const handleReview = async () => {
                     color="error"
                     onClick={() => openReview("kyc-reject")}
                     disabled={reviewing}
+                    sx={{ minHeight: 44 }}
                   >
                     Reject KYC
                   </Button>
@@ -1326,8 +1384,9 @@ const handleReview = async () => {
         }}
         fullWidth
         maxWidth="sm"
+        aria-labelledby="seller-reject-dialog-title"
       >
-        <DialogTitle>
+        <DialogTitle id="seller-reject-dialog-title">
           {reviewAction?.startsWith("verification")
             ? "Reject Seller Verification"
             : "Reject Seller KYC"}
@@ -1353,7 +1412,7 @@ const handleReview = async () => {
           />
         </DialogContent>
 
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button
             onClick={() => {
               if (!reviewing) {
@@ -1362,6 +1421,7 @@ const handleReview = async () => {
               }
             }}
             disabled={reviewing}
+            sx={{ minHeight: 44 }}
           >
             Cancel
           </Button>
@@ -1371,6 +1431,7 @@ const handleReview = async () => {
             variant="contained"
             onClick={() => void handleReview()}
             disabled={reviewing || !rejectionReason.trim()}
+            sx={{ minHeight: 44 }}
           >
             {reviewing ? "Rejecting..." : "Reject"}
           </Button>

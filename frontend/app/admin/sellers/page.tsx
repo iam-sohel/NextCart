@@ -20,6 +20,7 @@ import AdminTable, { type AdminTableColumn } from "@/components/admin/AdminTable
 import AdminStatusChip from "@/components/admin/AdminStatusChip";
 import { AdminErrorState } from "@/components/admin/AdminStates";
 import ConfirmActionDialog from "@/components/admin/ConfirmActionDialog";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import useAuthStore from "@/store/authStore";
 import {
   activateAdminSeller,
@@ -246,13 +247,38 @@ export default function AdminSellersPage() {
 
   return (
     <Box>
-      <Typography variant="h3" component="h2" sx={{ fontWeight: 700, mb: 0.5 }}>
-        Sellers
-      </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        Review seller accounts and change activation state. Verification
-        reviews remain separate from direct seller activation.
-      </Typography>
+      <Box
+        sx={{
+          mb: 3,
+          display: "flex",
+          flexDirection: { xs: "column", md: "row" },
+          justifyContent: "space-between",
+          alignItems: { xs: "flex-start", md: "center" },
+          gap: 2,
+        }}
+      >
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="h3" component="h2" sx={{ fontWeight: 700, mb: 0.5 }}>
+            Sellers
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Manage seller accounts and activation state. Activating a seller
+            enables their account — it does not mark them verified. Seller
+            verification and KYC are reviewed separately.
+          </Typography>
+        </Box>
+
+        <Button
+          variant="outlined"
+          startIcon={<RefreshIcon />}
+          onClick={() => void load()}
+          disabled={loading}
+          aria-label="Refresh seller list"
+          sx={{ minHeight: 44, flexShrink: 0 }}
+        >
+          Refresh
+        </Button>
+      </Box>
 
       {mutationError ? (
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setMutationError(null)}>
@@ -266,8 +292,8 @@ export default function AdminSellersPage() {
         </Alert>
       ) : null}
 
-      <Card sx={{ borderRadius: 3, mb: 3 }}>
-        <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+      <Card sx={{ mb: 3 }}>
+        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
           <Grid container spacing={2} sx={{ alignItems: "flex-end" }}>
             <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
@@ -321,6 +347,7 @@ export default function AdminSellersPage() {
               variant="outlined"
               size="small"
               aria-label={`View ${sellerDisplayName(seller)}`}
+              sx={{ minHeight: 44 }}
             >
               View
             </Button>
@@ -331,6 +358,7 @@ export default function AdminSellersPage() {
                 size="small"
                 aria-label={`Deactivate ${sellerDisplayName(seller)}`}
                 onClick={() => startStatusChange(seller, "deactivate")}
+                sx={{ minHeight: 44 }}
               >
                 Deactivate
               </Button>
@@ -340,6 +368,7 @@ export default function AdminSellersPage() {
                 size="small"
                 aria-label={`Activate ${sellerDisplayName(seller)}`}
                 onClick={() => startStatusChange(seller, "activate")}
+                sx={{ minHeight: 44 }}
               >
                 Activate
               </Button>
@@ -356,6 +385,7 @@ export default function AdminSellersPage() {
               variant="outlined"
               disabled={page <= 0 || sellersPage.first || loading}
               onClick={() => setPage((current) => Math.max(0, current - 1))}
+              sx={{ minHeight: 44 }}
             >
               Previous
             </Button>
@@ -363,6 +393,7 @@ export default function AdminSellersPage() {
               variant="outlined"
               disabled={sellersPage.last || loading}
               onClick={() => setPage((current) => current + 1)}
+              sx={{ minHeight: 44 }}
             >
               Next
             </Button>

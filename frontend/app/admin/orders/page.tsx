@@ -6,13 +6,13 @@ import {
   Box,
   Button,
   Chip,
-  CircularProgress,
   FormControl,
   InputLabel,
   MenuItem,
   Paper,
   Select,
   SelectChangeEvent,
+  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -177,15 +177,11 @@ export default function AdminOrdersPage() {
 
       setOrders(result.content);
       setTotalElements(result.totalElements);
-    } catch (err: any) {
-      console.error(
-        "Failed to load admin orders:",
-        err
-      );
-
+    } catch (err) {
       setError(
-        err?.message ||
-          "Unable to load orders. Please try again."
+        err instanceof Error
+          ? err.message
+          : "Unable to load orders. Please try again."
       );
     } finally {
       setLoading(false);
@@ -197,7 +193,18 @@ export default function AdminOrdersPage() {
   ]);
 
   useEffect(() => {
-    loadOrders();
+    let cancelled = false;
+
+    const run = async () => {
+      if (cancelled) return;
+      await loadOrders();
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
   }, [loadOrders]);
 
   const handleStatusFilterChange = (
@@ -235,15 +242,11 @@ export default function AdminOrdersPage() {
             : currentOrder
         )
       );
-    } catch (err: any) {
-      console.error(
-        "Failed to update order status:",
-        err
-      );
-
+    } catch (err) {
       setError(
-        err?.message ||
-          "Unable to update order status."
+        err instanceof Error
+          ? err.message
+          : "Unable to update order status."
       );
     } finally {
       setActionLoading(null);
@@ -293,9 +296,10 @@ export default function AdminOrdersPage() {
           gap: 2,
         }}
       >
-        <Box>
+        <Box sx={{ minWidth: 0 }}>
           <Typography
-            variant="h4"
+            variant="h3"
+            component="h2"
             sx={{ fontWeight: 700 }}
           >
             Orders
@@ -314,8 +318,9 @@ export default function AdminOrdersPage() {
         <Button
           variant="outlined"
           startIcon={<RefreshIcon />}
-          onClick={loadOrders}
+          onClick={() => void loadOrders()}
           disabled={loading}
+          sx={{ minHeight: 44, flexShrink: 0 }}
         >
           Refresh
         </Button>
@@ -356,9 +361,16 @@ export default function AdminOrdersPage() {
             size="small"
             label="Search orders"
             placeholder="Order number, customer, phone, city..."
+            helperText="Searches the currently loaded page only"
             value={search}
             onChange={(event) => {
               setSearch(event.target.value);
+            }}
+            sx={{
+              flex: { md: 1 },
+              "& .MuiOutlinedInput-root": {
+                minHeight: 44,
+              },
             }}
           />
 
@@ -368,6 +380,9 @@ export default function AdminOrdersPage() {
               minWidth: {
                 xs: "100%",
                 md: 220,
+              },
+              "& .MuiOutlinedInput-root": {
+                minHeight: 44,
               },
             }}
           >
@@ -407,8 +422,9 @@ export default function AdminOrdersPage() {
         >
           <Table
             sx={{
-              minWidth: 1150,
+              minWidth: 1000,
             }}
+            aria-label="Customer orders"
           >
             <TableHead>
               <TableRow>
@@ -465,19 +481,24 @@ export default function AdminOrdersPage() {
 
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={8}>
-                    <Box
-                      sx={{
-                        py: 7,
-                        display: "flex",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <CircularProgress />
-                    </Box>
-                  </TableCell>
-                </TableRow>
+                <>
+                  {Array.from({ length: 5 }).map(
+                    (_, rowIndex) => (
+                      <TableRow key={rowIndex}>
+                        {Array.from({ length: 8 }).map(
+                          (_, cellIndex) => (
+                            <TableCell key={cellIndex}>
+                              <Skeleton
+                                variant="text"
+                                width="80%"
+                              />
+                            </TableCell>
+                          )
+                        )}
+                      </TableRow>
+                    )
+                  )}
+                </>
               ) : filteredOrders.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8}>
@@ -490,7 +511,9 @@ export default function AdminOrdersPage() {
                       <Typography
                         sx={{ fontWeight: 600 }}
                       >
-                        No orders found
+                        {orders.length === 0
+                          ? "No orders found"
+                          : "No matching orders on this page"}
                       </Typography>
 
                       <Typography
@@ -498,8 +521,9 @@ export default function AdminOrdersPage() {
                         color="text.secondary"
                         sx={{ mt: 0.5 }}
                       >
-                        Try changing your search or
-                        status filter.
+                        {orders.length === 0
+                          ? "Try changing your search or status filter."
+                          : "Search covers the currently loaded page only. Try a different search or status filter."}
                       </Typography>
                     </Box>
                   </TableCell>
@@ -518,6 +542,7 @@ export default function AdminOrdersPage() {
                         <Typography
                           sx={{
                             fontWeight: 700,
+                            overflowWrap: "anywhere",
                           }}
                         >
                           {order.orderNumber ||
@@ -534,7 +559,10 @@ export default function AdminOrdersPage() {
 
                       <TableCell>
                         <Typography
-                          sx={{ fontWeight: 600 }}
+                          sx={{
+                            fontWeight: 600,
+                            overflowWrap: "anywhere",
+                          }}
                         >
                           {order.shippingFullName ||
                             "—"}
@@ -543,6 +571,7 @@ export default function AdminOrdersPage() {
                         <Typography
                           variant="body2"
                           color="text.secondary"
+                          sx={{ overflowWrap: "anywhere" }}
                         >
                           {order.shippingPhoneNumber ||
                             "—"}
@@ -551,6 +580,10 @@ export default function AdminOrdersPage() {
                         <Typography
                           variant="caption"
                           color="text.secondary"
+                          sx={{
+                            display: "block",
+                            overflowWrap: "anywhere",
+                          }}
                         >
                           {order.shippingCity ||
                             "—"}
@@ -610,70 +643,79 @@ export default function AdminOrdersPage() {
                       </TableCell>
 
                       <TableCell>
-                        <FormControl
-                          size="small"
-                          sx={{
-                            minWidth: 150,
-                          }}
-                        >
-                          <Select
-                            value={
-                              order.status
-                            }
-                            disabled={
-                              isUpdating
-                            }
-                            onChange={(event) =>
-                              handleStatusUpdate(
-                                order,
-                                event.target
-                                  .value
-                              )
-                            }
-                            renderValue={(
-                              selected
-                            ) => (
-                              <Chip
-                                size="small"
-                                label={
-                                  String(
-                                    selected
-                                  )
-                                }
-                                color={getStatusColor(
-                                  String(
-                                    selected
-                                  )
-                                )}
-                              />
-                            )}
+                        {isUpdating ? (
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            role="status"
                           >
-                            {ORDER_STATUSES.map(
-                              (status) => (
-                                <MenuItem
-                                  key={status}
-                                  value={status}
-                                >
-                                  {status}
-                                </MenuItem>
-                              )
-                            )}
-                          </Select>
-                        </FormControl>
+                            Updating…
+                          </Typography>
+                        ) : (
+                          <FormControl
+                            size="small"
+                            sx={{
+                              minWidth: 150,
+                              "& .MuiOutlinedInput-root": {
+                                minHeight: 44,
+                              },
+                            }}
+                          >
+                            <Select
+                              value={order.status}
+                              disabled={isUpdating}
+                              inputProps={{
+                                "aria-label": `Update status for order ${
+                                  order.orderNumber ||
+                                  `#${order.id}`
+                                }`,
+                              }}
+                              onChange={(event) =>
+                                handleStatusUpdate(
+                                  order,
+                                  event.target.value
+                                )
+                              }
+                              renderValue={(selected) => (
+                                <Chip
+                                  size="small"
+                                  label={String(selected)}
+                                  color={getStatusColor(
+                                    String(selected)
+                                  )}
+                                />
+                              )}
+                            >
+                              {ORDER_STATUSES.map(
+                                (status) => (
+                                  <MenuItem
+                                    key={status}
+                                    value={status}
+                                  >
+                                    {status}
+                                  </MenuItem>
+                                )
+                              )}
+                            </Select>
+                          </FormControl>
+                        )}
                       </TableCell>
 
                       <TableCell align="right">
                         <Button
                           size="small"
                           variant="outlined"
-                          startIcon={
-                            <VisibilityIcon />
-                          }
+                          startIcon={<VisibilityIcon />}
+                          aria-label={`View order ${
+                            order.orderNumber ||
+                            `#${order.id}`
+                          }`}
                           onClick={() =>
                             router.push(
                               `/admin/orders/${order.id}`
                             )
                           }
+                          sx={{ minHeight: 44 }}
                         >
                           View
                         </Button>
@@ -705,6 +747,16 @@ export default function AdminOrdersPage() {
             20,
             50,
           ]}
+          sx={{
+            "& .MuiTablePagination-toolbar": {
+              flexWrap: "wrap",
+              rowGap: 1,
+            },
+            "& .MuiTablePagination-actions .MuiIconButton-root": {
+              width: 44,
+              height: 44,
+            },
+          }}
         />
       </Paper>
     </Box>

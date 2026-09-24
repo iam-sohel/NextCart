@@ -2,16 +2,15 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  Alert,
   Box,
   Breadcrumbs,
   Button,
   Chip,
-  CircularProgress,
   Divider,
   Grid,
   Link,
   Paper,
+  Skeleton,
   Stack,
   Typography,
 } from "@mui/material";
@@ -23,8 +22,11 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import { useParams, useRouter } from "next/navigation";
 
 import {
+  AdminErrorState,
+} from "@/components/admin/AdminStates";
+
+import {
   getAdminProductDetails,
-  type AdminProduct,
 } from "@/services/adminProductService";
 
 interface ProductDetails {
@@ -92,7 +94,13 @@ function getVariantPrice(variant: any): string {
     return "—";
   }
 
-  return `₹${Number(price).toLocaleString(
+  const amount = Number(price);
+
+  if (!Number.isFinite(amount)) {
+    return "—";
+  }
+
+  return `₹${amount.toLocaleString(
     "en-IN"
   )}`;
 }
@@ -163,15 +171,11 @@ export default function AdminProductDetailsPage() {
             ? result.variants
             : [],
         });
-      } catch (err: any) {
-        console.error(
-          "Failed to load product:",
-          err
-        );
-
+      } catch (err) {
         setError(
-          err?.message ||
-            "Unable to load product details."
+          err instanceof Error
+            ? err.message
+            : "Unable to load product details."
         );
       } finally {
         setLoading(false);
@@ -181,49 +185,86 @@ export default function AdminProductDetailsPage() {
   );
 
   useEffect(() => {
-    loadProduct();
+    let cancelled = false;
+
+    const run = async () => {
+      if (cancelled) return;
+      await loadProduct();
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
   }, [loadProduct]);
 
   if (loading) {
     return (
-      <Box
-        sx={{
-          minHeight: "60vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <CircularProgress />
+      <Box>
+        <Skeleton
+          variant="text"
+          width={280}
+          height={24}
+          sx={{ mb: 2 }}
+        />
+        <Skeleton
+          variant="text"
+          width={220}
+          height={44}
+          sx={{ mb: 2 }}
+        />
+        <Skeleton
+          variant="rounded"
+          height={280}
+          sx={{ borderRadius: 2, mb: 2 }}
+        />
+        <Skeleton
+          variant="rounded"
+          height={220}
+          sx={{ borderRadius: 2 }}
+        />
       </Box>
     );
   }
 
   if (error || !product) {
     return (
-      <Box sx={{ p: { xs: 2, md: 3 } }}>
+      <Box>
+        <Box sx={{ mb: 2 }}>
+          <AdminErrorState
+            message={error || "Product not found."}
+            onRetry={() => void loadProduct()}
+          />
+        </Box>
+
         <Button
           startIcon={<ArrowBackIcon />}
           onClick={() =>
             router.push("/admin/products")
           }
-          sx={{ mb: 2 }}
+          sx={{ minHeight: 44 }}
         >
           Back to Products
         </Button>
-
-        <Alert severity="error">
-          {error || "Product not found."}
-        </Alert>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ p: { xs: 2, md: 3 } }}>
+    <Box>
       {/* Header */}
       <Box sx={{ mb: 3 }}>
-        <Breadcrumbs sx={{ mb: 2 }}>
+        <Breadcrumbs
+          sx={{
+            mb: 2,
+            "& .MuiBreadcrumbs-ol": {
+              flexWrap: "wrap",
+              rowGap: 0.5,
+            },
+          }}
+          aria-label="Product location"
+        >
           <Link
             component="button"
             underline="hover"
@@ -246,7 +287,10 @@ export default function AdminProductDetailsPage() {
             Products
           </Link>
 
-          <Typography color="text.primary">
+          <Typography
+            color="text.primary"
+            sx={{ overflowWrap: "anywhere" }}
+          >
             {product.name || "Product"}
           </Typography>
         </Breadcrumbs>
@@ -267,10 +311,11 @@ export default function AdminProductDetailsPage() {
             gap: 2,
           }}
         >
-          <Box>
+          <Box sx={{ minWidth: 0 }}>
             <Typography
-              variant="h4"
-              sx={{ fontWeight: 700 }}
+              variant="h3"
+              component="h2"
+              sx={{ fontWeight: 700, overflowWrap: "anywhere" }}
             >
               {product.name ||
                 "Unnamed Product"}
@@ -296,7 +341,10 @@ export default function AdminProductDetailsPage() {
             <Button
               variant="outlined"
               startIcon={<RefreshIcon />}
-              onClick={loadProduct}
+              onClick={() => void loadProduct()}
+              disabled={loading}
+              aria-label="Refresh product details"
+              sx={{ minHeight: 44 }}
             >
               Refresh
             </Button>
@@ -309,6 +357,7 @@ export default function AdminProductDetailsPage() {
                   `/seller/products/new?edit=${product.id}`
                 )
               }
+              sx={{ minHeight: 44 }}
             >
               Edit Product
             </Button>
@@ -326,7 +375,7 @@ export default function AdminProductDetailsPage() {
           <Paper
             elevation={0}
             sx={{
-              p: 3,
+              p: { xs: 2, sm: 3 },
               height: "100%",
               border: "1px solid",
               borderColor: "divider",
@@ -357,7 +406,7 @@ export default function AdminProductDetailsPage() {
           <Paper
             elevation={0}
             sx={{
-              p: 3,
+              p: { xs: 2, sm: 3 },
               height: "100%",
               border: "1px solid",
               borderColor: "divider",
@@ -443,7 +492,7 @@ export default function AdminProductDetailsPage() {
       <Paper
         elevation={0}
         sx={{
-          p: 3,
+          p: { xs: 2, sm: 3 },
           mb: 2,
           border: "1px solid",
           borderColor: "divider",
@@ -536,7 +585,7 @@ export default function AdminProductDetailsPage() {
       <Paper
         elevation={0}
         sx={{
-          p: 3,
+          p: { xs: 2, sm: 3 },
           mb: 2,
           border: "1px solid",
           borderColor: "divider",
@@ -611,7 +660,7 @@ export default function AdminProductDetailsPage() {
       <Paper
         elevation={0}
         sx={{
-          p: 3,
+          p: { xs: 2, sm: 3 },
           mb: 2,
           border: "1px solid",
           borderColor: "divider",
@@ -697,7 +746,7 @@ export default function AdminProductDetailsPage() {
       <Paper
         elevation={0}
         sx={{
-          p: 3,
+          p: { xs: 2, sm: 3 },
           mb: 2,
           border: "1px solid",
           borderColor: "divider",
@@ -923,6 +972,7 @@ export default function AdminProductDetailsPage() {
           onClick={() =>
             router.push("/admin/products")
           }
+          sx={{ minHeight: 44 }}
         >
           Back to Products
         </Button>

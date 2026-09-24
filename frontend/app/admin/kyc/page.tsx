@@ -8,7 +8,7 @@ import {
   Button,
   Card,
   CardContent,
-  Chip,
+  Skeleton,
   Stack,
   Table,
   TableBody,
@@ -17,6 +17,12 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
+
+import RefreshIcon from "@mui/icons-material/Refresh";
+
+import AdminStatusChip, {
+  type AdminStatusTone,
+} from "@/components/admin/AdminStatusChip";
 
 import {
   AdminSellerKyc,
@@ -35,9 +41,9 @@ function formatDate(value?: string | null) {
   return date.toLocaleString();
 }
 
-function statusColor(
+function statusTone(
   status: AdminSellerKyc["status"],
-) {
+): AdminStatusTone {
   switch (status) {
     case "VERIFIED":
       return "success";
@@ -49,7 +55,7 @@ function statusColor(
       return "warning";
 
     default:
-      return "default";
+      return "neutral";
   }
 }
 
@@ -100,7 +106,18 @@ export default function AdminKycPage() {
   }, [page, pendingOnly, size]);
 
   useEffect(() => {
-    void loadKyc();
+    let cancelled = false;
+
+    const run = async () => {
+      if (cancelled) return;
+      await loadKyc();
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
   }, [loadKyc]);
 
   return (
@@ -117,14 +134,13 @@ export default function AdminKycPage() {
             xs: "flex-start",
             sm: "center",
           },
-          justifyContent:
-            "space-between",
+          justifyContent: "space-between",
         }}
       >
-        <Box>
+        <Box sx={{ minWidth: 0 }}>
           <Typography
-            variant="h4"
-            component="h1"
+            variant="h3"
+            component="h2"
             sx={{
               fontWeight: 700,
             }}
@@ -136,14 +152,15 @@ export default function AdminKycPage() {
             color="text.secondary"
             sx={{ mt: 0.5 }}
           >
-            Review and approve seller KYC
-            submissions.
+            Review seller KYC submissions. Approving KYC records an
+            admin decision — it does not activate the seller account.
           </Typography>
         </Box>
 
         <Stack
           direction="row"
           spacing={1}
+          sx={{ flexShrink: 0, flexWrap: "wrap", rowGap: 1 }}
         >
           <Button
             variant={
@@ -155,6 +172,8 @@ export default function AdminKycPage() {
               setPendingOnly(true);
               setPage(0);
             }}
+            aria-pressed={pendingOnly}
+            sx={{ minHeight: 44 }}
           >
             Pending
           </Button>
@@ -169,8 +188,23 @@ export default function AdminKycPage() {
               setPendingOnly(false);
               setPage(0);
             }}
+            aria-pressed={!pendingOnly}
+            sx={{ minHeight: 44 }}
           >
             All KYC
+          </Button>
+
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={() => {
+              void loadKyc();
+            }}
+            disabled={loading}
+            aria-label="Refresh KYC list"
+            sx={{ minHeight: 44 }}
+          >
+            Refresh
           </Button>
         </Stack>
       </Stack>
@@ -195,11 +229,7 @@ export default function AdminKycPage() {
         </Alert>
       ) : null}
 
-      <Card
-        sx={{
-          borderRadius: 3,
-        }}
-      >
+      <Card>
         <CardContent
           sx={{
             p: 0,
@@ -210,7 +240,10 @@ export default function AdminKycPage() {
               overflowX: "auto",
             }}
           >
-            <Table>
+            <Table
+              sx={{ minWidth: 1080 }}
+              aria-label="Seller KYC records"
+            >
               <TableHead>
                 <TableRow>
                   <TableCell>
@@ -255,15 +288,24 @@ export default function AdminKycPage() {
 
               <TableBody>
                 {loading ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={9}
-                      align="center"
-                      sx={{ py: 6 }}
-                    >
-                      Loading seller KYC...
-                    </TableCell>
-                  </TableRow>
+                  <>
+                    {Array.from({ length: 5 }).map(
+                      (_, rowIndex) => (
+                        <TableRow key={rowIndex}>
+                          {Array.from({ length: 9 }).map(
+                            (_, cellIndex) => (
+                              <TableCell key={cellIndex}>
+                                <Skeleton
+                                  variant="text"
+                                  width="80%"
+                                />
+                              </TableCell>
+                            ),
+                          )}
+                        </TableRow>
+                      ),
+                    )}
+                  </>
                 ) : items.length === 0 ? (
                   <TableRow>
                     <TableCell
@@ -271,10 +313,19 @@ export default function AdminKycPage() {
                       align="center"
                       sx={{ py: 6 }}
                     >
+                      <Typography sx={{ fontWeight: 600 }}>
+                        {pendingOnly
+                          ? "No pending KYC records found."
+                          : "No KYC records found."}
+                      </Typography>
                       <Typography
+                        variant="body2"
                         color="text.secondary"
+                        sx={{ mt: 0.5 }}
                       >
-                        No KYC records found.
+                        {pendingOnly
+                          ? "There are currently no seller KYC submissions awaiting review."
+                          : "The backend returned no KYC records for the current filter."}
                       </Typography>
                     </TableCell>
                   </TableRow>
@@ -286,19 +337,20 @@ export default function AdminKycPage() {
                     >
                       <TableCell>
                         <Typography
-  sx={{
-    fontWeight: 600,
-  }}
->
-  #{kyc.sellerId}
-</Typography>
+                          sx={{
+                            fontWeight: 600,
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          #{kyc.sellerId}
+                        </Typography>
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell sx={{ overflowWrap: "anywhere" }}>
                         {kyc.ownerName || "-"}
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell sx={{ overflowWrap: "anywhere" }}>
                         {kyc.businessType
                           ? kyc.businessType.replace(
                               /_/g,
@@ -307,15 +359,15 @@ export default function AdminKycPage() {
                           : "-"}
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell sx={{ overflowWrap: "anywhere" }}>
                         {kyc.panNumber || "-"}
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell sx={{ overflowWrap: "anywhere" }}>
                         {kyc.gstNumber || "-"}
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell sx={{ overflowWrap: "anywhere" }}>
                         {[
                           kyc.city,
                           kyc.state,
@@ -326,22 +378,14 @@ export default function AdminKycPage() {
                       </TableCell>
 
                       <TableCell>
-                        <Chip
-                          size="small"
+                        <AdminStatusChip
+                          status={kyc.status}
                           label={kyc.status}
-                          color={
-                            statusColor(
-                              kyc.status,
-                            ) as
-                              | "success"
-                              | "error"
-                              | "warning"
-                              | "default"
-                          }
+                          tone={statusTone(kyc.status)}
                         />
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell sx={{ whiteSpace: "nowrap" }}>
                         {formatDate(
                           kyc.submittedAt,
                         )}
@@ -353,6 +397,8 @@ export default function AdminKycPage() {
                           href={`/admin/kyc/${kyc.sellerId}`}
                           variant="outlined"
                           size="small"
+                          aria-label={`Review KYC for seller #${kyc.sellerId}`}
+                          sx={{ minHeight: 44 }}
                         >
                           Review
                         </Button>
@@ -365,11 +411,11 @@ export default function AdminKycPage() {
           </Box>
 
           <Stack
-            direction="row"
-            spacing={2}
+            direction={{ xs: "column", sm: "row" }}
+            spacing={1.5}
             sx={{
               p: 2,
-              alignItems: "center",
+              alignItems: { xs: "stretch", sm: "center" },
               justifyContent:
                 "flex-end",
             }}
@@ -383,6 +429,7 @@ export default function AdminKycPage() {
                   Math.max(0, current - 1),
                 );
               }}
+              sx={{ minHeight: 44 }}
             >
               Previous
             </Button>
@@ -390,6 +437,8 @@ export default function AdminKycPage() {
             <Typography
               variant="body2"
               color="text.secondary"
+              role="status"
+              sx={{ textAlign: "center" }}
             >
               Page {page + 1}
               {totalPages > 0
@@ -408,6 +457,7 @@ export default function AdminKycPage() {
                   current + 1,
                 );
               }}
+              sx={{ minHeight: 44 }}
             >
               Next
             </Button>

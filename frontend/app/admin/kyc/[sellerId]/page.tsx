@@ -1,20 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   Alert,
   Box,
+  Breadcrumbs,
   Button,
   Card,
   CardContent,
-  Divider,
   Grid,
   Link as MuiLink,
+  Skeleton,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
+
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import HomeIcon from "@mui/icons-material/Home";
+import RefreshIcon from "@mui/icons-material/Refresh";
+
+import AdminStatusChip, {
+  type AdminStatusTone,
+} from "@/components/admin/AdminStatusChip";
+import {
+  AdminErrorState,
+} from "@/components/admin/AdminStates";
 
 import {
   AdminSellerKyc,
@@ -89,13 +101,17 @@ function DocumentLink({
       </Typography>
 
       {url ? (
-        <MuiLink
+        <Button
+          component="a"
           href={url}
           target="_blank"
           rel="noopener noreferrer"
+          variant="outlined"
+          aria-label={`Open ${label} in a new tab`}
+          sx={{ minHeight: 44, alignSelf: "flex-start" }}
         >
           Open document
-        </MuiLink>
+        </Button>
       ) : (
         <Typography color="text.secondary">
           Not provided
@@ -105,38 +121,20 @@ function DocumentLink({
   );
 }
 
-function Status({ status }: { status: string }) {
-  return (
-    <Box
-      component="span"
-      sx={{
-        display: "inline-flex",
-        px: 1.5,
-        py: 0.5,
-        borderRadius: 10,
-        fontSize: 13,
-        fontWeight: 700,
-        bgcolor:
-          status === "VERIFIED"
-            ? "success.light"
-            : status === "REJECTED"
-              ? "error.light"
-              : status === "UNDER_REVIEW"
-                ? "warning.light"
-                : "action.selected",
-        color:
-          status === "VERIFIED"
-            ? "success.dark"
-            : status === "REJECTED"
-              ? "error.dark"
-              : status === "UNDER_REVIEW"
-                ? "warning.dark"
-                : "text.primary",
-      }}
-    >
-      {status}
-    </Box>
-  );
+function statusTone(status: string): AdminStatusTone {
+  switch (status) {
+    case "VERIFIED":
+      return "success";
+
+    case "REJECTED":
+      return "error";
+
+    case "UNDER_REVIEW":
+      return "warning";
+
+    default:
+      return "neutral";
+  }
 }
 
 export default function AdminSellerKycPage() {
@@ -169,7 +167,7 @@ export default function AdminSellerKycPage() {
   const [success, setSuccess] =
     useState<string | null>(null);
 
-  async function loadKyc() {
+  const loadKyc = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -187,13 +185,24 @@ export default function AdminSellerKycPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [sellerId]);
 
   useEffect(() => {
-    if (sellerId) {
-      void loadKyc();
-    }
-  }, [sellerId]);
+    if (!sellerId) return;
+
+    let cancelled = false;
+
+    const run = async () => {
+      if (cancelled) return;
+      await loadKyc();
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sellerId, loadKyc]);
 
   async function handleApprove() {
     try {
@@ -263,10 +272,29 @@ export default function AdminSellerKycPage() {
 
   if (loading) {
     return (
-      <Box sx={{ py: 6 }}>
-        <Typography>
-          Loading seller KYC...
-        </Typography>
+      <Box>
+        <Skeleton
+          variant="text"
+          width={280}
+          height={24}
+          sx={{ mb: 2 }}
+        />
+        <Skeleton
+          variant="text"
+          width={220}
+          height={44}
+          sx={{ mb: 2 }}
+        />
+        <Skeleton
+          variant="rounded"
+          height={280}
+          sx={{ borderRadius: 2, mb: 3 }}
+        />
+        <Skeleton
+          variant="rounded"
+          height={220}
+          sx={{ borderRadius: 2 }}
+        />
       </Box>
     );
   }
@@ -274,16 +302,22 @@ export default function AdminSellerKycPage() {
   if (!kyc) {
     return (
       <Box>
-        <Alert severity="error">
-          {error ||
-            "Seller KYC record not found."}
-        </Alert>
+        <Box sx={{ mb: 2 }}>
+          <AdminErrorState
+            message={
+              error ||
+              "Seller KYC record not found."
+            }
+            onRetry={() => void loadKyc()}
+          />
+        </Box>
 
         <Button
-          sx={{ mt: 2 }}
+          startIcon={<ArrowBackIcon />}
           onClick={() =>
             router.push("/admin/kyc")
           }
+          sx={{ minHeight: 44 }}
         >
           Back to KYC
         </Button>
@@ -293,6 +327,56 @@ export default function AdminSellerKycPage() {
 
   return (
     <Box>
+      <Breadcrumbs
+        sx={{
+          mb: 2,
+          "& .MuiBreadcrumbs-ol": {
+            flexWrap: "wrap",
+            rowGap: 0.5,
+          },
+        }}
+        aria-label="KYC location"
+      >
+        <MuiLink
+          component="button"
+          underline="hover"
+          color="inherit"
+          onClick={() => router.push("/admin")}
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 0.5,
+            border: 0,
+            background: "transparent",
+            cursor: "pointer",
+          }}
+        >
+          <HomeIcon fontSize="small" />
+          Admin
+        </MuiLink>
+
+        <MuiLink
+          component="button"
+          underline="hover"
+          color="inherit"
+          onClick={() => router.push("/admin/kyc")}
+          sx={{
+            border: 0,
+            background: "transparent",
+            cursor: "pointer",
+          }}
+        >
+          KYC
+        </MuiLink>
+
+        <Typography
+          color="text.primary"
+          sx={{ overflowWrap: "anywhere" }}
+        >
+          Seller #{kyc.sellerId}
+        </Typography>
+      </Breadcrumbs>
+
       <Stack
         direction={{
           xs: "column",
@@ -309,27 +393,21 @@ export default function AdminSellerKycPage() {
           mb: 3,
         }}
       >
-        <Box>
-          <Button
-            onClick={() =>
-              router.push("/admin/kyc")
-            }
-            sx={{ mb: 1 }}
-          >
-            ← Back to KYC
-          </Button>
-
+        <Box sx={{ minWidth: 0 }}>
           <Typography
-            variant="h4"
-            component="h1"
-            sx={{ fontWeight: 700 }}
+            variant="h3"
+            component="h2"
+            sx={{
+              fontWeight: 700,
+              overflowWrap: "anywhere",
+            }}
           >
             Seller KYC
           </Typography>
 
           <Typography
             color="text.secondary"
-            sx={{ mt: 0.5 }}
+            sx={{ mt: 0.5, overflowWrap: "anywhere" }}
           >
             Seller #{kyc.sellerId}
             {" · "}
@@ -338,7 +416,27 @@ export default function AdminSellerKycPage() {
           </Typography>
         </Box>
 
-        <Status status={kyc.status} />
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1.5}
+          sx={{ alignItems: { xs: "stretch", sm: "center" } }}
+        >
+          <AdminStatusChip
+            status={kyc.status}
+            label={kyc.status}
+            tone={statusTone(kyc.status)}
+          />
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={() => void loadKyc()}
+            disabled={loading || mutating}
+            aria-label="Refresh KYC record"
+            sx={{ minHeight: 44 }}
+          >
+            Refresh
+          </Button>
+        </Stack>
       </Stack>
 
       {error ? (
@@ -366,12 +464,8 @@ export default function AdminSellerKycPage() {
       ) : null}
 
       <Stack spacing={3}>
-        <Card
-          sx={{
-            borderRadius: 3,
-          }}
-        >
-          <CardContent>
+        <Card>
+          <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
             <Typography
               variant="h5"
               sx={{
@@ -492,12 +586,8 @@ export default function AdminSellerKycPage() {
           </CardContent>
         </Card>
 
-        <Card
-          sx={{
-            borderRadius: 3,
-          }}
-        >
-          <CardContent>
+        <Card>
+          <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
             <Typography
               variant="h5"
               sx={{
@@ -572,12 +662,8 @@ export default function AdminSellerKycPage() {
           </CardContent>
         </Card>
 
-        <Card
-          sx={{
-            borderRadius: 3,
-          }}
-        >
-          <CardContent>
+        <Card>
+          <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
             <Typography
               variant="h5"
               sx={{
@@ -665,12 +751,8 @@ export default function AdminSellerKycPage() {
           </CardContent>
         </Card>
 
-        <Card
-          sx={{
-            borderRadius: 3,
-          }}
-        >
-          <CardContent>
+        <Card>
+          <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
             <Typography
               variant="h5"
               sx={{
@@ -678,7 +760,7 @@ export default function AdminSellerKycPage() {
                 mb: 3,
               }}
             >
-              Review History
+              Review details
             </Typography>
 
             <Grid
@@ -737,17 +819,41 @@ export default function AdminSellerKycPage() {
                   }
                 />
               </Grid>
+
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 6,
+                }}
+              >
+                <Field
+                  label="Created"
+                  value={formatDate(
+                    kyc.createdAt,
+                  )}
+                />
+              </Grid>
+
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 6,
+                }}
+              >
+                <Field
+                  label="Updated"
+                  value={formatDate(
+                    kyc.updatedAt,
+                  )}
+                />
+              </Grid>
             </Grid>
           </CardContent>
         </Card>
 
         {kyc.status !== "VERIFIED" ? (
-          <Card
-            sx={{
-              borderRadius: 3,
-            }}
-          >
-            <CardContent>
+          <Card>
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
               <Typography
                 variant="h5"
                 sx={{
@@ -783,6 +889,8 @@ export default function AdminSellerKycPage() {
                     onClick={() =>
                       setAction("approve")
                     }
+                    aria-label="Approve this KYC submission"
+                    sx={{ minHeight: 44 }}
                   >
                     Approve KYC
                   </Button>
@@ -793,6 +901,8 @@ export default function AdminSellerKycPage() {
                     onClick={() =>
                       setAction("reject")
                     }
+                    aria-label="Reject this KYC submission"
+                    sx={{ minHeight: 44 }}
                   >
                     Reject KYC
                   </Button>
@@ -822,6 +932,7 @@ export default function AdminSellerKycPage() {
                       onClick={() =>
                         void handleApprove()
                       }
+                      sx={{ minHeight: 44 }}
                     >
                       {mutating
                         ? "Approving..."
@@ -834,6 +945,7 @@ export default function AdminSellerKycPage() {
                       onClick={() =>
                         setAction(null)
                       }
+                      sx={{ minHeight: 44 }}
                     >
                       Cancel
                     </Button>
@@ -880,6 +992,7 @@ slotProps={{
                       onClick={() =>
                         void handleReject()
                       }
+                      sx={{ minHeight: 44 }}
                     >
                       {mutating
                         ? "Rejecting..."
@@ -893,6 +1006,7 @@ slotProps={{
                         setAction(null);
                         setReason("");
                       }}
+                      sx={{ minHeight: 44 }}
                     >
                       Cancel
                     </Button>
@@ -903,6 +1017,14 @@ slotProps={{
           </Card>
         ) : null}
       </Stack>
+
+      <Button
+        startIcon={<ArrowBackIcon />}
+        onClick={() => router.push("/admin/kyc")}
+        sx={{ mt: 3, minHeight: 44 }}
+      >
+        Back to KYC
+      </Button>
     </Box>
   );
 }

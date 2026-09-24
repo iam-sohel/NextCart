@@ -124,9 +124,9 @@ export default function AdminTopBar({ onOpenMobileNav }: AdminTopBarProps) {
 
         <Typography
           variant="h4"
-          component="h1"
+          component="div"
           noWrap
-          sx={{ fontWeight: 700, minWidth: 0 }}
+          sx={{ fontWeight: 700, minWidth: 0, flexShrink: 1 }}
         >
           {pageTitle}
         </Typography>

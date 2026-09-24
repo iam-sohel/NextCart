@@ -17,10 +17,12 @@ import {
   Paper,
   Select,
   SelectChangeEvent,
+  Skeleton,
   Stack,
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
   TableRow,
   Typography,
@@ -36,6 +38,10 @@ import {
   updateAdminOrderStatus,
   type AdminOrder,
 } from "@/services/adminOrderService";
+
+import {
+  AdminErrorState,
+} from "@/components/admin/AdminStates";
 
 const ORDER_STATUSES = [
   "PENDING",
@@ -172,6 +178,7 @@ function InfoRow({
           fontWeight: 600,
           textAlign: "right",
           wordBreak: "break-word",
+          minWidth: 0,
         }}
       >
         {value || "—"}
@@ -210,15 +217,11 @@ export default function AdminOrderDetailsPage() {
         await getAdminOrder(orderId);
 
       setOrder(result);
-    } catch (err: any) {
-      console.error(
-        "Failed to load order:",
-        err
-      );
-
+    } catch (err) {
       setError(
-        err?.message ||
-          "Unable to load order details."
+        err instanceof Error
+          ? err.message
+          : "Unable to load order details."
       );
     } finally {
       setLoading(false);
@@ -226,7 +229,18 @@ export default function AdminOrderDetailsPage() {
   }, [orderId]);
 
   useEffect(() => {
-    loadOrder();
+    let cancelled = false;
+
+    const run = async () => {
+      if (cancelled) return;
+      await loadOrder();
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
   }, [loadOrder]);
 
   const handleStatusChange = async (
@@ -254,15 +268,11 @@ export default function AdminOrderDetailsPage() {
         );
 
       setOrder(updatedOrder);
-    } catch (err: any) {
-      console.error(
-        "Failed to update order status:",
-        err
-      );
-
+    } catch (err) {
       setError(
-        err?.message ||
-          "Unable to update order status."
+        err instanceof Error
+          ? err.message
+          : "Unable to update order status."
       );
     } finally {
       setUpdating(false);
@@ -271,15 +281,29 @@ export default function AdminOrderDetailsPage() {
 
   if (loading) {
     return (
-      <Box
-        sx={{
-          minHeight: "60vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <CircularProgress />
+      <Box sx={{ p: { xs: 2, md: 3 } }}>
+        <Skeleton
+          variant="text"
+          width={280}
+          height={24}
+          sx={{ mb: 2 }}
+        />
+        <Skeleton
+          variant="text"
+          width={220}
+          height={44}
+          sx={{ mb: 2 }}
+        />
+        <Skeleton
+          variant="rounded"
+          height={320}
+          sx={{ borderRadius: 2, mb: 2 }}
+        />
+        <Skeleton
+          variant="rounded"
+          height={200}
+          sx={{ borderRadius: 2 }}
+        />
       </Box>
     );
   }
@@ -287,18 +311,19 @@ export default function AdminOrderDetailsPage() {
   if (error && !order) {
     return (
       <Box sx={{ p: { xs: 2, md: 3 } }}>
-        <Alert
-          severity="error"
-          sx={{ mb: 2 }}
-        >
-          {error}
-        </Alert>
+        <Box sx={{ mb: 2 }}>
+          <AdminErrorState
+            message={error}
+            onRetry={() => void loadOrder()}
+          />
+        </Box>
 
         <Button
           startIcon={<ArrowBackIcon />}
           onClick={() =>
             router.push("/admin/orders")
           }
+          sx={{ minHeight: 44 }}
         >
           Back to Orders
         </Button>
@@ -329,7 +354,15 @@ export default function AdminOrderDetailsPage() {
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
-      <Breadcrumbs sx={{ mb: 2 }}>
+      <Breadcrumbs
+        sx={{
+          mb: 2,
+          "& .MuiBreadcrumbs-ol": {
+            flexWrap: "wrap",
+            rowGap: 0.5,
+          },
+        }}
+      >
         <MuiLink
           component="button"
           underline="hover"
@@ -366,7 +399,7 @@ export default function AdminOrderDetailsPage() {
           Orders
         </MuiLink>
 
-        <Typography color="text.primary">
+        <Typography color="text.primary" sx={{ overflowWrap: "anywhere" }}>
           {order.orderNumber ||
             `#${order.id}`}
         </Typography>
@@ -401,7 +434,11 @@ export default function AdminOrderDetailsPage() {
         <Box>
           <Typography
             variant="h4"
-            sx={{ fontWeight: 700 }}
+            sx={{
+              fontWeight: 700,
+              overflowWrap: "anywhere",
+              minWidth: 0,
+            }}
           >
             Order{" "}
             {order.orderNumber ||
@@ -428,8 +465,9 @@ export default function AdminOrderDetailsPage() {
           <Button
             variant="outlined"
             startIcon={<RefreshIcon />}
-            onClick={loadOrder}
+            onClick={() => void loadOrder()}
             disabled={loading || updating}
+            sx={{ minHeight: 44 }}
           >
             Refresh
           </Button>
@@ -440,6 +478,7 @@ export default function AdminOrderDetailsPage() {
             onClick={() =>
               router.push("/admin/orders")
             }
+            sx={{ minHeight: 44 }}
           >
             Back to Orders
           </Button>
@@ -490,7 +529,11 @@ export default function AdminOrderDetailsPage() {
                 />
               </Box>
 
-              <Table>
+              <TableContainer sx={{ overflowX: "auto" }}>
+                <Table
+                  sx={{ minWidth: 640 }}
+                  aria-label="Order items"
+                >
                 <TableHead>
                   <TableRow>
                     <TableCell
@@ -556,6 +599,7 @@ export default function AdminOrderDetailsPage() {
                             <Typography
                               sx={{
                                 fontWeight: 600,
+                                overflowWrap: "anywhere",
                               }}
                             >
                               {item.productName ||
@@ -565,6 +609,10 @@ export default function AdminOrderDetailsPage() {
                             <Typography
                               variant="caption"
                               color="text.secondary"
+                              sx={{
+                                display: "block",
+                                overflowWrap: "anywhere",
+                              }}
                             >
                               Variant ID:{" "}
                               {
@@ -573,7 +621,7 @@ export default function AdminOrderDetailsPage() {
                             </Typography>
                           </TableCell>
 
-                          <TableCell>
+                          <TableCell sx={{ overflowWrap: "anywhere" }}>
                             {item.sku ||
                               "—"}
                           </TableCell>
@@ -606,7 +654,8 @@ export default function AdminOrderDetailsPage() {
                     )
                   )}
                 </TableBody>
-              </Table>
+                </Table>
+              </TableContainer>
             </Paper>
 
             <Paper
@@ -682,6 +731,7 @@ export default function AdminOrderDetailsPage() {
                     sx={{
                       fontWeight: 600,
                       mt: 0.5,
+                      overflowWrap: "anywhere",
                     }}
                   >
                     {shippingAddress ||
@@ -804,17 +854,23 @@ export default function AdminOrderDetailsPage() {
               </Typography>
 
               <FormControl fullWidth>
-                <InputLabel>
+                <InputLabel id="admin-order-status-label">
                   Status
                 </InputLabel>
 
                 <Select
+                  labelId="admin-order-status-label"
                   value={order.status}
                   label="Status"
                   disabled={updating}
                   onChange={
                     handleStatusChange
                   }
+                  sx={{
+                    "&.MuiOutlinedInput-root": {
+                      minHeight: 44,
+                    },
+                  }}
                 >
                   {ORDER_STATUSES.map(
                     (status) => (

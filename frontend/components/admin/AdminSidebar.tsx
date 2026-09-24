@@ -146,7 +146,7 @@ function AdminSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <List
         component="nav"
         aria-label="Admin navigation"
-        sx={{ px: 1.5, py: 2 }}
+        sx={{ px: 1.5, py: 1, overflowY: "auto" }}
       >
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
@@ -170,6 +170,9 @@ function AdminSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                   "&.Mui-selected": {
                     bgcolor: "action.selected",
                     "&:hover": { bgcolor: "action.selected" },
+                    "& .MuiListItemText-primary": {
+                      color: "primary.dark",
+                    },
                   },
                 }}
               >
@@ -212,6 +215,9 @@ function AdminSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                   "&.Mui-selected": {
                     bgcolor: "action.selected",
                     "&:hover": { bgcolor: "action.selected" },
+                    "& .MuiListItemText-primary": {
+                      color: "primary.dark",
+                    },
                   },
                 }}
               >
@@ -271,6 +277,9 @@ function AdminSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                           "&.Mui-selected": {
                             bgcolor: "action.selected",
                             "&:hover": { bgcolor: "action.selected" },
+                            "& .MuiListItemText-primary": {
+                              color: "primary.dark",
+                            },
                           },
                         }}
                       >
