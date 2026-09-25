@@ -56,7 +56,7 @@ export default function Hero({ product }: Props) {
           "radial-gradient(120% 160% at 85% 0%, rgba(241, 90, 41, 0.28) 0%, rgba(241, 90, 41, 0) 55%)",
         color: "#F4EFE6",
         mt: { xs: 1, md: 2 },
-        borderRadius: { xs: 0, md: 4 },
+        borderRadius: { xs: 0, md: 3 },
         overflow: "hidden",
         position: "relative",
       }}
@@ -66,7 +66,8 @@ export default function Hero({ product }: Props) {
           maxWidth: "1400px",
           mx: "auto",
           px: { xs: 2, sm: 3, md: 5 },
-          py: { xs: 2.5, sm: 3, md: 4.5 },
+          pt: { xs: 2.5, sm: 3, md: 4.5 },
+          pb: { xs: 4, sm: 4.5, md: 6 },
           display: "grid",
           gridTemplateColumns: {
             xs: "1fr",
@@ -110,11 +111,9 @@ export default function Hero({ product }: Props) {
             />
 
             <Typography
+              variant="caption"
               sx={{
-                fontSize: "0.6875rem",
                 fontWeight: 700,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
                 lineHeight: 1.2,
                 color: "#F8B5A0",
               }}
@@ -192,21 +191,21 @@ export default function Hero({ product }: Props) {
 
             {product.originalPrice &&
               product.originalPrice > product.price && (
-                <Typography
-                  sx={{
-                    fontSize: "0.875rem",
-                    color: "rgba(244, 239, 230, 0.5)",
-                    textDecoration: "line-through",
-                  }}
-                >
-                  ₹{originalPrice}
-                </Typography>
+              <Typography
+                variant="body1"
+                sx={{
+                  color: "rgba(244, 239, 230, 0.5)",
+                  textDecoration: "line-through",
+                }}
+              >
+                ₹{originalPrice}
+              </Typography>
               )}
 
             {discountPct > 0 && (
               <Typography
+                variant="caption"
                 sx={{
-                  fontSize: "0.75rem",
                   fontWeight: 800,
                   color: "#FFFFFF",
                   bgcolor: "primary.main",
@@ -245,19 +244,10 @@ export default function Hero({ product }: Props) {
               size="large"
               disableElevation
               sx={{
-                bgcolor: "primary.main",
-                color: "primary.contrastText",
                 fontWeight: 700,
                 px: 3,
                 minHeight: 44,
                 borderRadius: 2,
-                fontSize: "0.875rem",
-                textTransform: "none",
-                boxShadow: "none",
-                "&:hover": {
-                  bgcolor: "primary.dark",
-                  boxShadow: "none",
-                },
               }}
             >
               Shop now
@@ -274,8 +264,6 @@ export default function Hero({ product }: Props) {
                 minHeight: 44,
                 borderRadius: 2,
                 px: 2,
-                fontSize: "0.875rem",
-                textTransform: "none",
                 "&:hover": {
                   bgcolor: "rgba(244, 239, 230, 0.1)",
                 },

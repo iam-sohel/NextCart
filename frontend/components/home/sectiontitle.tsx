@@ -66,9 +66,7 @@ export default function SectionTitle({ title }: Props) {
         }
         sx={{
           borderRadius: 100,
-          textTransform: "none",
           fontWeight: 700,
-          fontSize: "0.8125rem",
           px: 2,
           py: 0.5,
           borderColor: "divider",

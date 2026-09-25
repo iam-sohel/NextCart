@@ -16,7 +16,7 @@ export default function Newsletter() {
         elevation={0}
         sx={{
           p: { xs: 3.5, md: 5 },
-          borderRadius: 4,
+          borderRadius: 3,
           textAlign: "center",
           bgcolor: "background.paper",
           border: "1px solid",
@@ -24,14 +24,18 @@ export default function Newsletter() {
           boxShadow: 1,
         }}
       >
-        <Typography variant="h4" sx={{ fontWeight: 700, letterSpacing: "-0.01em" }}>
+        <Typography
+          variant="h4"
+          component="h2"
+          sx={{ fontWeight: 700, letterSpacing: "-0.01em" }}
+        >
           Stay Updated
         </Typography>
 
         <Typography
           sx={{
-            mt: 2,
-            mb: 4,
+            mt: 1,
+            mb: 2.5,
             color: "text.secondary",
           }}
         >
@@ -61,16 +65,9 @@ export default function Newsletter() {
             size="large"
             disableElevation
             sx={{
-              bgcolor: "primary.main",
-              color: "primary.contrastText",
               fontWeight: 700,
-              textTransform: "none",
               px: 4,
-              boxShadow: "none",
-              "&:hover": {
-                bgcolor: "primary.dark",
-                boxShadow: "none",
-              },
+              minHeight: 44,
             }}
           >
             Subscribe

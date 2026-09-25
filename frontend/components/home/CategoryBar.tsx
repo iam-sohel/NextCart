@@ -24,6 +24,9 @@ import categories from "@/data/categories";
 export default function CategoryBar() {
   return (
     <Box
+      role="region"
+      aria-label="Product categories"
+      tabIndex={0}
       sx={{
         bgcolor: "background.paper",
         border: "1px solid",
@@ -35,12 +38,24 @@ export default function CategoryBar() {
         overflowX: "auto",
         // Contain the scroll so the strip never widens the document.
         maxWidth: "100%",
+        // Soft right-edge fade signals that more categories lie beyond
+        // the visible edge without adding extra controls.
+        maskImage:
+          "linear-gradient(to right, black calc(100% - 48px), transparent 100%)",
+        WebkitMaskImage:
+          "linear-gradient(to right, black calc(100% - 48px), transparent 100%)",
 
         "&::-webkit-scrollbar": {
           display: "none",
         },
 
         scrollbarWidth: "none",
+
+        "&:focus-visible": {
+          outline: "2px solid",
+          outlineColor: "primary.main",
+          outlineOffset: 2,
+        },
       }}
     >
       <Stack

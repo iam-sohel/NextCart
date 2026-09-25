@@ -69,8 +69,8 @@ const BrandMark = ({ fontSize = "1.5rem" }: { fontSize?: string }) => (
 
 /** Outlined icon-button treatment shared by the wishlist / cart / account icons. */
 const iconLinkSx = {
-  width: 42,
-  height: 42,
+  width: 44,
+  height: 44,
   color: "text.primary",
   bgcolor: "background.paper",
   border: "1px solid",
@@ -280,7 +280,7 @@ export default function Navbar() {
             color: "primary.contrastText",
             fontWeight: 700,
             borderRadius: 2,
-            minHeight: 42,
+            minHeight: 44,
             px: 2.5,
             flexShrink: 0,
             boxShadow: "none",
@@ -338,7 +338,7 @@ export default function Navbar() {
             sx={{
               color: "text.secondary",
               fontWeight: 600,
-              minHeight: 42,
+              minHeight: 44,
               px: 1.5,
               borderRadius: 2,
               flexShrink: 0,

@@ -203,7 +203,7 @@ export default function ProductCard({
                 bgcolor: "secondary.main",
                 color: "secondary.contrastText",
                 fontWeight: 700,
-                fontSize: "0.7rem",
+                fontSize: "0.75rem",
                 height: 22,
               }}
             />
@@ -217,7 +217,7 @@ export default function ProductCard({
                 bgcolor: "primary.main",
                 color: "primary.contrastText",
                 fontWeight: 700,
-                fontSize: "0.7rem",
+                fontSize: "0.75rem",
                 height: 22,
               }}
             />
@@ -230,7 +230,7 @@ export default function ProductCard({
               bgcolor: "error.main",
               color: "#fff",
               fontWeight: 700,
-              fontSize: "0.7rem",
+              fontSize: "0.75rem",
               height: 22,
             }}
           />
@@ -349,8 +349,8 @@ export default function ProductCard({
               }}
             >
               <Typography
+                variant="caption"
                 sx={{
-                  fontSize: "0.75rem",
                   fontWeight: 700,
                   lineHeight: 1.6,
                   fontVariantNumeric: "tabular-nums",
@@ -418,15 +418,10 @@ export default function ProductCard({
           size="small"
           disableElevation
           sx={{
-            borderRadius: 2,
             mt: "auto",
             py: { xs: 0.75, sm: 1 },
+            minHeight: 44,
             fontWeight: 700,
-            textTransform: "none",
-            boxShadow: "none",
-            "&:hover": {
-              boxShadow: "none",
-            },
           }}
           onClick={handleAddToCart}
         >
