@@ -1,7 +1,7 @@
 package com.nextcart.nextcart.cart_module;
 
-import com.nextcart.nextcart.product_module.product_base.ProductEntity;
-import com.nextcart.nextcart.product_module.productVariant.ProductVariantEntity;
+import com.nextcart.nextcart.product_module.product_base.entity.ProductEntity;
+import com.nextcart.nextcart.product_module.productVariant.entity.ProductVariantEntity;
 import jakarta.persistence.*;
 import lombok.*;
 

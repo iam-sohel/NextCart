@@ -1,26 +1,37 @@
 package com.nextcart.nextcart.checkout_module;
 
-import com.nextcart.nextcart.address_module.entity.Address;
 import com.nextcart.nextcart.address_module.repository.AddressRepository;
 import com.nextcart.nextcart.cart_module.Cart;
 import com.nextcart.nextcart.cart_module.CartItem;
 import com.nextcart.nextcart.cart_module.CartRepository;
+import com.nextcart.nextcart.checkout_module.exceptions.CheckoutBillingAddressException;
+import com.nextcart.nextcart.checkout_module.exceptions.CheckoutCartEmptyException;
+import com.nextcart.nextcart.checkout_module.exceptions.CheckoutCartItemException;
+import com.nextcart.nextcart.checkout_module.exceptions.CheckoutCartNotFoundException;
+import com.nextcart.nextcart.checkout_module.exceptions.CheckoutCouponNotAvailableException;
+import com.nextcart.nextcart.checkout_module.exceptions.CheckoutCustomerNotFoundException;
+import com.nextcart.nextcart.checkout_module.exceptions.CheckoutInventoryNotFoundException;
+import com.nextcart.nextcart.checkout_module.exceptions.CheckoutPriceException;
+import com.nextcart.nextcart.checkout_module.exceptions.CheckoutPriceNotFoundException;
+import com.nextcart.nextcart.checkout_module.exceptions.CheckoutProductVariantNotFoundException;
+import com.nextcart.nextcart.checkout_module.exceptions.CheckoutShippingAddressNotFoundException;
+import com.nextcart.nextcart.checkout_module.exceptions.CheckoutStockException;
+import com.nextcart.nextcart.checkout_module.exceptions.CheckoutUserNotFoundException;
+import com.nextcart.nextcart.checkout_module.exceptions.CheckoutValidationException;
 import com.nextcart.nextcart.customer_module.entity.Customer;
 import com.nextcart.nextcart.customer_module.repository.CustomerRepository;
 import com.nextcart.nextcart.discount_module.DiscountType;
 import com.nextcart.nextcart.discount_module.ProductVariantDiscountEntity;
 import com.nextcart.nextcart.discount_module.ProductVariantDiscountRepository;
-import com.nextcart.nextcart.product_module.productPrice.ProductVariantPriceEntity;
-import com.nextcart.nextcart.product_module.productPrice.ProductVariantPriceRepository;
-import com.nextcart.nextcart.product_module.productVariant.ProductVariantEntity;
-import com.nextcart.nextcart.product_module.productVariant.ProductVariantRepository;
-import com.nextcart.nextcart.product_module.productVariant.ProductVariantStatus;
+import com.nextcart.nextcart.product_module.productPrice.entity.ProductVariantPriceEntity;
+import com.nextcart.nextcart.product_module.productPrice.repository.ProductVariantPriceRepository;
+import com.nextcart.nextcart.product_module.productVariant.entity.ProductVariantEntity;
+import com.nextcart.nextcart.product_module.productVariant.repository.ProductVariantRepository;
+import com.nextcart.nextcart.product_module.productVariant.entity.ProductVariantStatus;
 import com.nextcart.nextcart.seller_module.inventory_module.service.InventoryService;
 import com.nextcart.nextcart.user_module.entity.User;
 import com.nextcart.nextcart.user_module.repository.UserRepository;
-
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -61,7 +72,6 @@ public class CheckoutServiceImpl implements CheckoutService {
 
     private final InventoryService inventoryService;
 
-
     // =========================================================
     // CHECKOUT PREVIEW
     // =========================================================
@@ -85,11 +95,10 @@ public class CheckoutServiceImpl implements CheckoutService {
         Customer customer = customerRepository
                 .findByUserId(user.getId())
                 .orElseThrow(() ->
-                        new IllegalArgumentException(
+                        new CheckoutCustomerNotFoundException(
                                 "Customer profile not found"
                         )
                 );
-
 
         // -----------------------------------------------------
         // SHIPPING ADDRESS
@@ -101,11 +110,10 @@ public class CheckoutServiceImpl implements CheckoutService {
                         customer
                 )
                 .orElseThrow(() ->
-                        new IllegalArgumentException(
+                        new CheckoutShippingAddressNotFoundException(
                                 "Shipping address not found"
                         )
                 );
-
 
         // -----------------------------------------------------
         // BILLING ADDRESS
@@ -116,7 +124,6 @@ public class CheckoutServiceImpl implements CheckoutService {
                 request
         );
 
-
         // -----------------------------------------------------
         // COUPON
         // -----------------------------------------------------
@@ -126,14 +133,14 @@ public class CheckoutServiceImpl implements CheckoutService {
          *
          * Do not silently accept and ignore it.
          */
+
         if (request.getCouponCode() != null
                 && !request.getCouponCode().isBlank()) {
 
-            throw new IllegalArgumentException(
+            throw new CheckoutCouponNotAvailableException(
                     "Coupon processing is not available yet"
             );
         }
-
 
         // -----------------------------------------------------
         // CART
@@ -143,20 +150,18 @@ public class CheckoutServiceImpl implements CheckoutService {
                 cartRepository
                         .findByUserId(user.getId())
                         .orElseThrow(() ->
-                                new IllegalArgumentException(
+                                new CheckoutCartNotFoundException(
                                         "Cart not found"
                                 )
                         );
 
-
         if (cart.getItems() == null
                 || cart.getItems().isEmpty()) {
 
-            throw new IllegalArgumentException(
+            throw new CheckoutCartEmptyException(
                     "Cannot checkout with an empty cart"
             );
         }
-
 
         // -----------------------------------------------------
         // BUILD CHECKOUT PREVIEW
@@ -164,7 +169,6 @@ public class CheckoutServiceImpl implements CheckoutService {
 
         return buildCheckoutResponse(cart);
     }
-
 
     // =========================================================
     // BUILD CHECKOUT RESPONSE
@@ -191,7 +195,6 @@ public class CheckoutServiceImpl implements CheckoutService {
         LocalDateTime now =
                 LocalDateTime.now();
 
-
         for (CartItem cartItem : cart.getItems()) {
 
             // -------------------------------------------------
@@ -199,7 +202,6 @@ public class CheckoutServiceImpl implements CheckoutService {
             // -------------------------------------------------
 
             validateCartItem(cartItem);
-
 
             // -------------------------------------------------
             // ACTIVE PRODUCT VARIANT
@@ -212,7 +214,6 @@ public class CheckoutServiceImpl implements CheckoutService {
                                     .getId()
                     );
 
-
             int quantity =
                     cartItem.getQuantity();
 
@@ -220,7 +221,6 @@ public class CheckoutServiceImpl implements CheckoutService {
 
             Long variantId =
                     variant.getId();
-
 
             // -------------------------------------------------
             // INVENTORY AVAILABILITY
@@ -239,21 +239,24 @@ public class CheckoutServiceImpl implements CheckoutService {
                     inventoryService.getTotalAvailableStock(variantId);
 
             if (availableStock == null) {
-                throw new IllegalArgumentException(
+
+                throw new CheckoutInventoryNotFoundException(
                         "Inventory not found for product variant id: "
                                 + variantId
                 );
             }
 
             if (availableStock < 0) {
-                throw new IllegalArgumentException(
+
+                throw new CheckoutStockException(
                         "Invalid inventory stock for product variant: "
                                 + variantId
                 );
             }
 
             if (availableStock < quantity) {
-                throw new IllegalArgumentException(
+
+                throw new CheckoutStockException(
                         "Insufficient stock for product variant: "
                                 + variantId
                                 + ". Available: "
@@ -263,7 +266,6 @@ public class CheckoutServiceImpl implements CheckoutService {
                 );
             }
 
-
             // -------------------------------------------------
             // PRICE
             // -------------------------------------------------
@@ -272,34 +274,29 @@ public class CheckoutServiceImpl implements CheckoutService {
                     productVariantPriceRepository
                             .findByProductVariantId(variantId)
                             .orElseThrow(() ->
-                                    new IllegalArgumentException(
+                                    new CheckoutPriceNotFoundException(
                                             "Price not found for product variant id: "
                                                     + variantId
                                     )
                             );
 
-
             BigDecimal mrp =
                     money(price.getMrp());
 
-
             BigDecimal sellingPrice =
                     money(price.getSellingPrice());
-
 
             if (sellingPrice.compareTo(
                     BigDecimal.ZERO
             ) < 0) {
 
-                throw new IllegalArgumentException(
+                throw new CheckoutPriceException(
                         "Selling price cannot be negative"
                 );
             }
 
-
             BigDecimal quantityDecimal =
                     BigDecimal.valueOf(quantity);
-
 
             // -------------------------------------------------
             // DISCOUNT
@@ -312,12 +309,10 @@ public class CheckoutServiceImpl implements CheckoutService {
                             now
                     );
 
-
             BigDecimal finalUnitPrice =
                     sellingPrice.subtract(
                             discountPerUnit
                     );
-
 
             if (finalUnitPrice.compareTo(
                     BigDecimal.ZERO
@@ -327,10 +322,8 @@ public class CheckoutServiceImpl implements CheckoutService {
                         BigDecimal.ZERO;
             }
 
-
             finalUnitPrice =
                     money(finalUnitPrice);
-
 
             // -------------------------------------------------
             // TOTALS
@@ -343,7 +336,6 @@ public class CheckoutServiceImpl implements CheckoutService {
                             )
                     );
 
-
             BigDecimal mrpTotal =
                     money(
                             mrp.multiply(
@@ -351,14 +343,12 @@ public class CheckoutServiceImpl implements CheckoutService {
                             )
                     );
 
-
             BigDecimal lineDiscount =
                     money(
                             mrpTotal.subtract(
                                     lineTotal
                             )
                     );
-
 
             if (lineDiscount.compareTo(
                     BigDecimal.ZERO
@@ -368,14 +358,12 @@ public class CheckoutServiceImpl implements CheckoutService {
                         BigDecimal.ZERO;
             }
 
-
             productPrice =
                     money(
                             productPrice.add(
                                     mrpTotal
                             )
                     );
-
 
             totalDiscount =
                     money(
@@ -384,7 +372,6 @@ public class CheckoutServiceImpl implements CheckoutService {
                             )
                     );
 
-
             orderTotal =
                     money(
                             orderTotal.add(
@@ -392,14 +379,12 @@ public class CheckoutServiceImpl implements CheckoutService {
                             )
                     );
 
-
             String productName =
                     variant.getProductEntity() != null
                             ? variant
                             .getProductEntity()
                             .getName()
                             : null;
-
 
             // -------------------------------------------------
             // ITEM RESPONSE
@@ -438,7 +423,6 @@ public class CheckoutServiceImpl implements CheckoutService {
             );
         }
 
-
         // -----------------------------------------------------
         // DELIVERY
         // -----------------------------------------------------
@@ -448,14 +432,12 @@ public class CheckoutServiceImpl implements CheckoutService {
                         DEFAULT_DELIVERY_CHARGE
                 );
 
-
         BigDecimal finalOrderTotal =
                 money(
                         orderTotal.add(
                                 deliveryCharge
                         )
                 );
-
 
         // -----------------------------------------------------
         // RESPONSE
@@ -490,7 +472,6 @@ public class CheckoutServiceImpl implements CheckoutService {
                 .build();
     }
 
-
     // =========================================================
     // DISCOUNT
     // =========================================================
@@ -509,7 +490,6 @@ public class CheckoutServiceImpl implements CheckoutService {
                         )
                         .orElse(null);
 
-
         if (discount == null) {
 
             return money(
@@ -517,9 +497,7 @@ public class CheckoutServiceImpl implements CheckoutService {
             );
         }
 
-
         BigDecimal discountAmount;
-
 
         if (discount.getDiscountType()
                 == DiscountType.PERCENTAGE) {
@@ -548,7 +526,6 @@ public class CheckoutServiceImpl implements CheckoutService {
                     BigDecimal.ZERO;
         }
 
-
         if (discountAmount.compareTo(
                 BigDecimal.ZERO
         ) < 0) {
@@ -556,7 +533,6 @@ public class CheckoutServiceImpl implements CheckoutService {
             discountAmount =
                     BigDecimal.ZERO;
         }
-
 
         /*
          * Discount cannot exceed selling price.
@@ -569,7 +545,6 @@ public class CheckoutServiceImpl implements CheckoutService {
         );
     }
 
-
     // =========================================================
     // ACTIVE PRODUCT VARIANT
     // =========================================================
@@ -581,11 +556,10 @@ public class CheckoutServiceImpl implements CheckoutService {
         if (productVariantId == null
                 || productVariantId <= 0) {
 
-            throw new IllegalArgumentException(
+            throw new CheckoutProductVariantNotFoundException(
                     "Invalid product variant id"
             );
         }
-
 
         return productVariantRepository
                 .findByIdAndStatus(
@@ -593,13 +567,12 @@ public class CheckoutServiceImpl implements CheckoutService {
                         ProductVariantStatus.ACTIVE
                 )
                 .orElseThrow(
-                        () -> new IllegalArgumentException(
+                        () -> new CheckoutProductVariantNotFoundException(
                                 "Active product variant not found with id: "
                                         + productVariantId
                         )
                 );
     }
-
 
     // =========================================================
     // CART ITEM VALIDATION
@@ -611,32 +584,29 @@ public class CheckoutServiceImpl implements CheckoutService {
 
         if (cartItem == null) {
 
-            throw new IllegalArgumentException(
+            throw new CheckoutCartItemException(
                     "Cart contains an invalid item"
             );
         }
-
 
         if (cartItem.getProductVariant() == null
                 || cartItem
                 .getProductVariant()
                 .getId() == null) {
 
-            throw new IllegalArgumentException(
+            throw new CheckoutCartItemException(
                     "Cart item has an invalid product variant"
             );
         }
 
-
         if (cartItem.getQuantity() == null
                 || cartItem.getQuantity() <= 0) {
 
-            throw new IllegalArgumentException(
+            throw new CheckoutCartItemException(
                     "Cart item quantity must be greater than zero"
             );
         }
     }
-
 
     // =========================================================
     // ADDRESS VALIDATION
@@ -652,21 +622,18 @@ public class CheckoutServiceImpl implements CheckoutService {
                         request.getSameAsShipping()
                 );
 
-
         if (sameAsShipping) {
 
             return;
         }
 
-
         if (request.getBillingAddressId() == null
                 || request.getBillingAddressId() <= 0) {
 
-            throw new IllegalArgumentException(
+            throw new CheckoutBillingAddressException(
                     "Billing address is required when sameAsShipping is false"
             );
         }
-
 
         addressRepository
                 .findByIdAndCustomer(
@@ -674,12 +641,11 @@ public class CheckoutServiceImpl implements CheckoutService {
                         customer
                 )
                 .orElseThrow(
-                        () -> new IllegalArgumentException(
+                        () -> new CheckoutBillingAddressException(
                                 "Billing address not found"
                         )
                 );
     }
-
 
     // =========================================================
     // USER
@@ -692,15 +658,13 @@ public class CheckoutServiceImpl implements CheckoutService {
         if (userIdentifier == null
                 || userIdentifier.isBlank()) {
 
-            throw new IllegalArgumentException(
+            throw new CheckoutUserNotFoundException(
                     "Authenticated user is required"
             );
         }
 
-
         String identifier =
                 userIdentifier.trim();
-
 
         /*
          * First treat identifier as USER ID.
@@ -714,11 +678,10 @@ public class CheckoutServiceImpl implements CheckoutService {
             Long userId =
                     Long.valueOf(identifier);
 
-
             return userRepository
                     .findById(userId)
                     .orElseThrow(
-                            () -> new IllegalArgumentException(
+                            () -> new CheckoutUserNotFoundException(
                                     "User not found with id: "
                                             + userId
                             )
@@ -738,13 +701,12 @@ public class CheckoutServiceImpl implements CheckoutService {
                             identifier
                     )
                     .orElseThrow(
-                            () -> new IllegalArgumentException(
+                            () -> new CheckoutUserNotFoundException(
                                     "User not found"
                             )
                     );
         }
     }
-
 
     // =========================================================
     // USER IDENTIFIER VALIDATION
@@ -757,12 +719,11 @@ public class CheckoutServiceImpl implements CheckoutService {
         if (userIdentifier == null
                 || userIdentifier.isBlank()) {
 
-            throw new IllegalArgumentException(
+            throw new CheckoutUserNotFoundException(
                     "Authenticated user is required"
             );
         }
     }
-
 
     // =========================================================
     // REQUEST VALIDATION
@@ -774,39 +735,35 @@ public class CheckoutServiceImpl implements CheckoutService {
 
         if (request == null) {
 
-            throw new IllegalArgumentException(
+            throw new CheckoutValidationException(
                     "Checkout request is required"
             );
         }
 
-
         if (request.getShippingAddressId() == null
                 || request.getShippingAddressId() <= 0) {
 
-            throw new IllegalArgumentException(
+            throw new CheckoutValidationException(
                     "Shipping address is required"
             );
         }
-
 
         boolean sameAsShipping =
                 Boolean.TRUE.equals(
                         request.getSameAsShipping()
                 );
 
-
         if (!sameAsShipping) {
 
             if (request.getBillingAddressId() == null
                     || request.getBillingAddressId() <= 0) {
 
-                throw new IllegalArgumentException(
+                throw new CheckoutValidationException(
                         "Billing address is required when sameAsShipping is false"
                 );
             }
         }
     }
-
 
     // =========================================================
     // MONEY
@@ -823,7 +780,6 @@ public class CheckoutServiceImpl implements CheckoutService {
                     RoundingMode.HALF_UP
             );
         }
-
 
         return value.setScale(
                 MONEY_SCALE,

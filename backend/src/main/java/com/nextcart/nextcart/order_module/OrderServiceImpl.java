@@ -22,12 +22,12 @@ import com.nextcart.nextcart.order_module.exceptions.OrderCancellationException;
 import com.nextcart.nextcart.order_module.exceptions.OrderNotFoundException;
 import com.nextcart.nextcart.order_module.exceptions.OrderValidationException;
 
-import com.nextcart.nextcart.product_module.productPrice.ProductVariantPriceEntity;
-import com.nextcart.nextcart.product_module.productPrice.ProductVariantPriceRepository;
+import com.nextcart.nextcart.product_module.productPrice.entity.ProductVariantPriceEntity;
+import com.nextcart.nextcart.product_module.productPrice.repository.ProductVariantPriceRepository;
 
-import com.nextcart.nextcart.product_module.productVariant.ProductVariantEntity;
-import com.nextcart.nextcart.product_module.productVariant.ProductVariantRepository;
-import com.nextcart.nextcart.product_module.productVariant.ProductVariantStatus;
+import com.nextcart.nextcart.product_module.productVariant.entity.ProductVariantEntity;
+import com.nextcart.nextcart.product_module.productVariant.repository.ProductVariantRepository;
+import com.nextcart.nextcart.product_module.productVariant.entity.ProductVariantStatus;
 
 import com.nextcart.nextcart.seller_module.inventory_module.service.InventoryService;
 import com.nextcart.nextcart.user_module.entity.User;

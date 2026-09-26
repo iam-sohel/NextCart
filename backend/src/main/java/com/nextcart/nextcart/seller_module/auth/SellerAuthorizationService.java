@@ -1,9 +1,12 @@
 package com.nextcart.nextcart.seller_module.auth;
 
+import com.nextcart.nextcart.seller_module.auth.exceptions.SellerInactiveException;
+import com.nextcart.nextcart.seller_module.auth.exceptions.SellerNotFoundException;
 import com.nextcart.nextcart.seller_module.seller.entity.Seller;
 import com.nextcart.nextcart.seller_module.seller.repository.SellerRepository;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.AccessDeniedException;
+
 import org.springframework.stereotype.Service;
 
 @Service
@@ -22,23 +25,16 @@ public class SellerAuthorizationService {
         Seller seller = sellerRepository
                 .findByUserId(userId)
                 .orElseThrow(() ->
-                        new AccessDeniedException(
+                        new SellerNotFoundException(
                                 "Authenticated user is not a seller"
                         )
                 );
 
         /*
-         * IMPORTANT:
-         * Replace this with your actual seller status check.
-         *
-         * Example:
-         * if (seller.getStatus() != SellerStatus.ACTIVE) { ... }
-         *
-         * Do NOT keep this line if your SellerEntity does not have isActive().
+         * Seller must be active to access seller APIs.
          */
-
         if (!seller.isActive()) {
-            throw new AccessDeniedException(
+            throw new SellerInactiveException(
                     "Seller account is not active"
             );
         }
@@ -50,6 +46,7 @@ public class SellerAuthorizationService {
      * Returns the authorized seller ID.
      */
     public Long getAuthorizedSellerId(Long userId) {
+
         return getAuthorizedSeller(userId).getId();
     }
 }

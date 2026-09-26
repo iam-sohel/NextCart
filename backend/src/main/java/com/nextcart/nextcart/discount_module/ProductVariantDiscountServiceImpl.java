@@ -1,15 +1,17 @@
 package com.nextcart.nextcart.discount_module;
 
-import com.nextcart.nextcart.discount_module.dto.ProductVariantDiscountCreateRequest;
-import com.nextcart.nextcart.discount_module.dto.ProductVariantDiscountResponse;
-import com.nextcart.nextcart.discount_module.dto.ProductVariantDiscountUpdateRequest;
 import com.nextcart.nextcart.discount_module.discountExceptions.InvalidDiscountException;
 import com.nextcart.nextcart.discount_module.discountExceptions.ProductVariantDiscountAlreadyExistsException;
 import com.nextcart.nextcart.discount_module.discountExceptions.ProductVariantDiscountNotFoundException;
-import com.nextcart.nextcart.product_module.productPrice.ProductVariantPriceEntity;
-import com.nextcart.nextcart.product_module.productPrice.ProductVariantPriceRepository;
-import com.nextcart.nextcart.product_module.productVariant.ProductVariantEntity;
-import com.nextcart.nextcart.product_module.productVariant.ProductVariantRepository;
+import com.nextcart.nextcart.discount_module.discountExceptions.ProductVariantNotFoundException;
+import com.nextcart.nextcart.discount_module.discountExceptions.ProductVariantPriceNotFoundException;
+import com.nextcart.nextcart.discount_module.dto.ProductVariantDiscountCreateRequest;
+import com.nextcart.nextcart.discount_module.dto.ProductVariantDiscountResponse;
+import com.nextcart.nextcart.discount_module.dto.ProductVariantDiscountUpdateRequest;
+import com.nextcart.nextcart.product_module.productPrice.entity.ProductVariantPriceEntity;
+import com.nextcart.nextcart.product_module.productPrice.repository.ProductVariantPriceRepository;
+import com.nextcart.nextcart.product_module.productVariant.entity.ProductVariantEntity;
+import com.nextcart.nextcart.product_module.productVariant.repository.ProductVariantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +31,10 @@ public class ProductVariantDiscountServiceImpl
     private final ProductVariantPriceRepository priceRepository;
     private final ProductVariantDiscountMapper discountMapper;
 
+    // =========================================================
+    // CREATE DISCOUNT
+    // =========================================================
+
     @Override
     public ProductVariantDiscountResponse createDiscount(
             ProductVariantDiscountCreateRequest request) {
@@ -42,7 +48,7 @@ public class ProductVariantDiscountServiceImpl
                 productVariantRepository.findById(
                         request.getProductVariantId()
                 ).orElseThrow(() ->
-                        new InvalidDiscountException(
+                        new ProductVariantNotFoundException(
                                 "Product variant not found with id: "
                                         + request.getProductVariantId()
                         )
@@ -72,6 +78,10 @@ public class ProductVariantDiscountServiceImpl
         return discountMapper.toResponse(saved);
     }
 
+    // =========================================================
+    // GET DISCOUNT BY ID
+    // =========================================================
+
     @Override
     @Transactional(readOnly = true)
     public ProductVariantDiscountResponse getDiscountById(
@@ -82,6 +92,10 @@ public class ProductVariantDiscountServiceImpl
 
         return discountMapper.toResponse(discount);
     }
+
+    // =========================================================
+    // GET DISCOUNTS BY VARIANT
+    // =========================================================
 
     @Override
     @Transactional(readOnly = true)
@@ -98,6 +112,10 @@ public class ProductVariantDiscountServiceImpl
                 .map(discountMapper::toResponse)
                 .toList();
     }
+
+    // =========================================================
+    // UPDATE DISCOUNT
+    // =========================================================
 
     @Override
     public ProductVariantDiscountResponse updateDiscount(
@@ -139,6 +157,10 @@ public class ProductVariantDiscountServiceImpl
         return discountMapper.toResponse(updated);
     }
 
+    // =========================================================
+    // DEACTIVATE DISCOUNT
+    // =========================================================
+
     @Override
     public void deactivateDiscount(Long id) {
 
@@ -153,6 +175,10 @@ public class ProductVariantDiscountServiceImpl
 
         discountRepository.save(discount);
     }
+
+    // =========================================================
+    // RESTORE DISCOUNT
+    // =========================================================
 
     @Override
     public ProductVariantDiscountResponse restoreDiscount(
@@ -190,6 +216,10 @@ public class ProductVariantDiscountServiceImpl
         return discountMapper.toResponse(restored);
     }
 
+    // =========================================================
+    // GET CURRENT DISCOUNT
+    // =========================================================
+
     @Override
     @Transactional(readOnly = true)
     public ProductVariantDiscountResponse getCurrentDiscount(
@@ -214,7 +244,7 @@ public class ProductVariantDiscountServiceImpl
     }
 
     // =========================================================
-    // VALIDATION
+    // VALIDATE DISCOUNT VALUE
     // =========================================================
 
     private void validateDiscountValue(
@@ -223,6 +253,7 @@ public class ProductVariantDiscountServiceImpl
             BigDecimal discountValue) {
 
         if (discountType == null) {
+
             throw new InvalidDiscountException(
                     "Discount type is required"
             );
@@ -236,9 +267,10 @@ public class ProductVariantDiscountServiceImpl
             );
         }
 
-        /*
-         * Percentage discount
-         */
+        // -----------------------------------------------------
+        // PERCENTAGE DISCOUNT
+        // -----------------------------------------------------
+
         if (discountType == DiscountType.PERCENTAGE) {
 
             if (discountValue.compareTo(
@@ -252,16 +284,19 @@ public class ProductVariantDiscountServiceImpl
             return;
         }
 
-        /*
-         * Fixed amount discount
-         */
+        // -----------------------------------------------------
+        // FIXED AMOUNT DISCOUNT
+        // -----------------------------------------------------
+
         if (discountType == DiscountType.FIXED_AMOUNT) {
 
             ProductVariantPriceEntity price =
                     priceRepository
-                            .findByProductVariantId(productVariantId)
+                            .findByProductVariantId(
+                                    productVariantId
+                            )
                             .orElseThrow(() ->
-                                    new InvalidDiscountException(
+                                    new ProductVariantPriceNotFoundException(
                                             "Price not found for product variant id: "
                                                     + productVariantId
                                     )
@@ -271,14 +306,16 @@ public class ProductVariantDiscountServiceImpl
                     price.getSellingPrice();
 
             if (sellingPrice == null
-                    || sellingPrice.compareTo(BigDecimal.ZERO) <= 0) {
+                    || sellingPrice.compareTo(
+                    BigDecimal.ZERO) <= 0) {
 
                 throw new InvalidDiscountException(
                         "Selling price must be greater than zero"
                 );
             }
 
-            if (discountValue.compareTo(sellingPrice) > 0) {
+            if (discountValue.compareTo(
+                    sellingPrice) > 0) {
 
                 throw new InvalidDiscountException(
                         "Fixed discount cannot be greater than selling price"
@@ -286,6 +323,10 @@ public class ProductVariantDiscountServiceImpl
             }
         }
     }
+
+    // =========================================================
+    // VALIDATE DATES
+    // =========================================================
 
     private void validateDates(
             LocalDateTime startAt,
@@ -307,18 +348,26 @@ public class ProductVariantDiscountServiceImpl
         }
     }
 
+    // =========================================================
+    // VALIDATE PRODUCT VARIANT
+    // =========================================================
+
     private void validateVariantExists(
             Long productVariantId) {
 
         if (!productVariantRepository.existsById(
                 productVariantId)) {
 
-            throw new InvalidDiscountException(
+            throw new ProductVariantNotFoundException(
                     "Product variant not found with id: "
                             + productVariantId
             );
         }
     }
+
+    // =========================================================
+    // FIND DISCOUNT
+    // =========================================================
 
     private ProductVariantDiscountEntity findDiscount(
             Long id) {
@@ -330,6 +379,10 @@ public class ProductVariantDiscountServiceImpl
                         )
                 );
     }
+
+    // =========================================================
+    // VALIDATE OVERLAPPING DISCOUNTS
+    // =========================================================
 
     private void validateNoOverlappingDiscount(
             Long productVariantId,
@@ -348,6 +401,7 @@ public class ProductVariantDiscountServiceImpl
             if (excludeDiscountId != null
                     && existing.getId().equals(
                     excludeDiscountId)) {
+
                 continue;
             }
 
@@ -363,6 +417,10 @@ public class ProductVariantDiscountServiceImpl
             }
         }
     }
+
+    // =========================================================
+    // CHECK DATE OVERLAP
+    // =========================================================
 
     private boolean isOverlapping(
             LocalDateTime start1,

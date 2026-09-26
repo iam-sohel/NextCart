@@ -1,6 +1,6 @@
 package com.nextcart.nextcart.product_module.productVariant.dto;
 
-import com.nextcart.nextcart.product_module.productVariant.ProductVariantStatus;
+import com.nextcart.nextcart.product_module.productVariant.entity.ProductVariantStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;

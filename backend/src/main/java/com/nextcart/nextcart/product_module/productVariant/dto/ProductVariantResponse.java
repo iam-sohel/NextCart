@@ -1,7 +1,7 @@
 package com.nextcart.nextcart.product_module.productVariant.dto;
 
 import com.nextcart.nextcart.product_module.productPrice.dto.ProductVariantPriceResponse;
-import com.nextcart.nextcart.product_module.productVariant.ProductVariantStatus;
+import com.nextcart.nextcart.product_module.productVariant.entity.ProductVariantStatus;
 import com.nextcart.nextcart.product_module.variantAttribute.dto.VariantAttributeResponse;
 import lombok.*;
 

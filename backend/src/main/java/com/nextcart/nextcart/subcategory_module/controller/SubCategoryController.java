@@ -1,6 +1,6 @@
 package com.nextcart.nextcart.subcategory_module.controller;
 
-import com.nextcart.nextcart.common.dto.ApiResponse;
+import com.nextcart.nextcart.common.dto.CommonResponseDto;
 import com.nextcart.nextcart.subcategory_module.dto.SubCategoryCreateRequest;
 import com.nextcart.nextcart.subcategory_module.dto.SubCategoryResponse;
 import com.nextcart.nextcart.subcategory_module.dto.SubCategoryUpdateRequest;
@@ -25,7 +25,7 @@ public class SubCategoryController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<SubCategoryResponse>> createSubCategory(
+    public ResponseEntity<CommonResponseDto<SubCategoryResponse>> createSubCategory(
             @Valid @RequestBody SubCategoryCreateRequest request) {
 
         SubCategoryResponse response =
@@ -34,7 +34,7 @@ public class SubCategoryController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(
-                        new ApiResponse<>(
+                        new CommonResponseDto<>(
                                 true,
                                 "SubCategory created successfully",
                                 response
@@ -43,14 +43,14 @@ public class SubCategoryController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<SubCategoryResponse>> getSubCategoryById(
+    public ResponseEntity<CommonResponseDto<SubCategoryResponse>> getSubCategoryById(
             @PathVariable Long id) {
 
         SubCategoryResponse response =
                 subCategoryService.getSubCategoryById(id);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "SubCategory fetched successfully",
                         response
@@ -59,7 +59,7 @@ public class SubCategoryController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<Page<SubCategoryResponse>>>
+    public ResponseEntity<CommonResponseDto<Page<SubCategoryResponse>>>
     getAllSubCategories(
             @PageableDefault(
                     size = 20,
@@ -72,7 +72,7 @@ public class SubCategoryController {
                 subCategoryService.getAllSubCategories(pageable);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "SubCategories fetched successfully",
                         response
@@ -81,7 +81,7 @@ public class SubCategoryController {
     }
 
     @GetMapping("/category/{categoryId}")
-    public ResponseEntity<ApiResponse<Page<SubCategoryResponse>>>
+    public ResponseEntity<CommonResponseDto<Page<SubCategoryResponse>>>
     getSubCategoriesByCategoryId(
             @PathVariable Long categoryId,
             @PageableDefault(
@@ -98,7 +98,7 @@ public class SubCategoryController {
                 );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "SubCategories fetched successfully",
                         response
@@ -108,15 +108,18 @@ public class SubCategoryController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<SubCategoryResponse>> updateSubCategory(
+    public ResponseEntity<CommonResponseDto<SubCategoryResponse>> updateSubCategory(
             @PathVariable Long id,
             @Valid @RequestBody SubCategoryUpdateRequest request) {
 
         SubCategoryResponse response =
-                subCategoryService.updateSubCategory(id, request);
+                subCategoryService.updateSubCategory(
+                        id,
+                        request
+                );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "SubCategory updated successfully",
                         response
@@ -126,13 +129,13 @@ public class SubCategoryController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Void>> deactivateSubCategory(
+    public ResponseEntity<CommonResponseDto<Void>> deactivateSubCategory(
             @PathVariable Long id) {
 
         subCategoryService.deactivateSubCategory(id);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "SubCategory deactivated successfully",
                         null
@@ -142,14 +145,14 @@ public class SubCategoryController {
 
     @PatchMapping("/{id}/restore")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<SubCategoryResponse>> restoreSubCategory(
+    public ResponseEntity<CommonResponseDto<SubCategoryResponse>> restoreSubCategory(
             @PathVariable Long id) {
 
         SubCategoryResponse response =
                 subCategoryService.restoreSubCategory(id);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "SubCategory restored successfully",
                         response

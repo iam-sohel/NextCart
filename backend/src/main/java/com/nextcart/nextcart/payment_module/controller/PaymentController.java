@@ -1,10 +1,12 @@
 package com.nextcart.nextcart.payment_module.controller;
 
-import com.nextcart.nextcart.common.dto.ApiResponse;
+import com.nextcart.nextcart.auth_module.security.CustomUserDetails;
+import com.nextcart.nextcart.common.dto.CommonResponseDto;
 import com.nextcart.nextcart.payment_module.dto.CreatePaymentRequestDTO;
 import com.nextcart.nextcart.payment_module.dto.CreatePaymentResponseDTO;
 import com.nextcart.nextcart.payment_module.dto.PaymentResponseDTO;
 import com.nextcart.nextcart.payment_module.dto.VerifyPaymentRequestDTO;
+import com.nextcart.nextcart.payment_module.exceptions.PaymentAuthenticationException;
 import com.nextcart.nextcart.payment_module.service.PaymentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,41 +31,39 @@ public class PaymentController {
 
     private final PaymentService paymentService;
 
-
     // =========================================================
-    // CREATE RAZORPAY ORDER
+    // CREATE PAYMENT
     // =========================================================
 
     @PostMapping("/create")
     @Operation(
             summary = "Create Razorpay payment order",
-            description = "Creates a Razorpay order for an existing pending NextCart order"
+            description = "Creates a Razorpay order for the authenticated user's order"
     )
-    public ResponseEntity<ApiResponse<CreatePaymentResponseDTO>> createPayment(
+    public ResponseEntity<CommonResponseDto<CreatePaymentResponseDTO>> createPayment(
             Authentication authentication,
-            @Valid @RequestBody CreatePaymentRequestDTO requestDto
+            @Valid @RequestBody CreatePaymentRequestDTO request
     ) {
 
-        String userEmail =
+        CustomUserDetails userDetails =
                 getAuthenticatedUser(authentication);
 
         CreatePaymentResponseDTO response =
                 paymentService.createRazorpayOrder(
-                        userEmail,
-                        requestDto
+                        userDetails.getUsername(),
+                        request
                 );
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(
-                        new ApiResponse<>(
+                        new CommonResponseDto<>(
                                 true,
-                                "Payment initialized successfully",
+                                "Payment order created successfully",
                                 response
                         )
                 );
     }
-
 
     // =========================================================
     // VERIFY PAYMENT
@@ -74,29 +74,30 @@ public class PaymentController {
             summary = "Verify Razorpay payment",
             description = "Verifies Razorpay payment signature and confirms the order"
     )
-    public ResponseEntity<ApiResponse<PaymentResponseDTO>> verifyPayment(
+    public ResponseEntity<CommonResponseDto<PaymentResponseDTO>> verifyPayment(
             Authentication authentication,
-            @Valid @RequestBody VerifyPaymentRequestDTO requestDto
+            @Valid @RequestBody VerifyPaymentRequestDTO request
     ) {
 
-        String userEmail =
+        CustomUserDetails userDetails =
                 getAuthenticatedUser(authentication);
 
         PaymentResponseDTO response =
                 paymentService.verifyPayment(
-                        userEmail,
-                        requestDto
+                        userDetails.getUsername(),
+                        request
                 );
 
-        return ResponseEntity.ok(
-                new ApiResponse<>(
-                        true,
-                        "Payment verified successfully",
-                        response
-                )
-        );
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(
+                        new CommonResponseDto<>(
+                                true,
+                                "Payment verified successfully",
+                                response
+                        )
+                );
     }
-
 
     // =========================================================
     // GET PAYMENT STATUS
@@ -107,31 +108,32 @@ public class PaymentController {
             summary = "Get payment status",
             description = "Returns payment status for the authenticated user's order"
     )
-    public ResponseEntity<ApiResponse<PaymentResponseDTO>> getPaymentStatus(
+    public ResponseEntity<CommonResponseDto<PaymentResponseDTO>> getPaymentStatus(
             Authentication authentication,
-            @PathVariable("orderId")
+            @PathVariable
             @Positive(message = "Order ID must be greater than zero")
             Long orderId
     ) {
 
-        String userEmail =
+        CustomUserDetails userDetails =
                 getAuthenticatedUser(authentication);
 
         PaymentResponseDTO response =
                 paymentService.getPaymentStatusByOrderId(
-                        userEmail,
+                        userDetails.getUsername(),
                         orderId
                 );
 
-        return ResponseEntity.ok(
-                new ApiResponse<>(
-                        true,
-                        "Payment status retrieved successfully",
-                        response
-                )
-        );
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(
+                        new CommonResponseDto<>(
+                                true,
+                                "Payment status fetched successfully",
+                                response
+                        )
+                );
     }
-
 
     // =========================================================
     // RECONCILE PAYMENT
@@ -140,33 +142,34 @@ public class PaymentController {
     @PostMapping("/reconcile")
     @Operation(
             summary = "Reconcile payment",
-            description = "Synchronizes local payment state with Razorpay"
+            description = "Reconciles local payment status with Razorpay"
     )
-    public ResponseEntity<ApiResponse<PaymentResponseDTO>> reconcilePayment(
+    public ResponseEntity<CommonResponseDto<PaymentResponseDTO>> reconcilePayment(
             Authentication authentication,
-            @RequestParam("orderId")
+            @RequestParam
             @Positive(message = "Order ID must be greater than zero")
             Long orderId
     ) {
 
-        String userEmail =
+        CustomUserDetails userDetails =
                 getAuthenticatedUser(authentication);
 
         PaymentResponseDTO response =
                 paymentService.reconcilePayment(
-                        userEmail,
+                        userDetails.getUsername(),
                         orderId
                 );
 
-        return ResponseEntity.ok(
-                new ApiResponse<>(
-                        true,
-                        "Payment reconciled successfully",
-                        response
-                )
-        );
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(
+                        new CommonResponseDto<>(
+                                true,
+                                "Payment reconciled successfully",
+                                response
+                        )
+                );
     }
-
 
     // =========================================================
     // REFUND PAYMENT
@@ -175,33 +178,34 @@ public class PaymentController {
     @PostMapping("/order/{orderId}/refund")
     @Operation(
             summary = "Refund payment",
-            description = "Initiates a full refund for an eligible successful payment"
+            description = "Creates a full refund for a successful Razorpay payment"
     )
-    public ResponseEntity<ApiResponse<PaymentResponseDTO>> refundPayment(
+    public ResponseEntity<CommonResponseDto<PaymentResponseDTO>> refundPayment(
             Authentication authentication,
-            @PathVariable("orderId")
+            @PathVariable
             @Positive(message = "Order ID must be greater than zero")
             Long orderId
     ) {
 
-        String userEmail =
+        CustomUserDetails userDetails =
                 getAuthenticatedUser(authentication);
 
         PaymentResponseDTO response =
                 paymentService.refundPayment(
-                        userEmail,
+                        userDetails.getUsername(),
                         orderId
                 );
 
-        return ResponseEntity.ok(
-                new ApiResponse<>(
-                        true,
-                        "Refund initiated successfully",
-                        response
-                )
-        );
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(
+                        new CommonResponseDto<>(
+                                true,
+                                "Payment refunded successfully",
+                                response
+                        )
+                );
     }
-
 
     // =========================================================
     // RAZORPAY WEBHOOK
@@ -210,15 +214,11 @@ public class PaymentController {
     @PostMapping("/webhook/razorpay")
     @Operation(
             summary = "Handle Razorpay webhook",
-            description = "Receives asynchronous payment and refund events from Razorpay"
+            description = "Processes Razorpay payment and refund webhook events"
     )
-    public ResponseEntity<Void> handleWebhook(
+    public ResponseEntity<Void> handleRazorpayWebhook(
             @RequestBody String payload,
-            @RequestHeader(
-                    name = "X-Razorpay-Signature",
-                    required = true
-            )
-            String signature
+            @RequestHeader("X-Razorpay-Signature") String signature
     ) {
 
         paymentService.handleRazorpayWebhook(
@@ -226,32 +226,34 @@ public class PaymentController {
                 signature
         );
 
-        /*
-         * Razorpay only needs an HTTP success response.
-         */
         return ResponseEntity.ok().build();
     }
-
 
     // =========================================================
     // AUTHENTICATED USER
     // =========================================================
 
-    private String getAuthenticatedUser(
+    private CustomUserDetails getAuthenticatedUser(
             Authentication authentication
     ) {
 
         if (authentication == null ||
                 !authentication.isAuthenticated() ||
-                authentication.getName() == null ||
-                authentication.getName().isBlank()) {
+                authentication.getPrincipal() == null) {
 
-            throw new IllegalStateException(
+            throw new PaymentAuthenticationException(
                     "Authenticated user is required"
             );
         }
 
-        return authentication.getName();
+        if (!(authentication.getPrincipal()
+                instanceof CustomUserDetails userDetails)) {
+
+            throw new PaymentAuthenticationException(
+                    "Invalid authenticated user"
+            );
+        }
+
+        return userDetails;
     }
 }
-

@@ -1,6 +1,6 @@
 package com.nextcart.nextcart.seller_module.inventory_module.entity;
 
-import com.nextcart.nextcart.product_module.productVariant.ProductVariantEntity;
+import com.nextcart.nextcart.product_module.productVariant.entity.ProductVariantEntity;
 import jakarta.persistence.*;
 import lombok.*;
 

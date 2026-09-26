@@ -13,11 +13,11 @@ import com.nextcart.nextcart.cart_module.exceptions.InvalidCartQuantityException
 import com.nextcart.nextcart.discount_module.DiscountType;
 import com.nextcart.nextcart.discount_module.ProductVariantDiscountEntity;
 import com.nextcart.nextcart.discount_module.ProductVariantDiscountRepository;
-import com.nextcart.nextcart.product_module.productPrice.ProductVariantPriceEntity;
-import com.nextcart.nextcart.product_module.productPrice.ProductVariantPriceRepository;
-import com.nextcart.nextcart.product_module.productVariant.ProductVariantEntity;
-import com.nextcart.nextcart.product_module.productVariant.ProductVariantRepository;
-import com.nextcart.nextcart.product_module.productVariant.ProductVariantStatus;
+import com.nextcart.nextcart.product_module.productPrice.entity.ProductVariantPriceEntity;
+import com.nextcart.nextcart.product_module.productPrice.repository.ProductVariantPriceRepository;
+import com.nextcart.nextcart.product_module.productVariant.entity.ProductVariantEntity;
+import com.nextcart.nextcart.product_module.productVariant.repository.ProductVariantRepository;
+import com.nextcart.nextcart.product_module.productVariant.entity.ProductVariantStatus;
 import com.nextcart.nextcart.user_module.entity.User;
 import com.nextcart.nextcart.user_module.repository.UserRepository;
 import lombok.RequiredArgsConstructor;

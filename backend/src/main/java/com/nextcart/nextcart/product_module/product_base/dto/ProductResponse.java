@@ -1,6 +1,6 @@
 package com.nextcart.nextcart.product_module.product_base.dto;
 
-import com.nextcart.nextcart.product_module.product_base.ProductStatus;
+import com.nextcart.nextcart.product_module.product_base.entity.ProductStatus;
 import lombok.*;
 
 import java.time.Instant;

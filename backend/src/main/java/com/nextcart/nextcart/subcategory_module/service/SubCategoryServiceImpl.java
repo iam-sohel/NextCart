@@ -10,6 +10,7 @@ import com.nextcart.nextcart.subcategory_module.dto.SubCategoryUpdateRequest;
 import com.nextcart.nextcart.subcategory_module.entity.SubCategory;
 import com.nextcart.nextcart.subcategory_module.entity.SubCategoryStatus;
 import com.nextcart.nextcart.subcategory_module.exceptions.SubCategoryAlreadyExistsException;
+import com.nextcart.nextcart.subcategory_module.exceptions.SubCategoryCategoryInactiveException;
 import com.nextcart.nextcart.subcategory_module.exceptions.SubCategoryNotFoundException;
 import com.nextcart.nextcart.subcategory_module.mapper.SubCategoryMapper;
 import com.nextcart.nextcart.subcategory_module.repository.SubCategoryRepository;
@@ -202,7 +203,7 @@ public class SubCategoryServiceImpl implements SubCategoryService {
         if (category.getStatus()
                 != CategoryStatus.ACTIVE) {
 
-            throw new CategoryNotFoundException(
+            throw new SubCategoryCategoryInactiveException(
                     "Cannot restore SubCategory because its category is inactive"
             );
         }

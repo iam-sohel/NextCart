@@ -1,14 +1,15 @@
 package com.nextcart.nextcart.seller_module.inventory_module.controller;
 
 import com.nextcart.nextcart.auth_module.security.CustomUserDetails;
-import com.nextcart.nextcart.common.dto.ApiResponse;
+import com.nextcart.nextcart.common.dto.CommonResponseDto;
 import com.nextcart.nextcart.seller_module.inventory_module.dto.InventoryCreateRequest;
 import com.nextcart.nextcart.seller_module.inventory_module.dto.InventoryItemResponse;
 import com.nextcart.nextcart.seller_module.inventory_module.dto.InventoryResponse;
 import com.nextcart.nextcart.seller_module.inventory_module.dto.InventoryUpdateRequest;
 import com.nextcart.nextcart.seller_module.inventory_module.service.InventoryService;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -24,13 +25,13 @@ public class SellerInventoryController {
 
     private final InventoryService inventoryService;
 
-
     // =========================================================
     // CREATE INVENTORY ITEM
     // =========================================================
 
     @PostMapping
-    public ResponseEntity<ApiResponse<InventoryResponse>> createInventory(
+    public ResponseEntity<CommonResponseDto<InventoryResponse>>
+    createInventory(
             Authentication authentication,
             @RequestBody InventoryCreateRequest request
     ) {
@@ -44,7 +45,7 @@ public class SellerInventoryController {
                 );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Inventory item created successfully",
                         response
@@ -52,13 +53,13 @@ public class SellerInventoryController {
         );
     }
 
-
     // =========================================================
     // GET INVENTORY BY WAREHOUSE
     // =========================================================
 
     @GetMapping("/warehouse/{warehouseId}")
-    public ResponseEntity<ApiResponse<InventoryResponse>> getInventoryByWarehouse(
+    public ResponseEntity<CommonResponseDto<InventoryResponse>>
+    getInventoryByWarehouse(
             Authentication authentication,
             @PathVariable Long warehouseId
     ) {
@@ -72,7 +73,7 @@ public class SellerInventoryController {
                 );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Inventory fetched successfully",
                         response
@@ -80,13 +81,14 @@ public class SellerInventoryController {
         );
     }
 
-
     // =========================================================
     // GET INVENTORY ITEMS BY PRODUCT VARIANT
     // =========================================================
 
     @GetMapping("/product-variant/{productVariantId}")
-    public ResponseEntity<ApiResponse<List<InventoryItemResponse>>>
+    public ResponseEntity<
+            CommonResponseDto<List<InventoryItemResponse>>
+            >
     getInventoryItemsByProductVariant(
             @PathVariable Long productVariantId
     ) {
@@ -97,7 +99,7 @@ public class SellerInventoryController {
                 );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Inventory items fetched successfully",
                         response
@@ -105,13 +107,12 @@ public class SellerInventoryController {
         );
     }
 
-
     // =========================================================
     // GET TOTAL AVAILABLE STOCK
     // =========================================================
 
     @GetMapping("/product-variant/{productVariantId}/available-stock")
-    public ResponseEntity<ApiResponse<Integer>>
+    public ResponseEntity<CommonResponseDto<Integer>>
     getTotalAvailableStock(
             @PathVariable Long productVariantId
     ) {
@@ -122,7 +123,7 @@ public class SellerInventoryController {
                 );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Available stock fetched successfully",
                         stock
@@ -130,13 +131,12 @@ public class SellerInventoryController {
         );
     }
 
-
     // =========================================================
     // UPDATE INVENTORY ITEM
     // =========================================================
 
     @PutMapping("/items/{inventoryItemId}")
-    public ResponseEntity<ApiResponse<InventoryResponse>>
+    public ResponseEntity<CommonResponseDto<InventoryResponse>>
     updateInventoryItem(
             Authentication authentication,
             @PathVariable Long inventoryItemId,
@@ -153,7 +153,7 @@ public class SellerInventoryController {
                 );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Inventory item updated successfully",
                         response
@@ -161,13 +161,12 @@ public class SellerInventoryController {
         );
     }
 
-
     // =========================================================
     // DELETE INVENTORY ITEM
     // =========================================================
 
     @DeleteMapping("/items/{inventoryItemId}")
-    public ResponseEntity<ApiResponse<Void>>
+    public ResponseEntity<CommonResponseDto<Void>>
     deleteInventoryItem(
             Authentication authentication,
             @PathVariable Long inventoryItemId
@@ -181,14 +180,13 @@ public class SellerInventoryController {
         );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Inventory item deleted successfully",
                         null
                 )
         );
     }
-
 
     // =========================================================
     // GET USER ID FROM JWT

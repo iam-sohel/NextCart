@@ -1,14 +1,12 @@
 package com.nextcart.nextcart.user_module.controller;
 
+import com.nextcart.nextcart.common.dto.CommonResponseDto;
 import com.nextcart.nextcart.user_module.dto.ChangePasswordRequest;
 import com.nextcart.nextcart.user_module.dto.UserResponse;
 import com.nextcart.nextcart.user_module.dto.UserUpdateRequest;
 import com.nextcart.nextcart.user_module.service.UserService;
-
 import jakarta.validation.Valid;
-
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -21,46 +19,63 @@ public class UserController {
 
     private final UserService userService;
 
-    /**
-     * Get currently authenticated user's profile.
-     */
+    // ============================================================
+    // GET MY PROFILE
+    // ============================================================
+
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<UserResponse> getMyProfile(
+    public ResponseEntity<CommonResponseDto<UserResponse>> getMyProfile(
             Authentication authentication
     ) {
 
-        return ResponseEntity.ok(
+        UserResponse response =
                 userService.getMyProfile(
                         authentication.getName()
+                );
+
+        return ResponseEntity.ok(
+                new CommonResponseDto<>(
+                        true,
+                        "User profile fetched successfully",
+                        response
                 )
         );
     }
 
-    /**
-     * Update currently authenticated user's profile.
-     */
+    // ============================================================
+    // UPDATE MY PROFILE
+    // ============================================================
+
     @PutMapping("/me")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<UserResponse> updateMyProfile(
+    public ResponseEntity<CommonResponseDto<UserResponse>> updateMyProfile(
             Authentication authentication,
             @Valid @RequestBody UserUpdateRequest request
     ) {
 
-        return ResponseEntity.ok(
+        UserResponse response =
                 userService.updateMyProfile(
                         authentication.getName(),
                         request
+                );
+
+        return ResponseEntity.ok(
+                new CommonResponseDto<>(
+                        true,
+                        "User profile updated successfully",
+                        response
                 )
         );
     }
 
-    /**
-     * Change currently authenticated user's password.
-     */
+    // ============================================================
+    // CHANGE PASSWORD
+    // ============================================================
+
     @PatchMapping("/me/password")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Void> changePassword(
+    public ResponseEntity<CommonResponseDto<Void>> changePassword(
             Authentication authentication,
             @Valid @RequestBody ChangePasswordRequest request
     ) {
@@ -70,15 +85,22 @@ public class UserController {
                 request
         );
 
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(
+                new CommonResponseDto<>(
+                        true,
+                        "Password changed successfully",
+                        null
+                )
+        );
     }
 
-    /**
-     * Deactivate currently authenticated user's account.
-     */
+    // ============================================================
+    // DEACTIVATE ACCOUNT
+    // ============================================================
+
     @PatchMapping("/me/deactivate")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Void> deactivateMyAccount(
+    public ResponseEntity<CommonResponseDto<Void>> deactivateMyAccount(
             Authentication authentication
     ) {
 
@@ -86,6 +108,12 @@ public class UserController {
                 authentication.getName()
         );
 
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(
+                new CommonResponseDto<>(
+                        true,
+                        "User account deactivated successfully",
+                        null
+                )
+        );
     }
 }

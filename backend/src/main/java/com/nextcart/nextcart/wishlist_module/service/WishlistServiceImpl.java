@@ -1,18 +1,22 @@
 package com.nextcart.nextcart.wishlist_module.service;
 
-import com.nextcart.nextcart.product_module.productVariant.ProductVariantEntity;
-import com.nextcart.nextcart.product_module.productVariant.ProductVariantRepository;
-import com.nextcart.nextcart.product_module.product_base.ProductEntity;
+import com.nextcart.nextcart.product_module.productVariant.entity.ProductVariantEntity;
+import com.nextcart.nextcart.product_module.productVariant.repository.ProductVariantRepository;
+import com.nextcart.nextcart.product_module.product_base.entity.ProductEntity;
 import com.nextcart.nextcart.user_module.entity.User;
 import com.nextcart.nextcart.user_module.repository.UserRepository;
 import com.nextcart.nextcart.wishlist_module.dto.WishlistResponseDTO;
 import com.nextcart.nextcart.wishlist_module.entity.Wishlist;
+import com.nextcart.nextcart.wishlist_module.exceptions.WishlistAlreadyExistsException;
+import com.nextcart.nextcart.wishlist_module.exceptions.WishlistNotFoundException;
+import com.nextcart.nextcart.wishlist_module.exceptions.WishlistProductNotFoundException;
+import com.nextcart.nextcart.wishlist_module.exceptions.WishlistUserNotFoundException;
 import com.nextcart.nextcart.wishlist_module.repository.WishlistRepository;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -32,10 +36,6 @@ public class WishlistServiceImpl implements WishlistService {
         this.productVariantRepository = productVariantRepository;
     }
 
-    // =========================================================
-    // ADD TO WISHLIST
-    // =========================================================
-
     @Override
     public WishlistResponseDTO addToWishlist(
             Long userId,
@@ -43,74 +43,54 @@ public class WishlistServiceImpl implements WishlistService {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() ->
-                        new RuntimeException(
+                        new WishlistUserNotFoundException(
                                 "User not found with id: " + userId
                         )
                 );
 
         List<ProductVariantEntity> variants =
-                productVariantRepository
-                        .findByProductEntity_Id(productId);
+                productVariantRepository.findByProductEntity_Id(productId);
 
         if (variants.isEmpty()) {
-            throw new RuntimeException(
-                    "No product variant found for product id: "
-                            + productId
+            throw new WishlistProductNotFoundException(
+                    "No product variant found for product id: " + productId
             );
         }
 
-        ProductVariantEntity variant =
-                variants.get(0);
-
-        Long productVariantId =
-                variant.getId();
+        ProductVariantEntity variant = variants.get(0);
 
         if (wishlistRepository.existsByUser_IdAndProductVariant_Id(
                 userId,
-                productVariantId)) {
+                variant.getId())) {
 
-            throw new RuntimeException(
+            throw new WishlistAlreadyExistsException(
                     "Product is already in the wishlist"
             );
         }
 
-        Wishlist wishlist =
-                new Wishlist(user, variant);
+        Wishlist wishlist = new Wishlist(user, variant);
 
-        Wishlist savedWishlist =
-                wishlistRepository.save(wishlist);
+        Wishlist savedWishlist = wishlistRepository.save(wishlist);
 
         return mapToDTO(savedWishlist);
     }
 
-    // =========================================================
-    // GET USER WISHLIST
-    // =========================================================
-
     @Override
     @Transactional(readOnly = true)
-    public List<WishlistResponseDTO> getUserWishlist(
-            Long userId) {
+    public List<WishlistResponseDTO> getUserWishlist(Long userId) {
 
         if (!userRepository.existsById(userId)) {
-
-            throw new RuntimeException(
+            throw new WishlistUserNotFoundException(
                     "User not found with id: " + userId
             );
         }
 
-        List<Wishlist> wishlists =
-                wishlistRepository
-                        .findByUser_IdOrderByCreatedAtDesc(userId);
-
-        return wishlists.stream()
+        return wishlistRepository
+                .findByUser_IdOrderByCreatedAtDesc(userId)
+                .stream()
                 .map(this::mapToDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
-
-    // =========================================================
-    // REMOVE FROM WISHLIST
-    // =========================================================
 
     @Override
     public void removeFromWishlist(
@@ -118,47 +98,36 @@ public class WishlistServiceImpl implements WishlistService {
             Long productId) {
 
         List<ProductVariantEntity> variants =
-                productVariantRepository
-                        .findByProductEntity_Id(productId);
+                productVariantRepository.findByProductEntity_Id(productId);
 
         if (variants.isEmpty()) {
-            throw new RuntimeException(
-                    "No product variant found for product id: "
-                            + productId
+            throw new WishlistProductNotFoundException(
+                    "Product not found with id: " + productId
             );
         }
 
-        ProductVariantEntity variant =
-                variants.get(0);
-
-        Long productVariantId =
-                variant.getId();
+        ProductVariantEntity variant = variants.get(0);
 
         if (!wishlistRepository.existsByUser_IdAndProductVariant_Id(
                 userId,
-                productVariantId)) {
+                variant.getId())) {
 
-            throw new RuntimeException(
-                    "Product not found in wishlist"
+            throw new WishlistNotFoundException(
+                    "Product is not present in wishlist"
             );
         }
 
         wishlistRepository.deleteByUser_IdAndProductVariant_Id(
                 userId,
-                productVariantId
+                variant.getId()
         );
     }
-
-    // =========================================================
-    // CLEAR WISHLIST
-    // =========================================================
 
     @Override
     public void clearWishlist(Long userId) {
 
         if (!userRepository.existsById(userId)) {
-
-            throw new RuntimeException(
+            throw new WishlistUserNotFoundException(
                     "User not found with id: " + userId
             );
         }
@@ -166,12 +135,7 @@ public class WishlistServiceImpl implements WishlistService {
         wishlistRepository.deleteByUser_Id(userId);
     }
 
-    // =========================================================
-    // MAP ENTITY TO DTO
-    // =========================================================
-
-    private WishlistResponseDTO mapToDTO(
-            Wishlist wishlist) {
+    private WishlistResponseDTO mapToDTO(Wishlist wishlist) {
 
         ProductVariantEntity variant =
                 wishlist.getProductVariant();
