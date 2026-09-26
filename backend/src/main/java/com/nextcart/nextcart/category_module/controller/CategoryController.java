@@ -1,10 +1,10 @@
 package com.nextcart.nextcart.category_module.controller;
 
-import com.nextcart.nextcart.common.dto.ApiResponse;
 import com.nextcart.nextcart.category_module.dto.CategoryCreateRequest;
 import com.nextcart.nextcart.category_module.dto.CategoryResponse;
 import com.nextcart.nextcart.category_module.dto.CategoryUpdateRequest;
 import com.nextcart.nextcart.category_module.service.CategoryService;
+import com.nextcart.nextcart.common.dto.CommonResponseDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -23,9 +23,13 @@ public class CategoryController {
 
     private final CategoryService categoryService;
 
+    // =========================================================
+    // CREATE CATEGORY
+    // =========================================================
+
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<CategoryResponse>> createCategory(
+    public ResponseEntity<CommonResponseDto<CategoryResponse>> createCategory(
             @Valid @RequestBody CategoryCreateRequest request) {
 
         CategoryResponse response =
@@ -33,22 +37,28 @@ public class CategoryController {
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(new ApiResponse<>(
-                        true,
-                        "Category created successfully",
-                        response
-                ));
+                .body(
+                        new CommonResponseDto<>(
+                                true,
+                                "Category created successfully",
+                                response
+                        )
+                );
     }
 
+    // =========================================================
+    // GET CATEGORY BY ID
+    // =========================================================
+
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<CategoryResponse>> getCategoryById(
+    public ResponseEntity<CommonResponseDto<CategoryResponse>> getCategoryById(
             @PathVariable Long id) {
 
         CategoryResponse response =
                 categoryService.getCategoryById(id);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Category fetched successfully",
                         response
@@ -56,8 +66,12 @@ public class CategoryController {
         );
     }
 
+    // =========================================================
+    // GET ALL CATEGORIES
+    // =========================================================
+
     @GetMapping
-    public ResponseEntity<ApiResponse<Page<CategoryResponse>>>
+    public ResponseEntity<CommonResponseDto<Page<CategoryResponse>>>
     getAllCategories(
             @PageableDefault(
                     size = 20,
@@ -70,7 +84,7 @@ public class CategoryController {
                 categoryService.getAllCategories(pageable);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Categories fetched successfully",
                         response
@@ -78,9 +92,13 @@ public class CategoryController {
         );
     }
 
+    // =========================================================
+    // UPDATE CATEGORY
+    // =========================================================
+
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<CategoryResponse>> updateCategory(
+    public ResponseEntity<CommonResponseDto<CategoryResponse>> updateCategory(
             @PathVariable Long id,
             @Valid @RequestBody CategoryUpdateRequest request) {
 
@@ -88,7 +106,7 @@ public class CategoryController {
                 categoryService.updateCategory(id, request);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Category updated successfully",
                         response
@@ -96,15 +114,19 @@ public class CategoryController {
         );
     }
 
+    // =========================================================
+    // DEACTIVATE CATEGORY
+    // =========================================================
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Void>> deactivateCategory(
+    public ResponseEntity<CommonResponseDto<Void>> deactivateCategory(
             @PathVariable Long id) {
 
         categoryService.deactivateCategory(id);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Category deactivated successfully",
                         null
@@ -112,16 +134,20 @@ public class CategoryController {
         );
     }
 
+    // =========================================================
+    // RESTORE CATEGORY
+    // =========================================================
+
     @PatchMapping("/{id}/restore")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<CategoryResponse>> restoreCategory(
+    public ResponseEntity<CommonResponseDto<CategoryResponse>> restoreCategory(
             @PathVariable Long id) {
 
         CategoryResponse response =
                 categoryService.restoreCategory(id);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Category restored successfully",
                         response

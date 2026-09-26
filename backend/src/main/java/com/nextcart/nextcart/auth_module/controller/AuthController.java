@@ -1,10 +1,15 @@
 package com.nextcart.nextcart.auth_module.controller;
 
 import com.nextcart.nextcart.auth_module.dto.*;
+import com.nextcart.nextcart.auth_module.exceptions.AuthException;
+import com.nextcart.nextcart.auth_module.exceptions.InvalidAuthRequestException;
 import com.nextcart.nextcart.auth_module.service.AuthService;
-import com.nextcart.nextcart.common.dto.ApiResponse;
+import com.nextcart.nextcart.common.dto.CommonResponseDto;
+
 import jakarta.validation.Valid;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -25,7 +30,7 @@ public class AuthController {
     // ============================================================
 
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<RegisterResponse>> register(
+    public ResponseEntity<CommonResponseDto<RegisterResponse>> register(
             @Valid @RequestBody RegisterRequest request) {
 
         RegisterResponse response =
@@ -34,7 +39,7 @@ public class AuthController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(
-                        new ApiResponse<>(
+                        new CommonResponseDto<>(
                                 true,
                                 "Registration initiated successfully",
                                 response
@@ -48,7 +53,7 @@ public class AuthController {
     // ============================================================
 
     @PostMapping("/register/complete")
-    public ResponseEntity<ApiResponse<RegisterResponse>>
+    public ResponseEntity<CommonResponseDto<RegisterResponse>>
     completeRegistration(
             @Valid @RequestBody CompleteRegistrationRequest request) {
 
@@ -59,7 +64,7 @@ public class AuthController {
                 );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Registration completed successfully",
                         response
@@ -73,7 +78,7 @@ public class AuthController {
     // ============================================================
 
     @PostMapping("/register/seller")
-    public ResponseEntity<ApiResponse<RegisterResponse>>
+    public ResponseEntity<CommonResponseDto<RegisterResponse>>
     registerSeller(
             @Valid @RequestBody SellerRegisterRequest request) {
 
@@ -83,7 +88,7 @@ public class AuthController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(
-                        new ApiResponse<>(
+                        new CommonResponseDto<>(
                                 true,
                                 "Seller registration initiated successfully",
                                 response
@@ -97,14 +102,14 @@ public class AuthController {
     // ============================================================
 
     @PostMapping("/verify-seller-email-otp")
-    public ResponseEntity<ApiResponse<Void>>
+    public ResponseEntity<CommonResponseDto<Void>>
     verifySellerEmailOtp(
             @Valid @RequestBody VerifyEmailOtpRequest request) {
 
         authService.verifySellerEmailOtp(request);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Seller email OTP verified successfully",
                         null
@@ -118,7 +123,7 @@ public class AuthController {
     // ============================================================
 
     @PostMapping("/verify-seller-phone-otp")
-    public ResponseEntity<ApiResponse<Void>>
+    public ResponseEntity<CommonResponseDto<Void>>
     verifySellerPhoneOtp(
             @Valid @RequestBody VerifyPhoneWidgetRequest request) {
 
@@ -128,7 +133,7 @@ public class AuthController {
         );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Seller phone OTP verified successfully",
                         null
@@ -142,14 +147,14 @@ public class AuthController {
     // ============================================================
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<LoginResponse>> login(
+    public ResponseEntity<CommonResponseDto<LoginResponse>> login(
             @Valid @RequestBody LoginRequest request) {
 
         LoginResponse response =
                 authService.login(request);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Login successful",
                         response
@@ -163,7 +168,7 @@ public class AuthController {
     // ============================================================
 
     @PostMapping("/customer/login")
-    public ResponseEntity<ApiResponse<LoginResponse>>
+    public ResponseEntity<CommonResponseDto<LoginResponse>>
     customerLogin(
             @Valid @RequestBody LoginRequest request) {
 
@@ -171,7 +176,7 @@ public class AuthController {
                 authService.customerLogin(request);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Customer login successful",
                         response
@@ -185,7 +190,7 @@ public class AuthController {
     // ============================================================
 
     @PostMapping("/admin/login")
-    public ResponseEntity<ApiResponse<LoginResponse>>
+    public ResponseEntity<CommonResponseDto<LoginResponse>>
     adminLogin(
             @Valid @RequestBody LoginRequest request) {
 
@@ -193,7 +198,7 @@ public class AuthController {
                 authService.adminLogin(request);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Admin login successful",
                         response
@@ -207,7 +212,7 @@ public class AuthController {
     // ============================================================
 
     @PostMapping("/refresh")
-    public ResponseEntity<ApiResponse<TokenRefreshResponse>>
+    public ResponseEntity<CommonResponseDto<TokenRefreshResponse>>
     refreshAccessToken(
             @Valid @RequestBody RefreshTokenRequest request) {
 
@@ -215,7 +220,7 @@ public class AuthController {
                 authService.refreshAccessToken(request);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Token refreshed successfully",
                         response
@@ -229,22 +234,16 @@ public class AuthController {
     // ============================================================
 
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<Void>> logout(
+    public ResponseEntity<CommonResponseDto<Void>> logout(
             Authentication authentication) {
 
         if (authentication == null ||
                 authentication.getName() == null ||
                 authentication.getName().isBlank()) {
 
-            return ResponseEntity
-                    .status(HttpStatus.UNAUTHORIZED)
-                    .body(
-                            new ApiResponse<>(
-                                    false,
-                                    "Authenticated user is required",
-                                    null
-                            )
-                    );
+            throw new InvalidAuthRequestException(
+                    "Authenticated user is required"
+            );
         }
 
         final Long userId;
@@ -257,21 +256,16 @@ public class AuthController {
 
         } catch (NumberFormatException ex) {
 
-            return ResponseEntity
-                    .status(HttpStatus.UNAUTHORIZED)
-                    .body(
-                            new ApiResponse<>(
-                                    false,
-                                    "Invalid authenticated user",
-                                    null
-                            )
-                    );
+            throw new AuthException(
+                    "Invalid authenticated user",
+                    ex
+            );
         }
 
         authService.logout(userId);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Logout successful",
                         null
@@ -285,14 +279,14 @@ public class AuthController {
     // ============================================================
 
     @PostMapping("/email/send-otp")
-    public ResponseEntity<ApiResponse<Void>>
+    public ResponseEntity<CommonResponseDto<Void>>
     sendEmailOtp(
             @Valid @RequestBody SendEmailOtpRequest request) {
 
         authService.sendEmailOtp(request);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Email OTP sent successfully",
                         null
@@ -306,14 +300,14 @@ public class AuthController {
     // ============================================================
 
     @PostMapping("/email/verify-otp")
-    public ResponseEntity<ApiResponse<Void>>
+    public ResponseEntity<CommonResponseDto<Void>>
     verifyEmailOtp(
             @Valid @RequestBody VerifyEmailOtpRequest request) {
 
         authService.verifyEmailOtp(request);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Email OTP verified successfully",
                         null
@@ -327,7 +321,7 @@ public class AuthController {
     // ============================================================
 
     @PostMapping("/phone/verify-widget")
-    public ResponseEntity<ApiResponse<Void>>
+    public ResponseEntity<CommonResponseDto<Void>>
     verifyPhoneOtpWidget(
             @Valid @RequestBody VerifyPhoneWidgetRequest request) {
 
@@ -337,7 +331,7 @@ public class AuthController {
         );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Phone OTP verified successfully",
                         null
@@ -351,14 +345,14 @@ public class AuthController {
     // ============================================================
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<ApiResponse<Void>>
+    public ResponseEntity<CommonResponseDto<Void>>
     forgotPassword(
             @Valid @RequestBody ForgotPasswordRequest request) {
 
         authService.forgotPassword(request);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "If the account exists, a password reset OTP has been sent",
                         null
@@ -372,7 +366,7 @@ public class AuthController {
     // ============================================================
 
     @PostMapping("/forgot-password/verify-otp")
-    public ResponseEntity<ApiResponse<Map<String, String>>>
+    public ResponseEntity<CommonResponseDto<Map<String, String>>>
     verifyResetOtp(
             @Valid @RequestBody VerifyResetOtpRequest request) {
 
@@ -380,7 +374,7 @@ public class AuthController {
                 authService.verifyResetOtp(request);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "OTP verified successfully",
                         Map.of(
@@ -397,14 +391,14 @@ public class AuthController {
     // ============================================================
 
     @PostMapping("/reset-password")
-    public ResponseEntity<ApiResponse<Void>>
+    public ResponseEntity<CommonResponseDto<Void>>
     resetPassword(
             @Valid @RequestBody ResetPasswordRequest request) {
 
         authService.resetPassword(request);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Password reset successfully",
                         null

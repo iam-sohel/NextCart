@@ -1,7 +1,9 @@
 package com.nextcart.nextcart.checkout_module;
 
-import com.nextcart.nextcart.common.dto.ApiResponse;
 import com.nextcart.nextcart.auth_module.security.CustomUserDetails;
+import com.nextcart.nextcart.checkout_module.exceptions.CheckoutUserNotFoundException;
+import com.nextcart.nextcart.checkout_module.exceptions.CheckoutValidationException;
+import com.nextcart.nextcart.common.dto.CommonResponseDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -30,7 +32,7 @@ public class CheckoutController {
      * - create a payment
      */
     @PostMapping
-    public ResponseEntity<ApiResponse<CheckoutResponseDTO>> checkout(
+    public ResponseEntity<CommonResponseDto<CheckoutResponseDTO>> checkout(
             Authentication authentication,
             @Valid @RequestBody CheckoutRequestDTO request
     ) {
@@ -42,28 +44,25 @@ public class CheckoutController {
         if (authentication == null ||
                 !authentication.isAuthenticated()) {
 
-            throw new IllegalArgumentException(
+            throw new CheckoutUserNotFoundException(
                     "Authenticated customer is required"
             );
         }
 
-        Object principal =
-                authentication.getPrincipal();
+        Object principal = authentication.getPrincipal();
 
         if (!(principal instanceof CustomUserDetails userDetails)) {
 
-            throw new IllegalArgumentException(
+            throw new CheckoutUserNotFoundException(
                     "Authenticated customer details are unavailable"
             );
         }
 
-        Long userId =
-                userDetails.getUserId();
+        Long userId = userDetails.getUserId();
 
-        if (userId == null ||
-                userId <= 0) {
+        if (userId == null || userId <= 0) {
 
-            throw new IllegalArgumentException(
+            throw new CheckoutValidationException(
                     "Authenticated customer ID is invalid"
             );
         }
@@ -81,7 +80,7 @@ public class CheckoutController {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(
-                        new ApiResponse<>(
+                        new CommonResponseDto<>(
                                 true,
                                 "Checkout details calculated successfully",
                                 response

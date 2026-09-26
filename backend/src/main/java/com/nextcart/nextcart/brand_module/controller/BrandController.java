@@ -1,10 +1,10 @@
 package com.nextcart.nextcart.brand_module.controller;
 
-import com.nextcart.nextcart.common.dto.ApiResponse;
 import com.nextcart.nextcart.brand_module.dto.BrandCreateRequest;
 import com.nextcart.nextcart.brand_module.dto.BrandResponse;
 import com.nextcart.nextcart.brand_module.dto.BrandUpdateRequest;
 import com.nextcart.nextcart.brand_module.service.BrandService;
+import com.nextcart.nextcart.common.dto.CommonResponseDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -23,9 +23,13 @@ public class BrandController {
 
     private final BrandService brandService;
 
+    // =========================================================
+    // CREATE BRAND
+    // =========================================================
+
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<BrandResponse>> createBrand(
+    public ResponseEntity<CommonResponseDto<BrandResponse>> createBrand(
             @Valid @RequestBody BrandCreateRequest request) {
 
         BrandResponse response =
@@ -34,7 +38,7 @@ public class BrandController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(
-                        new ApiResponse<>(
+                        new CommonResponseDto<>(
                                 true,
                                 "Brand created successfully",
                                 response
@@ -42,15 +46,19 @@ public class BrandController {
                 );
     }
 
+    // =========================================================
+    // GET BRAND BY ID
+    // =========================================================
+
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<BrandResponse>> getBrandById(
+    public ResponseEntity<CommonResponseDto<BrandResponse>> getBrandById(
             @PathVariable Long id) {
 
         BrandResponse response =
                 brandService.getBrandById(id);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Brand fetched successfully",
                         response
@@ -58,8 +66,12 @@ public class BrandController {
         );
     }
 
+    // =========================================================
+    // GET ALL BRANDS
+    // =========================================================
+
     @GetMapping
-    public ResponseEntity<ApiResponse<Page<BrandResponse>>> getAllBrands(
+    public ResponseEntity<CommonResponseDto<Page<BrandResponse>>> getAllBrands(
             @PageableDefault(
                     size = 20,
                     sort = "name",
@@ -71,7 +83,7 @@ public class BrandController {
                 brandService.getAllBrands(pageable);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Brands fetched successfully",
                         response
@@ -79,9 +91,13 @@ public class BrandController {
         );
     }
 
+    // =========================================================
+    // UPDATE BRAND
+    // =========================================================
+
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<BrandResponse>> updateBrand(
+    public ResponseEntity<CommonResponseDto<BrandResponse>> updateBrand(
             @PathVariable Long id,
             @Valid @RequestBody BrandUpdateRequest request) {
 
@@ -89,7 +105,7 @@ public class BrandController {
                 brandService.updateBrand(id, request);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Brand updated successfully",
                         response
@@ -97,15 +113,19 @@ public class BrandController {
         );
     }
 
+    // =========================================================
+    // DEACTIVATE BRAND
+    // =========================================================
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Void>> deactivateBrand(
+    public ResponseEntity<CommonResponseDto<Void>> deactivateBrand(
             @PathVariable Long id) {
 
         brandService.deactivateBrand(id);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Brand deactivated successfully",
                         null
@@ -113,16 +133,20 @@ public class BrandController {
         );
     }
 
+    // =========================================================
+    // RESTORE BRAND
+    // =========================================================
+
     @PatchMapping("/{id}/restore")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<BrandResponse>> restoreBrand(
+    public ResponseEntity<CommonResponseDto<BrandResponse>> restoreBrand(
             @PathVariable Long id) {
 
         BrandResponse response =
                 brandService.restoreBrand(id);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Brand restored successfully",
                         response

@@ -1,8 +1,8 @@
 package com.nextcart.nextcart.product_module.product_base.dto;
 
-import com.nextcart.nextcart.product_module.productImage.productImageDTO.ProductImageResponse;
-import com.nextcart.nextcart.product_module.productInformation.productInformation.ProductInformationResponse;
-import com.nextcart.nextcart.product_module.productSpecification.productSpecification.ProductSpecificationResponse;
+import com.nextcart.nextcart.product_module.productImage.dto.ProductImageResponse;
+import com.nextcart.nextcart.product_module.productInformation.dto.ProductInformationResponse;
+import com.nextcart.nextcart.product_module.productSpecification.dto.ProductSpecificationResponse;
 import com.nextcart.nextcart.product_module.productVariant.dto.ProductVariantResponse;
 import lombok.*;
 

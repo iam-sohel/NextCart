@@ -1,6 +1,6 @@
 package com.nextcart.nextcart.discount_module;
 
-import com.nextcart.nextcart.product_module.productVariant.ProductVariantEntity;
+import com.nextcart.nextcart.product_module.productVariant.entity.ProductVariantEntity;
 import jakarta.persistence.*;
 import lombok.*;
 

@@ -3,6 +3,7 @@ package com.nextcart.nextcart.cart_module;
 import com.nextcart.nextcart.cart_module.dto.CartItemAddRequestDTO;
 import com.nextcart.nextcart.cart_module.dto.CartItemUpdateRequestDTO;
 import com.nextcart.nextcart.cart_module.dto.CartResponseDTO;
+import com.nextcart.nextcart.common.dto.CommonResponseDto;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
@@ -23,13 +24,20 @@ public class CartController {
     // =========================================================
 
     @GetMapping
-    public ResponseEntity<CartResponseDTO> getCart(
+    public ResponseEntity<CommonResponseDto<CartResponseDTO>> getCart(
             Authentication authentication) {
 
         String userEmail = authentication.getName();
 
+        CartResponseDTO response =
+                cartService.getCart(userEmail);
+
         return ResponseEntity.ok(
-                cartService.getCart(userEmail)
+                new CommonResponseDto<>(
+                        true,
+                        "Cart fetched successfully",
+                        response
+                )
         );
     }
 
@@ -38,19 +46,26 @@ public class CartController {
     // =========================================================
 
     @PostMapping("/items")
-    public ResponseEntity<CartResponseDTO> addItem(
+    public ResponseEntity<CommonResponseDto<CartResponseDTO>> addItem(
             Authentication authentication,
             @Valid @RequestBody
             CartItemAddRequestDTO request) {
 
         String userEmail = authentication.getName();
 
+        CartResponseDTO response =
+                cartService.addItem(
+                        userEmail,
+                        request
+                );
+
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(
-                        cartService.addItem(
-                                userEmail,
-                                request
+                        new CommonResponseDto<>(
+                                true,
+                                "Item added to cart successfully",
+                                response
                         )
                 );
     }
@@ -60,7 +75,7 @@ public class CartController {
     // =========================================================
 
     @PutMapping("/items/{itemId}")
-    public ResponseEntity<CartResponseDTO> updateItem(
+    public ResponseEntity<CommonResponseDto<CartResponseDTO>> updateItem(
             Authentication authentication,
 
             @PathVariable
@@ -72,11 +87,18 @@ public class CartController {
 
         String userEmail = authentication.getName();
 
-        return ResponseEntity.ok(
+        CartResponseDTO response =
                 cartService.updateItem(
                         userEmail,
                         itemId,
                         request
+                );
+
+        return ResponseEntity.ok(
+                new CommonResponseDto<>(
+                        true,
+                        "Cart item updated successfully",
+                        response
                 )
         );
     }
@@ -86,7 +108,7 @@ public class CartController {
     // =========================================================
 
     @DeleteMapping("/items/{itemId}")
-    public ResponseEntity<Void> removeItem(
+    public ResponseEntity<CommonResponseDto<Void>> removeItem(
             Authentication authentication,
 
             @PathVariable
@@ -100,7 +122,13 @@ public class CartController {
                 itemId
         );
 
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(
+                new CommonResponseDto<>(
+                        true,
+                        "Cart item removed successfully",
+                        null
+                )
+        );
     }
 
     // =========================================================
@@ -108,13 +136,19 @@ public class CartController {
     // =========================================================
 
     @DeleteMapping
-    public ResponseEntity<Void> clearCart(
+    public ResponseEntity<CommonResponseDto<Void>> clearCart(
             Authentication authentication) {
 
         String userEmail = authentication.getName();
 
         cartService.clearCart(userEmail);
 
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(
+                new CommonResponseDto<>(
+                        true,
+                        "Cart cleared successfully",
+                        null
+                )
+        );
     }
 }

@@ -2,11 +2,15 @@ package com.nextcart.nextcart.address_module.controller;
 
 import com.nextcart.nextcart.address_module.dto.AddressRequestDTO;
 import com.nextcart.nextcart.address_module.dto.AddressResponseDTO;
-import com.nextcart.nextcart.address_module.service.address.AddressService;
-import com.nextcart.nextcart.common.dto.ApiResponse;
+import com.nextcart.nextcart.address_module.service.AddressService;
+import com.nextcart.nextcart.common.dto.CommonResponseDto;
+
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+
 import jakarta.validation.Valid;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -21,12 +25,13 @@ public class AddressController {
 
     private final AddressService addressService;
 
+
     // =========================================================
     // ADD ADDRESS
     // =========================================================
 
     @PostMapping
-    public ResponseEntity<ApiResponse<AddressResponseDTO>> addAddress(
+    public ResponseEntity<CommonResponseDto<AddressResponseDTO>> addAddress(
             Authentication authentication,
             @Valid @RequestBody AddressRequestDTO requestDto
     ) {
@@ -34,10 +39,13 @@ public class AddressController {
         Long userId = Long.valueOf(authentication.getName());
 
         AddressResponseDTO response =
-                addressService.addAddress(userId, requestDto);
+                addressService.addAddress(
+                        userId,
+                        requestDto
+                );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Address added successfully",
                         response
@@ -45,12 +53,14 @@ public class AddressController {
         );
     }
 
+
     // =========================================================
     // GET ALL ADDRESSES
     // =========================================================
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<AddressResponseDTO>>> getUserAddresses(
+    public ResponseEntity<CommonResponseDto<List<AddressResponseDTO>>>
+    getUserAddresses(
             Authentication authentication
     ) {
 
@@ -60,7 +70,7 @@ public class AddressController {
                 addressService.getUserAddresses(userId);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Addresses retrieved successfully",
                         response
@@ -68,12 +78,14 @@ public class AddressController {
         );
     }
 
+
     // =========================================================
     // GET ADDRESS BY ID
     // =========================================================
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<AddressResponseDTO>> getAddressById(
+    public ResponseEntity<CommonResponseDto<AddressResponseDTO>>
+    getAddressById(
             Authentication authentication,
             @PathVariable Long id
     ) {
@@ -81,10 +93,13 @@ public class AddressController {
         Long userId = Long.valueOf(authentication.getName());
 
         AddressResponseDTO response =
-                addressService.getAddressById(userId, id);
+                addressService.getAddressById(
+                        userId,
+                        id
+                );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Address retrieved successfully",
                         response
@@ -92,12 +107,14 @@ public class AddressController {
         );
     }
 
+
     // =========================================================
     // UPDATE ADDRESS
     // =========================================================
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<AddressResponseDTO>> updateAddress(
+    public ResponseEntity<CommonResponseDto<AddressResponseDTO>>
+    updateAddress(
             Authentication authentication,
             @PathVariable Long id,
             @Valid @RequestBody AddressRequestDTO requestDto
@@ -113,7 +130,7 @@ public class AddressController {
                 );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Address updated successfully",
                         response
@@ -121,22 +138,27 @@ public class AddressController {
         );
     }
 
+
     // =========================================================
     // DELETE ADDRESS
     // =========================================================
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteAddress(
+    public ResponseEntity<CommonResponseDto<Void>>
+    deleteAddress(
             Authentication authentication,
             @PathVariable Long id
     ) {
 
         Long userId = Long.valueOf(authentication.getName());
 
-        addressService.deleteAddress(userId, id);
+        addressService.deleteAddress(
+                userId,
+                id
+        );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Address deleted successfully",
                         null
@@ -144,12 +166,14 @@ public class AddressController {
         );
     }
 
+
     // =========================================================
     // SET DEFAULT ADDRESS
     // =========================================================
 
     @PatchMapping("/{id}/default")
-    public ResponseEntity<ApiResponse<AddressResponseDTO>> setDefaultAddress(
+    public ResponseEntity<CommonResponseDto<AddressResponseDTO>>
+    setDefaultAddress(
             Authentication authentication,
             @PathVariable Long id
     ) {
@@ -157,10 +181,13 @@ public class AddressController {
         Long userId = Long.valueOf(authentication.getName());
 
         AddressResponseDTO response =
-                addressService.setDefaultAddress(userId, id);
+                addressService.setDefaultAddress(
+                        userId,
+                        id
+                );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Default address updated successfully",
                         response

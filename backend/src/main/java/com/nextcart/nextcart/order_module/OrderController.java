@@ -1,7 +1,7 @@
 package com.nextcart.nextcart.order_module;
 
-import com.nextcart.nextcart.common.dto.ApiResponse;
 import com.nextcart.nextcart.auth_module.security.CustomUserDetails;
+import com.nextcart.nextcart.common.dto.CommonResponseDto;
 import com.nextcart.nextcart.order_module.dto.OrderCreateRequestDTO;
 import com.nextcart.nextcart.order_module.dto.OrderResponseDTO;
 import com.nextcart.nextcart.order_module.exceptions.OrderValidationException;
@@ -30,11 +30,12 @@ public class OrderController {
 
     @PostMapping
     @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<ApiResponse<OrderResponseDTO>> createOrder(
+    public ResponseEntity<CommonResponseDto<OrderResponseDTO>> createOrder(
             Authentication authentication,
             @Valid @RequestBody OrderCreateRequestDTO request) {
 
-        String userIdentifier = getAuthenticatedUserIdentifier(authentication);
+        String userIdentifier =
+                getAuthenticatedUserIdentifier(authentication);
 
         OrderResponseDTO response =
                 orderService.createOrder(
@@ -45,7 +46,7 @@ public class OrderController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(
-                        new ApiResponse<>(
+                        new CommonResponseDto<>(
                                 true,
                                 "Order created successfully",
                                 response
@@ -59,11 +60,12 @@ public class OrderController {
 
     @GetMapping("/{orderId}")
     @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<ApiResponse<OrderResponseDTO>> getOrderById(
+    public ResponseEntity<CommonResponseDto<OrderResponseDTO>> getOrderById(
             Authentication authentication,
             @PathVariable Long orderId) {
 
-        String userIdentifier = getAuthenticatedUserIdentifier(authentication);
+        String userIdentifier =
+                getAuthenticatedUserIdentifier(authentication);
 
         OrderResponseDTO response =
                 orderService.getOrderById(
@@ -72,7 +74,7 @@ public class OrderController {
                 );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Order fetched successfully",
                         response
@@ -86,11 +88,13 @@ public class OrderController {
 
     @GetMapping("/number/{orderNumber}")
     @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<ApiResponse<OrderResponseDTO>> getOrderByNumber(
+    public ResponseEntity<CommonResponseDto<OrderResponseDTO>>
+    getOrderByNumber(
             Authentication authentication,
             @PathVariable String orderNumber) {
 
-        String userIdentifier = getAuthenticatedUserIdentifier(authentication);
+        String userIdentifier =
+                getAuthenticatedUserIdentifier(authentication);
 
         OrderResponseDTO response =
                 orderService.getOrderByNumber(
@@ -99,7 +103,7 @@ public class OrderController {
                 );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Order fetched successfully",
                         response
@@ -113,7 +117,8 @@ public class OrderController {
 
     @GetMapping("/my")
     @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<ApiResponse<Page<OrderResponseDTO>>> getMyOrders(
+    public ResponseEntity<CommonResponseDto<Page<OrderResponseDTO>>>
+    getMyOrders(
             Authentication authentication,
             @PageableDefault(
                     size = 20,
@@ -122,7 +127,8 @@ public class OrderController {
             )
             Pageable pageable) {
 
-        String userIdentifier = getAuthenticatedUserIdentifier(authentication);
+        String userIdentifier =
+                getAuthenticatedUserIdentifier(authentication);
 
         Page<OrderResponseDTO> response =
                 orderService.getMyOrders(
@@ -131,7 +137,7 @@ public class OrderController {
                 );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Orders fetched successfully",
                         response
@@ -145,7 +151,7 @@ public class OrderController {
 
     @GetMapping("/my/status/{status}")
     @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<ApiResponse<Page<OrderResponseDTO>>>
+    public ResponseEntity<CommonResponseDto<Page<OrderResponseDTO>>>
     getMyOrdersByStatus(
             Authentication authentication,
             @PathVariable OrderStatus status,
@@ -156,7 +162,8 @@ public class OrderController {
             )
             Pageable pageable) {
 
-        String userIdentifier = getAuthenticatedUserIdentifier(authentication);
+        String userIdentifier =
+                getAuthenticatedUserIdentifier(authentication);
 
         Page<OrderResponseDTO> response =
                 orderService.getMyOrdersByStatus(
@@ -166,7 +173,7 @@ public class OrderController {
                 );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Orders fetched successfully",
                         response
@@ -180,11 +187,13 @@ public class OrderController {
 
     @PatchMapping("/{orderId}/cancel")
     @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<ApiResponse<OrderResponseDTO>> cancelOrder(
+    public ResponseEntity<CommonResponseDto<OrderResponseDTO>>
+    cancelOrder(
             Authentication authentication,
             @PathVariable Long orderId) {
 
-        String userIdentifier = getAuthenticatedUserIdentifier(authentication);
+        String userIdentifier =
+                getAuthenticatedUserIdentifier(authentication);
 
         OrderResponseDTO response =
                 orderService.cancelOrder(
@@ -193,7 +202,7 @@ public class OrderController {
                 );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Order cancelled successfully",
                         response
@@ -207,7 +216,7 @@ public class OrderController {
 
     @GetMapping("/admin/{orderId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<OrderResponseDTO>>
+    public ResponseEntity<CommonResponseDto<OrderResponseDTO>>
     getOrderByIdForAdmin(
             @PathVariable Long orderId) {
 
@@ -217,7 +226,7 @@ public class OrderController {
                 );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Order fetched successfully",
                         response
@@ -231,7 +240,7 @@ public class OrderController {
 
     @GetMapping("/admin")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Page<OrderResponseDTO>>>
+    public ResponseEntity<CommonResponseDto<Page<OrderResponseDTO>>>
     getAllOrdersForAdmin(
             @PageableDefault(
                     size = 20,
@@ -246,7 +255,7 @@ public class OrderController {
                 );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Orders fetched successfully",
                         response
@@ -260,7 +269,7 @@ public class OrderController {
 
     @GetMapping("/admin/status/{status}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Page<OrderResponseDTO>>>
+    public ResponseEntity<CommonResponseDto<Page<OrderResponseDTO>>>
     getOrdersByStatusForAdmin(
             @PathVariable OrderStatus status,
             @PageableDefault(
@@ -277,7 +286,7 @@ public class OrderController {
                 );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Orders fetched successfully",
                         response
@@ -291,7 +300,7 @@ public class OrderController {
 
     @PatchMapping("/admin/{orderId}/status/{status}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<OrderResponseDTO>>
+    public ResponseEntity<CommonResponseDto<OrderResponseDTO>>
     updateOrderStatus(
             @PathVariable Long orderId,
             @PathVariable OrderStatus status) {
@@ -303,7 +312,7 @@ public class OrderController {
                 );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Order status updated successfully",
                         response
@@ -315,12 +324,6 @@ public class OrderController {
     // AUTHENTICATED USER IDENTIFIER
     // =========================================================
 
-    /**
-     * The JWT filter creates CustomUserDetails from the authenticated User.
-     * We pass the user id as a String because OrderService resolves numeric
-     * identifiers as user ids and keeps email lookup as a backward-compatible
-     * fallback.
-     */
     private String getAuthenticatedUserIdentifier(
             Authentication authentication) {
 
@@ -350,10 +353,6 @@ public class OrderController {
             );
         }
 
-        /*
-         * Fallback for an authentication implementation whose
-         * principal is represented as a String.
-         */
         String name = authentication.getName();
 
         if (name == null || name.isBlank()) {

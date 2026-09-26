@@ -22,29 +22,31 @@ import com.nextcart.nextcart.seller_module.sellerBank.exception.SellerBankNotFou
 import com.nextcart.nextcart.order_module.exceptions.InvalidOrderStatusException;
 import com.nextcart.nextcart.order_module.exceptions.OrderCancellationException;
 import com.nextcart.nextcart.order_module.exceptions.OrderNotFoundException;
-import com.nextcart.nextcart.payment_module.PaymentGatewayException;
-import com.nextcart.nextcart.payment_module.PaymentNotFoundException;
-import com.nextcart.nextcart.payment_module.PaymentValidationException;
-import com.nextcart.nextcart.payment_module.PaymentVerificationException;
-import com.nextcart.nextcart.product_module.exceptions.InvalidPriceException;
-import com.nextcart.nextcart.product_module.exceptions.ProductAlreadyExistsException;
-import com.nextcart.nextcart.product_module.exceptions.ProductImageNotFoundException;
-import com.nextcart.nextcart.product_module.exceptions.ProductNotFoundException;
-import com.nextcart.nextcart.product_module.exceptions.ProductSpecificationAlreadyExistsException;
-import com.nextcart.nextcart.product_module.exceptions.ProductSpecificationNotFoundException;
-import com.nextcart.nextcart.product_module.exceptions.ProductValidationException;
-import com.nextcart.nextcart.product_module.exceptions.ProductVariantAlreadyExistsException;
-import com.nextcart.nextcart.product_module.exceptions.ProductVariantNotFoundException;
-import com.nextcart.nextcart.product_module.exceptions.ProductVariantPriceAlreadyExistsException;
-import com.nextcart.nextcart.product_module.exceptions.ProductVariantPriceNotFoundException;
-import com.nextcart.nextcart.product_module.exceptions.VariantAttributeAlreadyExistsException;
-import com.nextcart.nextcart.product_module.exceptions.VariantAttributeNotFoundException;
+import com.nextcart.nextcart.payment_module.exceptions.PaymentGatewayException;
+import com.nextcart.nextcart.payment_module.exceptions.PaymentNotFoundException;
+import com.nextcart.nextcart.payment_module.exceptions.PaymentValidationException;
+import com.nextcart.nextcart.payment_module.exceptions.PaymentVerificationException;
+import com.nextcart.nextcart.product_module.productPrice.exceptions.InvalidPriceException;
+import com.nextcart.nextcart.product_module.product_base.exceptions.ProductAlreadyExistsException;
+import com.nextcart.nextcart.product_module.productImage.exceptions.ProductImageNotFoundException;
+import com.nextcart.nextcart.product_module.product_base.exceptions.ProductNotFoundException;
+import com.nextcart.nextcart.product_module.productSpecification.exceptions.ProductSpecificationAlreadyExistsException;
+import com.nextcart.nextcart.product_module.productSpecification.exceptions.ProductSpecificationNotFoundException;
+import com.nextcart.nextcart.product_module.product_base.exceptions.ProductValidationException;
+import com.nextcart.nextcart.product_module.productVariant.exceptions.ProductVariantAlreadyExistsException;
+import com.nextcart.nextcart.product_module.productVariant.exceptions.ProductVariantNotFoundException;
+import com.nextcart.nextcart.product_module.productPrice.exceptions.ProductVariantPriceAlreadyExistsException;
+import com.nextcart.nextcart.product_module.productPrice.exceptions.ProductVariantPriceNotFoundException;
+import com.nextcart.nextcart.product_module.variantAttribute.exceptions.VariantAttributeAlreadyExistsException;
+import com.nextcart.nextcart.product_module.variantAttribute.exceptions.VariantAttributeNotFoundException;
 import com.nextcart.nextcart.subcategory_module.exceptions.SubCategoryAlreadyExistsException;
 import com.nextcart.nextcart.subcategory_module.exceptions.SubCategoryNotFoundException;
 import com.nextcart.nextcart.user_module.exception.InvalidPasswordException;
 import com.nextcart.nextcart.user_module.exception.PasswordMismatchException;
 import com.nextcart.nextcart.user_module.exception.UserAlreadyExistsException;
 import com.nextcart.nextcart.user_module.exception.UserNotFoundException;
+import com.nextcart.nextcart.wishlist_module.exceptions.WishlistAlreadyExistsException;
+import com.nextcart.nextcart.wishlist_module.exceptions.WishlistNotFoundException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -604,5 +606,26 @@ public class GlobalExceptionHandler {
         ApiResponse<Map<String, String>> response = new ApiResponse<>(false, message, Map.of("errorCode", errorCode));
 
         return ResponseEntity.status(status).body(response);
+    }
+
+    @ExceptionHandler(WishlistAlreadyExistsException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>> handleWishlistAlreadyExists(
+            WishlistAlreadyExistsException exception) {
+
+        return buildError(
+                HttpStatus.CONFLICT,
+                exception.getMessage(),
+                "WISHLIST_ALREADY_EXISTS"
+        );
+    }
+    @ExceptionHandler(WishlistNotFoundException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>> handleWishlistNotFound(
+            WishlistNotFoundException exception) {
+
+        return buildError(
+                HttpStatus.NOT_FOUND,
+                exception.getMessage(),
+                "WISHLIST_NOT_FOUND"
+        );
     }
 }
