@@ -12,7 +12,7 @@ import {
 } from "@/services/productService";
 
 /**
- * NEXTCART — Product details page (Server Component)
+ * HAVLOOK — Product details page (Server Component)
  *
  * Route: /products/[slug]
  *

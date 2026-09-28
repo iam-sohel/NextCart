@@ -10,7 +10,7 @@ import SellerTopBar from "@/components/seller/SellerTopBar";
 import useRequireSeller from "@/hooks/useRequireSeller";
 
 /**
- * NEXTCART — Seller panel shell.
+ * HAVLOOK — Seller panel shell.
  *
  * Gates every `/seller/**` route behind `useRequireSeller` and provides the
  * seller-only navigation (desktop sidebar + mobile drawer) and top bar.

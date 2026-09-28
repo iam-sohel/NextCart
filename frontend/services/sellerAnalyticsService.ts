@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Seller analytics service boundary.
+ * HAVLOOK — Seller analytics service boundary.
  *
  * Consumes the real aggregate endpoint:
  *   GET /api/v1/sellers/analytics?from=YYYY-MM-DD&to=YYYY-MM-DD

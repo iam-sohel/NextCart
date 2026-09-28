@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Admin seller-verification service boundary.
+ * HAVLOOK — Admin seller-verification service boundary.
  *
  * Uses only the existing seller-verification endpoints:
  *   GET /api/v1/admin/sellers/verification

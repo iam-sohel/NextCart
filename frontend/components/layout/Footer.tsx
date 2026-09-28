@@ -14,7 +14,7 @@ export default function Footer() {
       }}
     >
       <Typography>
-        © 2026 NextCart. All Rights Reserved.
+        © 2026 HavLook. All Rights Reserved.
       </Typography>
     </Box>
   );

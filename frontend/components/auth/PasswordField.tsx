@@ -13,7 +13,7 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 
 /**
- * NEXTCART — Password input with visibility toggle
+ * HAVLOOK — Password input with visibility toggle
  *
  * Wraps the theme's `MuiTextField` so we get the orange focus ring,
  * cream canvas, and small size for free. The toggle button is an

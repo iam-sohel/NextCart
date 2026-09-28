@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Product service boundary.
+ * HAVLOOK — Product service boundary.
  *
  * All product API communication lives here.
  * UI components should not know backend endpoint paths.

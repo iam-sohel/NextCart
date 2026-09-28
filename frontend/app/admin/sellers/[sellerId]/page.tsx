@@ -1458,7 +1458,7 @@ const handleReview = async () => {
 
           confirmAction
 
-            ? `${confirmAction === "activate" ? "Activate" : "Deactivate"} ${detailName} (Seller #${seller.sellerId}). This changes whether the seller can operate on NextCart.`
+            ? `${confirmAction === "activate" ? "Activate" : "Deactivate"} ${detailName} (Seller #${seller.sellerId}). This changes whether the seller can operate on HavLook.`
 
             : undefined
 

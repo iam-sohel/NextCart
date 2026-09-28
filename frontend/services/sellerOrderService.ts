@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Seller order service boundary.
+ * HAVLOOK — Seller order service boundary.
  *
  * Uses the read-only seller order endpoints:
  *   GET /api/v1/sellers/orders

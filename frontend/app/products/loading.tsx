@@ -10,7 +10,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 
 /**
- * NEXTCART — Products index loading state.
+ * HAVLOOK — Products index loading state.
  *
  * Renders a non-interactive skeleton that mirrors the products page
  * layout (header + grid of card placeholders). Used by Next.js as the

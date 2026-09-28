@@ -24,7 +24,7 @@ export default function ProductsPage() {
       {/* ============================================================
           PAGE CANVAS
           Warm cream page background consistent with the modernized
-          NextCart homepage. ProductGrid itself is left untouched.
+          HavLook homepage. ProductGrid itself is left untouched.
           ============================================================ */}
       <Box
         sx={{

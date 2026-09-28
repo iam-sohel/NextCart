@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Auth service boundary
+ * HAVLOOK — Auth service boundary
  *
  * This module is the ONLY place that names Spring Boot's auth DTOs and field
  * spellings (`firstName`, `lastName`, `phone`, etc.). Components and the
@@ -160,7 +160,7 @@ function isLikelyBadCredentials(status: number): boolean {
 }
 
 /**
- * The auth endpoints answer with the standard NextCart envelope
+ * The auth endpoints answer with the standard HavLook envelope
  * (`{ success, message, data }`), and `apiRequest` hands back the parsed
  * body as-is — so the payload must be pulled out of `data` when it is
  * wrapped. Falls back to the raw body for unwrapped responses.

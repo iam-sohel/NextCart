@@ -8,7 +8,7 @@ interface Props {
 }
 
 /**
- * NEXTCART — Reusable section heading.
+ * HAVLOOK — Reusable section heading.
  *
  * Presentation-only component: a consistent heading treatment used across
  * the homepage sections. It has NO navigation behavior (and deliberately

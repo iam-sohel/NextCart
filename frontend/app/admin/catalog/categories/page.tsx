@@ -212,7 +212,7 @@ export default function AdminCategoriesPage() {
             color="text.secondary"
             sx={{ mt: 0.5 }}
           >
-            Manage product categories for the NextCart
+            Manage product categories for the HavLook
             catalog.
           </Typography>
         </Box>

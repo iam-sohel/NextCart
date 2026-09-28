@@ -1,5 +1,5 @@
 /**
- * NEXTCART TYPOGRAPHY
+ * HAVLOOK TYPOGRAPHY
  *
  * Compact commerce type scale — closer to Amazon / Flipkart density than to
  * a SaaS marketing landing. We start smaller than MUI defaults and step up in

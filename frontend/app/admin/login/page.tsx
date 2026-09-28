@@ -151,7 +151,7 @@ export default function AdminLoginPage() {
   return (
     <AuthCard
       title="Admin sign in"
-      subtitle="Restricted NextCart administration"
+      subtitle="Restricted HavLook administration"
       footer={
         <Typography variant="body2" color="text.secondary">
           Authorized administrators only.

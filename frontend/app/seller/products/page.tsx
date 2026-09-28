@@ -10,7 +10,7 @@ import Inventory2Icon from "@mui/icons-material/Inventory2";
 import PageHeader from "@/components/ops/PageHeader";
 
 /**
- * NEXTCART — Seller products.
+ * HAVLOOK — Seller products.
  *
  * The backend currently exposes ONLY product creation for sellers
  * (POST /api/v1/sellers/products). There is no list / detail / update /
@@ -21,7 +21,7 @@ export default function SellerProductsPage() {
     <Box>
       <PageHeader
         title="Products"
-        subtitle="Create products for your NextCart catalogue."
+        subtitle="Create products for your HavLook catalogue."
         actions={
           <Button
             component={Link}

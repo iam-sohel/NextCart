@@ -8,7 +8,7 @@ import spacing from "./spacing";
 import shadows from "./shadows";
 
 /**
- * NEXTCART MUI THEME
+ * HAVLOOK MUI THEME
  *
  * This file is the assembler. It pulls in the four geometry primitives
  * (palette, typography, spacing, shadows) and adds:

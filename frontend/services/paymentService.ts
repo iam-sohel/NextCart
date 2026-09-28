@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Payment service boundary.
+ * HAVLOOK — Payment service boundary.
  *
  * All payment API communication goes through the centralized authenticated
  * client in `lib/api.ts`:
@@ -152,7 +152,7 @@ function failureFrom(
 }
 
 /**
- * Creates the Razorpay order for an already-created NextCart order.
+ * Creates the Razorpay order for an already-created HavLook order.
  *
  * IMPORTANT:
  * Backend returns `amount` in paise.

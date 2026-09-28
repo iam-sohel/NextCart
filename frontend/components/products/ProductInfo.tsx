@@ -26,7 +26,7 @@ interface ProductInfoProps {
 }
 
 /**
- * NEXTCART — ProductInfo
+ * HAVLOOK — ProductInfo
  *
  * The right column of the product details page. This component is a
  * pure composition: it receives the product plus the orchestrator's

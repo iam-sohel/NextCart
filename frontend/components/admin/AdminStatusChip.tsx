@@ -3,7 +3,7 @@
 import { Chip } from "@mui/material";
 
 /**
- * NEXTCART — Admin status chip.
+ * HAVLOOK — Admin status chip.
  *
  * Presentation-only status display for future admin modules. Callers supply
  * the status value and, when a backend status has a module-specific meaning,

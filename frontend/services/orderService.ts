@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Order service boundary.
+ * HAVLOOK — Order service boundary.
  *
  * Mirrors the Spring Boot order module contract.
  */

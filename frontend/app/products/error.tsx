@@ -14,7 +14,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 
 /**
- * NEXTCART — Products index error boundary.
+ * HAVLOOK — Products index error boundary.
  *
  * Triggered when the server component throws while loading the
  * catalogue. Provides a clear recovery path (retry + browse all).

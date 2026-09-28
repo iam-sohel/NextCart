@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 
 /**
- * NEXTCART — Admin feedback states.
+ * HAVLOOK — Admin feedback states.
  *
  * Shared loading, empty, error, and access-denied treatments for admin pages.
  * These states never invent business data: missing data is shown as missing,

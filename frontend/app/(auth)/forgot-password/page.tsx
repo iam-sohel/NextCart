@@ -36,7 +36,7 @@ const INDIAN_PHONE_PATTERN = /^[6-9]\d{9}$/;
 const OTP_PATTERN = /^\d{6}$/;
 
 /**
- * NEXTCART — /forgot-password
+ * HAVLOOK — /forgot-password
  *
  * Functional password-recovery flow backed by the existing Spring Boot
  * endpoints:

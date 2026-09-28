@@ -46,7 +46,7 @@ import {
 import useRequireAuth from "@/hooks/useRequireAuth";
 
 /**
- * NEXTCART — Checkout
+ * HAVLOOK — Checkout
  *
  * Backend-driven checkout flow:
  *
@@ -212,7 +212,7 @@ const finishSuccessfulOrder = useCallback(
 );
 
   /**
-   * Open Razorpay Checkout for an already-created NextCart order.
+   * Open Razorpay Checkout for an already-created HavLook order.
    */
   const startOnlinePayment = useCallback(
     async (orderId: number, orderNumber: string) => {
@@ -268,7 +268,7 @@ const finishSuccessfulOrder = useCallback(
         key: paymentOrder.keyId,
         amount: paymentOrder.amount,
         currency: paymentOrder.currency,
-        name: "NextCart",
+        name: "HavLook",
         description: `Payment for order ${orderNumber}`,
         order_id: paymentOrder.razorpayOrderId,
 
@@ -434,7 +434,7 @@ const finishSuccessfulOrder = useCallback(
       }
 
       /**
-       * Create the NextCart order.
+       * Create the HavLook order.
        *
        * Backend contract:
        *

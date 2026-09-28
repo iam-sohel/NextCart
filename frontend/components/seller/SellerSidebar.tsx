@@ -28,7 +28,7 @@ import StorefrontIcon from "@mui/icons-material/Storefront";
 import SettingsIcon from "@mui/icons-material/Settings";
 
 /**
- * NEXTCART — Seller panel sidebar.
+ * HAVLOOK — Seller panel sidebar.
  *
  * Seller-specific navigation shell. Deliberately separate from the
  * customer `components/layout/Navbar.tsx`.

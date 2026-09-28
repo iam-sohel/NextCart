@@ -53,7 +53,7 @@ export default function ProductCard({
   offer,
   rating,
   reviews,
-  brand = "NextCart",
+  brand = "HavLook",
   bestseller = false,
   newArrival = false,
 }: ProductCardProps) {

@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Seller KYC service boundary.
+ * HAVLOOK — Seller KYC service boundary.
  *
  * Wraps the authenticated seller KYC endpoints. The backend resolves the
  * seller from the JWT, so no sellerId is ever sent.

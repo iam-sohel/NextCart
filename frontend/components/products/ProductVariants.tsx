@@ -25,7 +25,7 @@ interface ProductVariantsProps {
 }
 
 /**
- * NEXTCART — VariantSelector
+ * HAVLOOK — VariantSelector
  *
  * A reusable, data-driven selector that works against the backend's
  * `variants[].attributes` map. The component does NOT hardcode which

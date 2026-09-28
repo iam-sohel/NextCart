@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Delivery / pincode types.
+ * HAVLOOK — Delivery / pincode types.
  *
  * The backend will eventually expose an endpoint similar to:
  *   GET /api/delivery/check?pincode=110001&productId=…

@@ -9,7 +9,7 @@ interface ProductRatingRowProps {
 }
 
 /**
- * NEXTCART — ProductRatingRow
+ * HAVLOOK — ProductRatingRow
  *
  * The product rating line shown under the product title, Flipkart-style:
  * a green rating capsule (score + star) followed by the ratings count.

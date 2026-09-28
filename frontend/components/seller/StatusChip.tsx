@@ -3,7 +3,7 @@
 import { Chip } from "@mui/material";
 
 /**
- * NEXTCART — Seller status badge.
+ * HAVLOOK — Seller status badge.
  *
  * Maps the exact backend status values (KycStatus, BankVerificationStatus,
  * WarehouseStatus, OrderStatus, SellerEarningStatus and seller verified/active

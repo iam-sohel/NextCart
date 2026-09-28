@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Product image helpers
+ * HAVLOOK — Product image helpers
  *
  * Centralized image resolution for product cards, product details,
  * search results and other product UI.

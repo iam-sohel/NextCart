@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Wishlist store (Zustand)
+ * HAVLOOK — Wishlist store (Zustand)
  *
  * Single source of truth for saved-for-later items. The store mirrors
  * the backend's `WishlistResponseDTO` array directly so the UI never

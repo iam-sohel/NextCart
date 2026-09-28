@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Seller warehouse service boundary.
+ * HAVLOOK — Seller warehouse service boundary.
  *
  * Wraps the authenticated seller warehouse endpoints. The backend resolves
  * the seller from the JWT, so no sellerId is ever sent.

@@ -1,5 +1,5 @@
 /**
- * NEXTCART — useRequireAdmin
+ * HAVLOOK — useRequireAdmin
  *
  * Hydration-safe client-side route guard for the admin panel (`/admin/**`).
  *

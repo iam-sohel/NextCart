@@ -22,7 +22,7 @@ import useCartStore from "@/store/cartStore";
 import useAuthStore from "@/store/authStore";
 
 /**
- * NEXTCART — Cart page
+ * HAVLOOK — Cart page
  *
  * Composition layer for the cart UI. All cart state and business logic
  * lives in the existing Zustand store (store/cartStore.ts) and the

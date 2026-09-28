@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Auth form validators
+ * HAVLOOK — Auth form validators
  *
  * Pure functions that return either an empty string (valid) or a human-readable
  * error message. They are deliberately tiny and dependency-free:
@@ -16,7 +16,7 @@
 export type ValidationResult = string | null;
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-// Indian mobile numbers are the most common case for NextCart, but we accept
+// Indian mobile numbers are the most common case for HavLook, but we accept
 // any 8-15 digit string (with optional leading + and spaces) since the backend
 // only requires `@NotBlank`.
 const PHONE_REGEX = /^[+]?[\d\s-]{8,15}$/;

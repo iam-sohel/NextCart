@@ -38,7 +38,7 @@ import useWishlistStore from "@/store/wishlistStore";
 import useAuthStore from "@/store/authStore";
 
 /**
- * NEXTCART — Header / Navbar.
+ * HAVLOOK — Header / Navbar.
  *
  * Presentation layer only. All business logic is unchanged: cart/wishlist/auth
  * stores, search navigation, logout flow, link targets, and the mobile

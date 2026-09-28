@@ -413,7 +413,7 @@ export default function AdminSellersPage() {
           confirm
             ? `${confirm.action === "activate" ? "Activate" : "Deactivate"} ${
                 sellerDisplayName(confirm.seller)
-              } (Seller #${confirm.seller.sellerId}). This changes whether the seller can operate on NextCart.`
+              } (Seller #${confirm.seller.sellerId}). This changes whether the seller can operate on HavLook.`
             : undefined
         }
         confirmLabel={

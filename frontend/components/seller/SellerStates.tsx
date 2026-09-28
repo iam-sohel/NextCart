@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 
 /**
- * NEXTCART — Seller feedback states.
+ * HAVLOOK — Seller feedback states.
  *
  * Shared loading / error / empty treatments so every seller module presents
  * consistent, honest states (never fake content, never zero-as-error).

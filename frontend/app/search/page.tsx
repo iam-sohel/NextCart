@@ -44,7 +44,7 @@ import { formatCount } from "@/utils/formatAmount";
 import { formatPrice } from "@/utils/formatPrice";
 
 /**
- * NEXTCART — Search results page.
+ * HAVLOOK — Search results page.
  *
  * Presentation layer for the search module. All state, filtering, sorting,
  * pagination and data fetching live in the existing Zustand store

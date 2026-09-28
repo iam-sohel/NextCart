@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Auth bootstrap + terminal auth-failure interceptor
+ * HAVLOOK — Auth bootstrap + terminal auth-failure interceptor
  *
  * Mounted once on the client (`app/layout.tsx`). It wires three things into
  * the framework-agnostic HTTP layer (`lib/api.ts`):

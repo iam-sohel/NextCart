@@ -14,7 +14,7 @@ interface ProductPriceBlockProps {
 }
 
 /**
- * NEXTCART — ProductPriceBlock
+ * HAVLOOK — ProductPriceBlock
  *
  * Single visual block used on the product details page. Always renders
  * the active price; conditionally renders the strike-through original

@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Address store (Zustand)
+ * HAVLOOK — Address store (Zustand)
  *
  * Source of truth for the logged-in user's shipping addresses. The
  * backend already handles default-reassignment on create/update/delete,

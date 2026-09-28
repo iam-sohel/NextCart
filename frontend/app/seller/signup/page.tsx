@@ -117,7 +117,7 @@ function sellerAuthErrorMessage(
   fallback: string,
 ): string {
   if (result.status === 0) {
-    return "We couldn't connect to NextCart. Please check your connection and try again.";
+    return "We couldn't connect to HavLook. Please check your connection and try again.";
   }
 
   const message = result.message.trim();
@@ -521,7 +521,7 @@ export default function SellerSignupPage() {
     <AuthCard
       title={
         step === 1
-          ? "Become a NextCart seller"
+          ? "Become a HavLook seller"
           : step === 2
             ? "Verify your email"
             : step === 3
@@ -930,7 +930,7 @@ export default function SellerSignupPage() {
 
           {verifyingPhone && !widgetError ? (
             <Alert severity="info">
-              MSG91 verification succeeded. Confirming it with NextCart…
+              MSG91 verification succeeded. Confirming it with HavLook…
             </Alert>
           ) : null}
 
@@ -966,7 +966,7 @@ export default function SellerSignupPage() {
       {step === 4 && completed && submittedDetails && (
         <Stack spacing={2.5} sx={{ textAlign: "center" }}>
           <Alert severity="success">
-            Seller account created successfully. Your NextCart seller account
+            Seller account created successfully. Your HavLook seller account
             is ready.
           </Alert>
 

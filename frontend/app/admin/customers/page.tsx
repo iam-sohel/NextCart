@@ -145,7 +145,7 @@ export default function AdminCustomersPage() {
             color="text.secondary"
             sx={{ mt: 0.5 }}
           >
-            Manage registered NextCart customers and account status.
+            Manage registered HavLook customers and account status.
           </Typography>
         </Box>
 

@@ -14,7 +14,7 @@ import {
 import categories from "@/data/categories";
 
 /**
- * NEXTCART — Category strip.
+ * HAVLOOK — Category strip.
  *
  * Presentation layer only: renders the existing backend-driven category data
  * as a premium horizontal navigation strip. White surface card with circular

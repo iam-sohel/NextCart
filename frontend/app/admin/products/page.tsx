@@ -179,7 +179,7 @@ export default function AdminProductsPage() {
             color="text.secondary"
             sx={{ mt: 0.5 }}
           >
-            Manage products available in the NextCart catalog.
+            Manage products available in the HavLook catalog.
           </Typography>
         </Box>
 

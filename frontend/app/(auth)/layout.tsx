@@ -1,5 +1,5 @@
 /**
- * NEXTCART — (auth) route group layout
+ * HAVLOOK — (auth) route group layout
  *
  * `/login`, `/signup`, `/forgot-password` etc. live under `app/(auth)/`.
  * Putting them inside a `(auth)` route group lets them share a layout
@@ -22,8 +22,8 @@ import type { Metadata } from "next";
 import { Box } from "@mui/material";
 
 export const metadata: Metadata = {
-  title: "Sign in • NextCart",
-  description: "Sign in or create a NextCart account.",
+  title: "Sign in • HavLook",
+  description: "Sign in or create a HavLook account.",
 };
 
 export default function AuthLayout({

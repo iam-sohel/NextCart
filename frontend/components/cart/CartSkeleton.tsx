@@ -3,7 +3,7 @@
 import { Box, Container, Grid, Skeleton } from "@mui/material";
 
 /**
- * NEXTCART — CartSkeleton
+ * HAVLOOK — CartSkeleton
  *
  * Loading placeholder that mirrors the upgraded cart layout — item rows
  * on the left, summary card on the right — so the swap from skeleton to

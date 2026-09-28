@@ -10,7 +10,7 @@ import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminTopBar from "@/components/admin/AdminTopBar";
 
 /**
- * NEXTCART — Admin panel shell.
+ * HAVLOOK — Admin panel shell.
  *
  * Gates every `/admin/**` route behind `useRequireAdmin`, except the public
  * admin login page. This shell renders the admin sidebar, top bar, and

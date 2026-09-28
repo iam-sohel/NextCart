@@ -1,5 +1,5 @@
 /**
- * NEXTCART — User / Profile service boundary.
+ * HAVLOOK — User / Profile service boundary.
  *
  * Wraps the authenticated user endpoints exposed by the Spring Boot backend.
  *

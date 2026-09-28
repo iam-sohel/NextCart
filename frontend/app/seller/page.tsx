@@ -39,7 +39,7 @@ import {
 } from "@/utils/formatAmount";
 
 /**
- * NEXTCART — Seller dashboard.
+ * HAVLOOK — Seller dashboard.
  *
  * Consumes the single aggregate endpoint `GET /api/v1/sellers/dashboard`.
  * Every displayed total is supplied by the backend; this page only arranges
@@ -131,7 +131,7 @@ export default function SellerDashboardPage() {
     <Box>
       <PageHeader
         title="Seller Dashboard"
-        subtitle="Overview of your NextCart seller account."
+        subtitle="Overview of your HavLook seller account."
       />
       <Typography
         variant="caption"

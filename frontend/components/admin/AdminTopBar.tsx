@@ -22,7 +22,7 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import useAuthStore from "@/store/authStore";
 
 /**
- * NEXTCART — Admin panel top bar.
+ * HAVLOOK — Admin panel top bar.
  *
  * Admin-specific header. It follows the seller header pattern without
  * importing seller-branded components. It shows the current admin context,

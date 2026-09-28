@@ -14,7 +14,7 @@ import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined
 import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
 
 /**
- * NEXTCART — CartOrderSummary
+ * HAVLOOK — CartOrderSummary
  *
  * The right-hand order summary. Pure presentation: every amount comes
  * from the backend cart response (productPrice → "MRP", totalDiscount →

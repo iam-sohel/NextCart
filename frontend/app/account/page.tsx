@@ -287,7 +287,7 @@ export default function AccountPage() {
         <CardContent>
           <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Danger Zone</Typography>
           <Typography color="text.secondary" sx={{ mb: 2 }}>Are you sure you want to deactivate your account?</Typography>
-          <Typography color="text.error" sx={{ mb: 3 }}>Your account will be deactivated and you will no longer be able to use NextCart normally. This action cannot be undone.</Typography>
+          <Typography color="text.error" sx={{ mb: 3 }}>Your account will be deactivated and you will no longer be able to use HavLook normally. This action cannot be undone.</Typography>
           <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
             <Button variant="outlined" sx={{ flex: 1 }} onClick={closeDeactivateConfirm}>Cancel</Button>
             <Button variant="outlined" sx={{ flex: 1 }} onClick={handleDeactivateConfirm}>Deactivate Account</Button>

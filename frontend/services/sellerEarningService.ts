@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Seller earning service boundary.
+ * HAVLOOK — Seller earning service boundary.
  *
  * Uses the read-only seller earning endpoints:
  *   GET /api/v1/sellers/earnings

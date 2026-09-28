@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Inventory helpers.
+ * HAVLOOK — Inventory helpers.
  *
  * The backend will store inventory as:
  *   quantity      — physical units in the warehouse

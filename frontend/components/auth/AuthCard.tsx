@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Box, Card, CardContent, Container, Stack, Typography } from "@mui/material";
 
 /**
- * NEXTCART — AuthCard
+ * HAVLOOK — AuthCard
  *
  * The single source of truth for the auth-screen look-and-feel. Both
  * `/login` and `/signup` render inside this card so they look like the
@@ -67,7 +67,7 @@ export default function AuthCard({ title, subtitle, children, footer }: AuthCard
                     textDecoration: "none",
                     color: "inherit",
                   }}
-                  aria-label="NextCart home"
+                  aria-label="HavLook home"
                 >
                   <Typography
                     component="span"
@@ -78,7 +78,7 @@ export default function AuthCard({ title, subtitle, children, footer }: AuthCard
                       letterSpacing: "-0.01em",
                     }}
                   >
-                    NextCart
+                    HavLook
                   </Typography>
                 </Link>
               </Box>

@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Product normalization helpers.
+ * HAVLOOK — Product normalization helpers.
  *
  * Converts backend product payloads into the canonical frontend Product shape.
  *

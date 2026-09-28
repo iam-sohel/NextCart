@@ -22,7 +22,7 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import useAuthStore from "@/store/authStore";
 
 /**
- * NEXTCART — Seller panel top bar.
+ * HAVLOOK — Seller panel top bar.
  *
  * Seller-specific header. Deliberately separate from the customer
  * `components/layout/Navbar.tsx`. Provides the mobile navigation trigger,

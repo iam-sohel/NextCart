@@ -1,5 +1,5 @@
 /**
- * NEXTCART PALETTE
+ * HAVLOOK PALETTE
  *
  * The palette is the single source of truth for every colour used in the app.
  * Components should NEVER hardcode hex values — they should consume these tokens:
@@ -30,7 +30,7 @@ const palette = {
   mode: "light" as const,
 
   primary: {
-    main: "#F15A29",       // NextCart orange — primary CTA / focus / commerce emphasis
+    main: "#F15A29",       // HavLook orange — primary CTA / focus / commerce emphasis
     light: "#F47850",      // hover / lighter state
     dark: "#C8421B",       // pressed / active state
     contrastText: "#FFFFFF", // text drawn on top of primary fills

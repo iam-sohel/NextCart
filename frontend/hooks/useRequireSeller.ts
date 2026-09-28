@@ -1,5 +1,5 @@
 /**
- * NEXTCART — useRequireSeller
+ * HAVLOOK — useRequireSeller
  *
  * Hydration-safe client-side route guard for the seller panel (`/seller/**`).
  *

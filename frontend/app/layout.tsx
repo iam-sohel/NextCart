@@ -18,7 +18,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "NextCart",
+  title: "HavLook",
   description: "India's Next Generation Marketplace",
 };
 

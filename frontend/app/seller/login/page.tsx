@@ -147,7 +147,7 @@ export default function SellerLoginPage() {
   return (
     <AuthCard
       title="Welcome back, Seller"
-      subtitle="Sign in to your NextCart seller account"
+      subtitle="Sign in to your HavLook seller account"
       footer={
         <Typography variant="body2" color="text.secondary">
           Don&apos;t have a seller account?{" "}

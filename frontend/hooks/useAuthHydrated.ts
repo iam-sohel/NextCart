@@ -1,5 +1,5 @@
 /**
- * NEXTCART — useAuthHydrated
+ * HAVLOOK — useAuthHydrated
  *
  * True once the auth store has restored its persisted state on the client.
  *

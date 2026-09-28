@@ -22,7 +22,7 @@ interface ProductDetailsClientProps {
 }
 
 /**
- * NEXTCART — ProductDetailsClient
+ * HAVLOOK — ProductDetailsClient
  *
  * The interactive orchestrator for the product details page. Owns all
  * client-only state (selected variant, quantity) and composes the

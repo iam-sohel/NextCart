@@ -16,7 +16,7 @@ import {
 import { AdminEmptyState } from "@/components/admin/AdminStates";
 
 /**
- * NEXTCART — Generic admin table.
+ * HAVLOOK — Generic admin table.
  *
  * A reusable MUI table abstraction for future admin list pages. It renders
  * only caller-supplied columns and rows, supports responsive column hiding,

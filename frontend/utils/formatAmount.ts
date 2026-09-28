@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Seller-facing number and timestamp presentation helpers.
+ * HAVLOOK — Seller-facing number and timestamp presentation helpers.
  *
  * Amount responses do not include a display currency, so monetary values are
  * formatted without inventing one. These helpers only present backend values;

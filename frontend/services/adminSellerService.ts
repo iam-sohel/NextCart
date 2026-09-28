@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Admin seller service boundary.
+ * HAVLOOK — Admin seller service boundary.
  *
  * Uses only the existing admin seller endpoints:
  *   GET /api/v1/admin/sellers

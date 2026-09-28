@@ -8,7 +8,7 @@ interface ProductDescriptionProps {
 }
 
 /**
- * NEXTCART — ProductDescription
+ * HAVLOOK — ProductDescription
  *
  * Renders the long-form description and optional highlights list.
  *

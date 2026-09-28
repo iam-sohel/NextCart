@@ -3,7 +3,7 @@
 import { Box, Divider, Typography } from "@mui/material";
 
 /**
- * NEXTCART — "─── OR ───" divider used between primary auth and social auth.
+ * HAVLOOK — "─── OR ───" divider used between primary auth and social auth.
  * Pure presentational — keeps both pages visually consistent.
  */
 interface OrDividerProps {

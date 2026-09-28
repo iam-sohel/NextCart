@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Wishlist service boundary.
+ * HAVLOOK — Wishlist service boundary.
  *
  * Talks to Spring Boot's wishlist module. Endpoint paths and envelope
  * shapes are kept in one file so a future backend rename is a one-line

@@ -199,7 +199,7 @@ export default function AdminBrandsPage() {
             color="text.secondary"
             sx={{ mt: 0.5 }}
           >
-            Manage product brands for the NextCart catalog.
+            Manage product brands for the HavLook catalog.
           </Typography>
         </Box>
 

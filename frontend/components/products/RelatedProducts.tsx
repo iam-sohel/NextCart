@@ -19,7 +19,7 @@ interface RelatedProductsProps {
 }
 
 /**
- * NEXTCART — RelatedProducts
+ * HAVLOOK — RelatedProducts
  *
  * Lists products related to the current one (e.g. same category, "you
  * may also like") by reusing the existing <ProductCard /> component.

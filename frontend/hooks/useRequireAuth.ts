@@ -1,5 +1,5 @@
 /**
- * NEXTCART — useRequireAuth
+ * HAVLOOK — useRequireAuth
  *
  * Hydration-safe client-side route guard for pages that require a logged-in
  * user (checkout, account/addresses, and later orders).

@@ -19,7 +19,7 @@ interface QuantitySelectorProps {
 }
 
 /**
- * NEXTCART — QuantitySelector
+ * HAVLOOK — QuantitySelector
  *
  * Reusable quantity stepper used in:
  *   - Product details page (Add to Cart flow)

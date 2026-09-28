@@ -14,7 +14,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 
 /**
- * NEXTCART — Product not-found
+ * HAVLOOK — Product not-found
  *
  * Triggered by notFound() in the page when a slug does not match a
  * product. Provides a clear recovery path back to the catalogue.

@@ -31,7 +31,7 @@ import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 
 /**
- * NEXTCART — Admin panel sidebar.
+ * HAVLOOK — Admin panel sidebar.
  *
  * Admin-specific navigation shell. It follows the seller shell’s responsive
  * pattern without importing seller-branded components.

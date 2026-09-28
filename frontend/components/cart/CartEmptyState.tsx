@@ -14,7 +14,7 @@ import {
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 
 /**
- * NEXTCART — CartEmptyState
+ * HAVLOOK — CartEmptyState
  *
  * Empty-cart experience. Shows a clear message with a primary CTA back
  * to the catalogue. If a cart error was present (e.g. the backend could

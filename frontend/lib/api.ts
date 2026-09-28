@@ -85,7 +85,7 @@ function extractErrorCode(payload: unknown): string | undefined {
     return maybe.errorCode;
   }
 
-  // NextCart error bodies use `{ success, message, data: { errorCode } }`.
+  // HavLook error bodies use `{ success, message, data: { errorCode } }`.
   // Preserve that backend-supplied code without changing status or message.
   if (maybe.data && typeof maybe.data === "object") {
     const nested = (maybe.data as { errorCode?: unknown }).errorCode;

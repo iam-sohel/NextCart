@@ -7,7 +7,7 @@ import Link from "next/link";
 import { Box, Button, Card, CardContent, Typography } from "@mui/material";
 
 /**
- * NEXTCART — Ops StatCard (shared seller/admin design system).
+ * HAVLOOK — Ops StatCard (shared seller/admin design system).
  *
  * Single KPI tile: optional leading icon in a primary-tint square, a strong
  * value, and a muted label. An optional footer action links to the module

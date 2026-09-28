@@ -19,7 +19,7 @@ interface ProductReviewsProps {
 }
 
 /**
- * NEXTCART — ProductReviews
+ * HAVLOOK — ProductReviews
  *
  * A reusable review block backed by the backend-shaped Review and
  * ReviewSummary types. Renders:

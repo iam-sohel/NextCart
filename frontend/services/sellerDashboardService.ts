@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Seller dashboard service boundary.
+ * HAVLOOK — Seller dashboard service boundary.
  *
  * Consumes the real aggregate endpoint:
  *   GET /api/v1/sellers/dashboard

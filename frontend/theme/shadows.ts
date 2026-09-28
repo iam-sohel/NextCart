@@ -1,5 +1,5 @@
 /**
- * NEXTCART SHADOWS
+ * HAVLOOK SHADOWS
  *
  * MUI requires exactly 25 shadow entries (index 0–24). Index 0 is reserved
  * for "none" and is never used as an elevation. We build 9 unique shadows

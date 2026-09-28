@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { Box, Typography } from "@mui/material";
 
 /**
- * NEXTCART — Ops PageHeader (shared seller/admin design system).
+ * HAVLOOK — Ops PageHeader (shared seller/admin design system).
  *
  * Standard page heading for operations panels: title, optional subtitle,
  * and an optional right-aligned action slot (buttons, chips). Keeps every

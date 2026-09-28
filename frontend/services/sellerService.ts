@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Seller service boundary.
+ * HAVLOOK — Seller service boundary.
  *
  * Wraps the authenticated seller endpoints exposed by the Spring Boot backend.
  * The backend resolves the seller from the authenticated JWT user, so the

@@ -12,7 +12,7 @@ interface ProductBreadcrumbProps {
 }
 
 /**
- * NEXTCART — ProductBreadcrumb
+ * HAVLOOK — ProductBreadcrumb
  *
  * Breadcrumb trail for the product details page.
  *
@@ -20,7 +20,7 @@ interface ProductBreadcrumbProps {
  *   Home → Products → {Category} → {Product title}
  *
  * The category link goes to the search page filtered by category. We
- * don't link to a per-category route because NextCart does not expose
+ * don't link to a per-category route because HavLook does not expose
  * one — the search page is the canonical listing surface and the URL is
  * easier to share.
  */

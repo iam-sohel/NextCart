@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 import { fileURLToPath } from "node:url";
 
 /**
- * NEXTCART — Next.js config.
+ * HAVLOOK — Next.js config.
  *
  * Image handling note (Next.js 16):
  *   `images.domains` is deprecated as of Next 16. The supported ways to

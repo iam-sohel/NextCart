@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Public catalog service boundary.
+ * HAVLOOK — Public catalog service boundary.
  *
  * Read-only lookups used by the seller product form to populate
  * category / subcategory / brand selects. These are the existing public

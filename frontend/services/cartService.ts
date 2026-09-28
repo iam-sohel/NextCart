@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Cart service boundary.
+ * HAVLOOK — Cart service boundary.
  *
  * Backend is the authoritative source for cart contents,
  * prices, discounts and totals.

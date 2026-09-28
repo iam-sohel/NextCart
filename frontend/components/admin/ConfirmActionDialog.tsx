@@ -10,7 +10,7 @@ import {
 } from "@mui/material";
 
 /**
- * NEXTCART — Admin confirmation dialog.
+ * HAVLOOK — Admin confirmation dialog.
  *
  * A reusable confirmation dialog for future destructive or state-changing
  * admin actions. The dialog performs no API calls: the consuming page owns

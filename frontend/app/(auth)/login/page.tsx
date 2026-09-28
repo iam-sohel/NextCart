@@ -291,7 +291,7 @@ export default function LoginPage() {
   return (
       <AuthCard
           title="Welcome back"
-          subtitle="Sign in to your NextCart account"
+          subtitle="Sign in to your HavLook account"
       >
         <Stack spacing={3}>
           {notice && (

@@ -18,7 +18,7 @@ import DeleteOutlinedIcon from "@mui/icons-material/DeleteOutlined";
 import type { CartItem } from "@/store/cartStore";
 
 /**
- * NEXTCART — CartItemRow
+ * HAVLOOK — CartItemRow
  *
  * One line of the cart list. Pure presentation: every value comes from
  * the backend-mapped CartItem (unitPrice, lineTotal, quantity) and every

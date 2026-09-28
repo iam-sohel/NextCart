@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ─────────────────────────────────────────────────────────────
-   NEXTCART — GLOBAL CSS VARIABLES
+   HAVLOOK — GLOBAL CSS VARIABLES
    ─────────────────────────────────────────────────────────────
    These CSS variables mirror the MUI palette so non-MUI surfaces
    (plain HTML, SVG, third-party widgets, future Tailwind utilities)
@@ -14,28 +14,28 @@
 
 :root {
   /* Brand */
-  --nextcart-primary: #F15A29;        /* Orange — CTAs / focus / emphasis */
-  --nextcart-primary-hover: #C8421B;
-  --nextcart-primary-tint: rgba(241, 90, 41, 0.08);
+  --havlook-primary: #F15A29;        /* Orange — CTAs / focus / emphasis */
+  --havlook-primary-hover: #C8421B;
+  --havlook-primary-tint: rgba(241, 90, 41, 0.08);
 
   /* Canvas */
-  --nextcart-background: #F4EFE6;     /* Warm cream — page canvas */
-  --nextcart-surface: #FFFFFF;        /* White — cards / panels / app bar */
+  --havlook-background: #F4EFE6;     /* Warm cream — page canvas */
+  --havlook-surface: #FFFFFF;        /* White — cards / panels / app bar */
 
   /* Text */
-  --nextcart-text: #1F1B17;           /* Warm dark */
-  --nextcart-muted: #6B6259;          /* Muted warm brown */
-  --nextcart-disabled: rgba(31, 27, 23, 0.38);
+  --havlook-text: #1F1B17;           /* Warm dark */
+  --havlook-muted: #6B6259;          /* Muted warm brown */
+  --havlook-disabled: rgba(31, 27, 23, 0.38);
 
   /* Structural */
-  --nextcart-border: #E2D9CC;
-  --nextcart-radius-compact: 4px;
-  --nextcart-radius-default: 6px;
-  --nextcart-radius-soft: 8px;
+  --havlook-border: #E2D9CC;
+  --havlook-radius-compact: 4px;
+  --havlook-radius-default: 6px;
+  --havlook-radius-soft: 8px;
 
   /* Backwards-compatible aliases (legacy code may reference these) */
-  --background: var(--nextcart-background);
-  --foreground: var(--nextcart-text);
+  --background: var(--havlook-background);
+  --foreground: var(--havlook-text);
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -52,8 +52,8 @@ html, body {
 }
 
 body {
-  background-color: var(--nextcart-background);
-  color: var(--nextcart-text);
+  background-color: var(--havlook-background);
+  color: var(--havlook-text);
   font-family: var(--font-inter), "Inter", -apple-system, BlinkMacSystemFont,
     "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 0.875rem;

@@ -317,7 +317,7 @@ export default function AdminDashboardPage() {
             variant="body1"
             color="text.secondary"
           >
-            Operational overview of the NextCart marketplace.
+            Operational overview of the HavLook marketplace.
           </Typography>
         </Box>
 

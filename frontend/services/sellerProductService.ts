@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Seller product service boundary.
+ * HAVLOOK — Seller product service boundary.
  *
  * The backend currently exposes ONLY product creation for sellers:
  *   POST /api/v1/sellers/products   (multipart/form-data)

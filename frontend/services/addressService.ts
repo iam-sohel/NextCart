@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Address service boundary.
+ * HAVLOOK — Address service boundary.
  *
  * Wraps Spring Boot's address module. The backend's `AddressServiceImpl`
  * automatically:

@@ -14,7 +14,7 @@ import { listProducts, enrichProductListWithDetails } from "@/services/productSe
 import type { Product } from "@/types/product";
 
 /**
- * NEXTCART — Home page (Server Component).
+ * HAVLOOK — Home page (Server Component).
  *
  * Backend is the single source of truth for product data.
  *

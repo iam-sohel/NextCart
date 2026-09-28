@@ -7,7 +7,7 @@ import { Button, Snackbar, Alert } from "@mui/material";
 import GoogleIcon from "@mui/icons-material/Google";
 
 /**
- * NEXTCART — "Continue with Google" button
+ * HAVLOOK — "Continue with Google" button
  *
  * V1 status: UI-only by design. Real Google OAuth requires:
  *   - a Google Cloud OAuth client (or a Spring-Social equivalent),

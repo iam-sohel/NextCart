@@ -15,7 +15,7 @@ interface ProductGalleryProps {
 }
 
 /**
- * NEXTCART — Product gallery
+ * HAVLOOK — Product gallery
  *
  * A polished image viewer for the product details page.
  *

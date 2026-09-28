@@ -18,7 +18,7 @@ interface Props {
 }
 
 /**
- * NEXTCART — Home hero banner.
+ * HAVLOOK — Home hero banner.
  *
  * Receives a backend-sourced product as a prop and renders the
  * existing banner visual. The product slug drives the CTA

@@ -21,7 +21,7 @@ interface ProductStockProps {
 }
 
 /**
- * NEXTCART — ProductStock
+ * HAVLOOK — ProductStock
  *
  * A small inline indicator that tells the user whether a product/variant
  * is in stock, low on stock, or out of stock. Colour-coded via the theme
@@ -52,7 +52,7 @@ export default function ProductStock({
       {shouldPulse && (
         <GlobalStyles
           styles={{
-            "@keyframes nextcart-stock-pulse": {
+            "@keyframes havlook-stock-pulse": {
               "0%, 100%": { opacity: 1, transform: "scale(1)" },
               "50%": { opacity: 0.45, transform: "scale(0.8)" },
             },
@@ -67,7 +67,7 @@ export default function ProductStock({
           borderRadius: "50%",
           bgcolor: color,
           ...(shouldPulse && {
-            animation: "nextcart-stock-pulse 1.6s ease-in-out infinite",
+            animation: "havlook-stock-pulse 1.6s ease-in-out infinite",
           }),
         }}
       />

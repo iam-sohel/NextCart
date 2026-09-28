@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Seller auth service boundary.
+ * HAVLOOK — Seller auth service boundary.
  *
  * Seller registration and verification run through dedicated Spring Boot
  * endpoints. Registration itself never authenticates a seller and never

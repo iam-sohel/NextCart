@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Centralised currency formatting.
+ * HAVLOOK — Centralised currency formatting.
  *
  * Why this exists:
  *   - The backend will eventually return numeric prices in paise (or rupees)

@@ -48,7 +48,7 @@ interface CheckState {
 }
 
 /**
- * NEXTCART — DeliveryChecker
+ * HAVLOOK — DeliveryChecker
  *
  * Lets the user enter a pincode and learn whether this product can be
  * delivered to that pincode. Designed to be pluggable: the actual

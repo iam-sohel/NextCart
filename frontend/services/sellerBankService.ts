@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Seller bank account service boundary.
+ * HAVLOOK — Seller bank account service boundary.
  *
  * Wraps the authenticated seller bank endpoints. The backend resolves the
  * seller from the JWT and returns the account number masked.

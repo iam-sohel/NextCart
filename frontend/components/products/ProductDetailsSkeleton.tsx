@@ -3,7 +3,7 @@
 import { Box, Container, Grid, Skeleton, Stack } from "@mui/material";
 
 /**
- * NEXTCART — ProductDetailsSkeleton
+ * HAVLOOK — ProductDetailsSkeleton
  *
  * Skeleton placeholder for the product details page. Rendered by
  * app/products/[slug]/loading.tsx so navigation feels instant.

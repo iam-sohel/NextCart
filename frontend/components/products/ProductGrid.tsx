@@ -9,7 +9,7 @@ import { getProductImage } from "@/utils/productImages";
 import type { Product } from "@/types/product";
 
 /**
- * NEXTCART — ProductGrid (Server Component).
+ * HAVLOOK — ProductGrid (Server Component).
  *
  * Renders the full product catalogue. The grid deliberately goes
  * through the service layer (not a direct product import) so

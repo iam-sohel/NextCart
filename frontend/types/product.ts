@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Domain types for products.
+ * HAVLOOK — Domain types for products.
  *
  * These shapes intentionally mirror the Spring Boot DTOs the backend team
  * is building. They are NOT a 1:1 copy of the JPA entities — the entity

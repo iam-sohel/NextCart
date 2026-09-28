@@ -1,5 +1,5 @@
 /**
- * NEXTCART — Single-flight access-token refresher
+ * HAVLOOK — Single-flight access-token refresher
  *
  * This is the bridge between the framework-agnostic HTTP layer (`lib/api.ts`)
  * and the auth session (`store/authStore.ts` + `services/authService.ts`).

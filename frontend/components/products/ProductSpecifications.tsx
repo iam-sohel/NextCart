@@ -51,7 +51,7 @@ const BACKEND_PREFERRED_ORDER = [
 ];
 
 /**
- * NEXTCART — ProductSpecifications
+ * HAVLOOK — ProductSpecifications
  *
  * Renders a clean key/value table for product attributes.
  *
