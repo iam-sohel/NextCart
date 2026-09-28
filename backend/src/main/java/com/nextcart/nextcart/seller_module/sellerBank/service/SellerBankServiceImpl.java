@@ -7,9 +7,12 @@ import com.nextcart.nextcart.seller_module.sellerBank.dto.SellerBankResponse;
 import com.nextcart.nextcart.seller_module.sellerBank.entity.BankVerificationStatus;
 import com.nextcart.nextcart.seller_module.sellerBank.entity.SellerBankAccount;
 import com.nextcart.nextcart.seller_module.sellerBank.exception.SellerBankNotFoundException;
+import com.nextcart.nextcart.seller_module.sellerBank.exception.SellerBankStateException;
+import com.nextcart.nextcart.seller_module.sellerBank.exception.SellerBankValidationException;
 import com.nextcart.nextcart.seller_module.sellerBank.repository.SellerBankRepository;
 
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,7 +22,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class SellerBankServiceImpl implements SellerBankService {
 
     private final SellerRepository sellerRepository;
+
     private final SellerBankRepository sellerBankRepository;
+
+    // =========================================================
+    // ADD BANK ACCOUNT
+    // =========================================================
 
     @Override
     public SellerBankResponse addBankAccount(
@@ -27,28 +35,54 @@ public class SellerBankServiceImpl implements SellerBankService {
             SellerBankRequest request
     ) {
 
-        Seller seller = getSellerByUserId(userId);
+        if (request == null) {
+            throw new SellerBankValidationException(
+                    "Bank account request is required"
+            );
+        }
 
-        if (sellerBankRepository.existsBySellerId(seller.getId())) {
-            throw new IllegalStateException(
+        Seller seller =
+                getSellerByUserId(userId);
+
+        // -----------------------------------------------------
+        // ONLY ONE BANK ACCOUNT ALLOWED
+        // -----------------------------------------------------
+
+        if (sellerBankRepository.existsBySellerId(
+                seller.getId()
+        )) {
+
+            throw new SellerBankStateException(
                     "Bank account already exists"
             );
         }
+
+        // -----------------------------------------------------
+        // CREATE BANK ACCOUNT
+        // -----------------------------------------------------
 
         SellerBankAccount bankAccount =
                 SellerBankAccount.builder()
                         .seller(seller)
                         .accountHolderName(
-                                request.getAccountHolderName()
+                                normalize(
+                                        request.getAccountHolderName()
+                                )
                         )
                         .accountNumber(
-                                request.getAccountNumber()
+                                normalize(
+                                        request.getAccountNumber()
+                                )
                         )
                         .ifscCode(
-                                request.getIfscCode().toUpperCase()
+                                normalizeUpper(
+                                        request.getIfscCode()
+                                )
                         )
                         .bankName(
-                                request.getBankName()
+                                normalize(
+                                        request.getBankName()
+                                )
                         )
                         .verificationStatus(
                                 BankVerificationStatus.PENDING
@@ -62,23 +96,36 @@ public class SellerBankServiceImpl implements SellerBankService {
         return mapToResponse(saved);
     }
 
+    // =========================================================
+    // GET MY BANK ACCOUNT
+    // =========================================================
+
     @Override
     @Transactional(readOnly = true)
     public SellerBankResponse getMyBankAccount(
             Long userId
     ) {
 
-        Seller seller = getSellerByUserId(userId);
+        Seller seller =
+                getSellerByUserId(userId);
 
         SellerBankAccount bankAccount =
                 sellerBankRepository
-                        .findBySellerId(seller.getId())
+                        .findBySellerId(
+                                seller.getId()
+                        )
                         .orElseThrow(() ->
-                                new SellerBankNotFoundException("Bank account not found")
+                                new SellerBankNotFoundException(
+                                        "Bank account not found"
+                                )
                         );
 
         return mapToResponse(bankAccount);
     }
+
+    // =========================================================
+    // UPDATE BANK ACCOUNT
+    // =========================================================
 
     @Override
     public SellerBankResponse updateBankAccount(
@@ -86,38 +133,69 @@ public class SellerBankServiceImpl implements SellerBankService {
             SellerBankRequest request
     ) {
 
-        Seller seller = getSellerByUserId(userId);
+        if (request == null) {
+            throw new SellerBankValidationException(
+                    "Bank account update request is required"
+            );
+        }
+
+        Seller seller =
+                getSellerByUserId(userId);
 
         SellerBankAccount bankAccount =
                 sellerBankRepository
-                        .findBySellerId(seller.getId())
+                        .findBySellerId(
+                                seller.getId()
+                        )
                         .orElseThrow(() ->
-                                new SellerBankNotFoundException("Bank account not found")
+                                new SellerBankNotFoundException(
+                                        "Bank account not found"
+                                )
                         );
+
+        // -----------------------------------------------------
+        // VERIFIED ACCOUNT CANNOT BE MODIFIED
+        // -----------------------------------------------------
 
         if (bankAccount.getVerificationStatus()
                 == BankVerificationStatus.VERIFIED) {
 
-            throw new IllegalStateException(
+            throw new SellerBankStateException(
                     "Verified bank account cannot be modified"
             );
         }
 
+        // -----------------------------------------------------
+        // UPDATE BANK DETAILS
+        // -----------------------------------------------------
+
         bankAccount.setAccountHolderName(
-                request.getAccountHolderName()
+                normalize(
+                        request.getAccountHolderName()
+                )
         );
 
         bankAccount.setAccountNumber(
-                request.getAccountNumber()
+                normalize(
+                        request.getAccountNumber()
+                )
         );
 
         bankAccount.setIfscCode(
-                request.getIfscCode().toUpperCase()
+                normalizeUpper(
+                        request.getIfscCode()
+                )
         );
 
         bankAccount.setBankName(
-                request.getBankName()
+                normalize(
+                        request.getBankName()
+                )
         );
+
+        // -----------------------------------------------------
+        // NEW VERIFICATION REQUIRED
+        // -----------------------------------------------------
 
         bankAccount.setVerificationStatus(
                 BankVerificationStatus.PENDING
@@ -131,83 +209,139 @@ public class SellerBankServiceImpl implements SellerBankService {
         return mapToResponse(updated);
     }
 
+    // =========================================================
+    // DEACTIVATE BANK ACCOUNT
+    // =========================================================
+
     @Override
     public void deactivateBankAccount(
             Long userId
     ) {
 
-        Seller seller = getSellerByUserId(userId);
+        Seller seller =
+                getSellerByUserId(userId);
 
         SellerBankAccount bankAccount =
                 sellerBankRepository
-                        .findBySellerId(seller.getId())
+                        .findBySellerId(
+                                seller.getId()
+                        )
                         .orElseThrow(() ->
-                                new SellerBankNotFoundException("Bank account not found")
+                                new SellerBankNotFoundException(
+                                        "Bank account not found"
+                                )
                         );
+
+        // -----------------------------------------------------
+        // ALREADY INACTIVE
+        // -----------------------------------------------------
+
+        if (!bankAccount.isActive()) {
+
+            throw new SellerBankStateException(
+                    "Bank account is already inactive"
+            );
+        }
 
         bankAccount.setActive(false);
 
         sellerBankRepository.save(bankAccount);
     }
 
-    private Seller getSellerByUserId(Long userId) {
+    // =========================================================
+    // FIND SELLER BY USER ID
+    // =========================================================
+
+    private Seller getSellerByUserId(
+            Long userId
+    ) {
+
+        if (userId == null || userId <= 0) {
+
+            throw new SellerBankValidationException(
+                    "Valid user ID is required"
+            );
+        }
 
         return sellerRepository
                 .findByUserId(userId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException(
+                        new SellerBankValidationException(
                                 "Seller profile not found"
                         )
                 );
     }
+
+    // =========================================================
+    // ENTITY -> RESPONSE DTO
+    // =========================================================
 
     private SellerBankResponse mapToResponse(
             SellerBankAccount bankAccount
     ) {
 
         return SellerBankResponse.builder()
-                .id(bankAccount.getId())
-                .sellerId(
-                        bankAccount.getSeller().getId()
+
+                .id(
+                        bankAccount.getId()
                 )
+
+                .sellerId(
+                        bankAccount.getSeller()
+                                .getId()
+                )
+
                 .accountHolderName(
                         bankAccount.getAccountHolderName()
                 )
+
                 .maskedAccountNumber(
                         maskAccountNumber(
                                 bankAccount.getAccountNumber()
                         )
                 )
+
                 .ifscCode(
                         bankAccount.getIfscCode()
                 )
+
                 .bankName(
                         bankAccount.getBankName()
                 )
+
                 .verificationStatus(
                         bankAccount.getVerificationStatus()
                 )
+
                 .active(
                         bankAccount.isActive()
                 )
+
                 .verifiedAt(
                         bankAccount.getVerifiedAt()
                 )
+
                 .createdAt(
                         bankAccount.getCreatedAt()
                 )
+
                 .updatedAt(
                         bankAccount.getUpdatedAt()
                 )
+
                 .build();
     }
+
+    // =========================================================
+    // MASK ACCOUNT NUMBER
+    // =========================================================
 
     private String maskAccountNumber(
             String accountNumber
     ) {
 
-        if (accountNumber == null
-                || accountNumber.length() < 4) {
+        if (accountNumber == null ||
+                accountNumber.length() < 4) {
 
             return null;
         }
@@ -216,5 +350,41 @@ public class SellerBankServiceImpl implements SellerBankService {
                 + accountNumber.substring(
                         accountNumber.length() - 4
                 );
+    }
+
+    // =========================================================
+    // NORMALIZE STRING
+    // =========================================================
+
+    private String normalize(
+            String value
+    ) {
+
+        if (value == null) {
+            return null;
+        }
+
+        String trimmed =
+                value.trim();
+
+        return trimmed.isEmpty()
+                ? null
+                : trimmed;
+    }
+
+    // =========================================================
+    // NORMALIZE UPPERCASE
+    // =========================================================
+
+    private String normalizeUpper(
+            String value
+    ) {
+
+        String normalized =
+                normalize(value);
+
+        return normalized == null
+                ? null
+                : normalized.toUpperCase();
     }
 }

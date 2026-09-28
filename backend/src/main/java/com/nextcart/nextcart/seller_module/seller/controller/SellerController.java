@@ -1,6 +1,6 @@
 package com.nextcart.nextcart.seller_module.seller.controller;
 
-import com.nextcart.nextcart.common.dto.ApiResponse;
+import com.nextcart.nextcart.common.dto.CommonResponseDto;
 import com.nextcart.nextcart.seller_module.auth.SellerAuthorizationService;
 import com.nextcart.nextcart.seller_module.seller.dto.SellerResponse;
 import com.nextcart.nextcart.seller_module.seller.dto.SellerUpdateRequest;
@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,13 +24,12 @@ public class SellerController {
     private final SellerService sellerService;
     private final SellerAuthorizationService sellerAuthorizationService;
 
-
     // =========================================================
     // GET MY SELLER PROFILE
     // =========================================================
 
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<SellerResponse>> getMySellerProfile(
+    public ResponseEntity<CommonResponseDto<SellerResponse>> getMySellerProfile(
             Authentication authentication
     ) {
 
@@ -41,7 +41,7 @@ public class SellerController {
                 sellerService.getMySellerProfile(userId);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Seller profile retrieved successfully",
                         response
@@ -49,13 +49,12 @@ public class SellerController {
         );
     }
 
-
     // =========================================================
     // UPDATE MY SELLER PROFILE
     // =========================================================
 
     @PutMapping("/me")
-    public ResponseEntity<ApiResponse<SellerResponse>> updateMySellerProfile(
+    public ResponseEntity<CommonResponseDto<SellerResponse>> updateMySellerProfile(
             Authentication authentication,
             @Valid @RequestBody SellerUpdateRequest request
     ) {
@@ -71,7 +70,7 @@ public class SellerController {
                 );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Seller profile updated successfully",
                         response
@@ -79,13 +78,12 @@ public class SellerController {
         );
     }
 
-
     // =========================================================
     // DEACTIVATE SELLER ACCOUNT
     // =========================================================
 
     @DeleteMapping("/me")
-    public ResponseEntity<ApiResponse<Void>> deactivateMySellerAccount(
+    public ResponseEntity<CommonResponseDto<Void>> deactivateMySellerAccount(
             Authentication authentication
     ) {
 
@@ -96,14 +94,13 @@ public class SellerController {
         sellerService.deactivateMySellerAccount(userId);
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Seller account deactivated successfully",
                         null
                 )
         );
     }
-
 
     // =========================================================
     // AUTHENTICATED USER ID
@@ -114,11 +111,27 @@ public class SellerController {
         if (authentication == null ||
                 !authentication.isAuthenticated()) {
 
-            throw new org.springframework.security.access.AccessDeniedException(
+            throw new AccessDeniedException(
                     "Authentication required"
             );
         }
 
-        return Long.valueOf(authentication.getName());
+        try {
+            Long userId = Long.valueOf(authentication.getName());
+
+            if (userId <= 0) {
+                throw new AccessDeniedException(
+                        "Authenticated user ID is invalid"
+                );
+            }
+
+            return userId;
+
+        } catch (NumberFormatException ex) {
+
+            throw new AccessDeniedException(
+                    "Authenticated user ID is invalid"
+            );
+        }
     }
 }

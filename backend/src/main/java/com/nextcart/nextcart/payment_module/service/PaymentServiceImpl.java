@@ -14,7 +14,7 @@ import com.nextcart.nextcart.payment_module.dto.VerifyPaymentRequestDTO;
 import com.nextcart.nextcart.payment_module.entity.PaymentStatusEnum;
 import com.nextcart.nextcart.payment_module.entity.PaymentTransaction;
 import com.nextcart.nextcart.payment_module.repository.PaymentTransactionRepository;
-import com.nextcart.nextcart.seller_module.payment_module.SellerEarningService;
+import com.nextcart.nextcart.seller_module.payment_module.service.SellerEarningService;
 import com.nextcart.nextcart.user_module.entity.User;
 import com.nextcart.nextcart.user_module.repository.UserRepository;
 import com.razorpay.RazorpayClient;
