@@ -77,7 +77,7 @@ export async function listAdminCustomers(
   size = 20
 ): Promise<AdminCustomerPage> {
   const response = await apiRequest(
-    `/api/v1/admin/customers?page=${page}&size=${size}&sort=customerId,desc`,
+    `/api/v1/admin/customers?page=${page}&size=${size}&sort=id,desc`,
     {
       method: "GET",
     }
