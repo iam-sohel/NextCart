@@ -126,7 +126,7 @@ interface CartStore {
    Constants
    ───────────────────────────────────────────────────────────────────── */
 
-const META_STORAGE_KEY = "nextcart-cart-meta";
+const META_STORAGE_KEY = "HAVLOOK-cart-meta";
 
 /* ─────────────────────────────────────────────────────────────────────
    Metadata helpers
