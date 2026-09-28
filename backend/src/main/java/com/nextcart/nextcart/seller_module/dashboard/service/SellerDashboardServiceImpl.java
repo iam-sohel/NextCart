@@ -5,15 +5,15 @@ import com.nextcart.nextcart.order_module.OrderStatus;
 import com.nextcart.nextcart.product_module.product_base.entity.ProductStatus;
 import com.nextcart.nextcart.product_module.product_base.repository.ProductRepository;
 import com.nextcart.nextcart.seller_module.dashboard.dto.SellerDashboardResponse;
-import com.nextcart.nextcart.seller_module.dashboard.exceptions.SellerDashboardValidationException;
 import com.nextcart.nextcart.seller_module.inventory_module.repository.InventoryItemRepository;
+import com.nextcart.nextcart.seller_module.payment_module.exceptions.SellerDashboardValidationException;
+import com.nextcart.nextcart.seller_module.payment_module.exceptions.SellerNotFoundException;
 import com.nextcart.nextcart.seller_module.seller.entity.Seller;
 import com.nextcart.nextcart.seller_module.seller.repository.SellerRepository;
 import com.nextcart.nextcart.seller_module.sellerBank.repository.SellerBankRepository;
 import com.nextcart.nextcart.seller_module.sellerKyc.repository.SellerKycRepository;
 import com.nextcart.nextcart.seller_module.warehouse_module.entity.WarehouseStatus;
 import com.nextcart.nextcart.seller_module.warehouse_module.repository.WarehouseRepository;
-import com.nextcart.nextcart.seller_module.exceptions.SellerNotFoundException;
 
 import lombok.RequiredArgsConstructor;
 

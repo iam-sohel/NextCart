@@ -6,7 +6,10 @@ import com.nextcart.nextcart.seller_module.sellerKyc.dto.SellerKycRequest;
 import com.nextcart.nextcart.seller_module.sellerKyc.dto.SellerKycResponse;
 import com.nextcart.nextcart.seller_module.sellerKyc.entity.KycStatus;
 import com.nextcart.nextcart.seller_module.sellerKyc.entity.SellerKyc;
+import com.nextcart.nextcart.seller_module.sellerKyc.exception.SellerKycDocumentUploadException;
 import com.nextcart.nextcart.seller_module.sellerKyc.exception.SellerKycNotFoundException;
+import com.nextcart.nextcart.seller_module.sellerKyc.exception.SellerKycStateException;
+import com.nextcart.nextcart.seller_module.sellerKyc.exception.SellerKycValidationException;
 import com.nextcart.nextcart.seller_module.sellerKyc.repository.SellerKycRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -41,7 +44,6 @@ public class SellerKycServiceImpl implements SellerKycService {
      */
     private final RestTemplate restTemplate = new RestTemplate();
 
-
     // =========================================================
     // SUPABASE CONFIGURATION
     // =========================================================
@@ -55,7 +57,6 @@ public class SellerKycServiceImpl implements SellerKycService {
     @Value("${supabase.kyc-bucket:seller-kyc}")
     private String kycBucket;
 
-
     // =========================================================
     // CONSTANTS
     // =========================================================
@@ -68,7 +69,6 @@ public class SellerKycServiceImpl implements SellerKycService {
     private static final long MAX_FILE_SIZE =
             2L * 1024L * 1024L;
 
-
     // =========================================================
     // SUBMIT KYC
     // =========================================================
@@ -79,12 +79,17 @@ public class SellerKycServiceImpl implements SellerKycService {
             SellerKycRequest request
     ) {
 
+        if (request == null) {
+            throw new SellerKycValidationException(
+                    "KYC request is required"
+            );
+        }
+
         Seller seller = getSellerByUserId(userId);
 
         SellerKyc kyc = sellerKycRepository
                 .findBySellerId(seller.getId())
                 .orElse(null);
-
 
         // -----------------------------------------------------
         // VERIFIED KYC CANNOT BE MODIFIED
@@ -93,11 +98,10 @@ public class SellerKycServiceImpl implements SellerKycService {
         if (kyc != null &&
                 kyc.getStatus() == KycStatus.VERIFIED) {
 
-            throw new IllegalStateException(
+            throw new SellerKycStateException(
                     "KYC is already verified and cannot be modified"
             );
         }
-
 
         // -----------------------------------------------------
         // CREATE NEW KYC
@@ -260,7 +264,6 @@ public class SellerKycServiceImpl implements SellerKycService {
                     )
             );
 
-
             // -------------------------------------------------
             // NEW REVIEW CYCLE
             // -------------------------------------------------
@@ -280,13 +283,11 @@ public class SellerKycServiceImpl implements SellerKycService {
             );
         }
 
-
         SellerKyc savedKyc =
                 sellerKycRepository.save(kyc);
 
         return mapToResponse(savedKyc);
     }
-
 
     // =========================================================
     // GET MY KYC
@@ -315,7 +316,6 @@ public class SellerKycServiceImpl implements SellerKycService {
         return mapToResponse(kyc);
     }
 
-
     // =========================================================
     // GET KYC STATUS
     // =========================================================
@@ -343,7 +343,6 @@ public class SellerKycServiceImpl implements SellerKycService {
         return mapToResponse(kyc);
     }
 
-
     // =========================================================
     // UPDATE KYC
     // =========================================================
@@ -353,6 +352,12 @@ public class SellerKycServiceImpl implements SellerKycService {
             Long userId,
             SellerKycRequest request
     ) {
+
+        if (request == null) {
+            throw new SellerKycValidationException(
+                    "KYC update request is required"
+            );
+        }
 
         Seller seller =
                 getSellerByUserId(userId);
@@ -368,18 +373,16 @@ public class SellerKycServiceImpl implements SellerKycService {
                                 )
                         );
 
-
         // -----------------------------------------------------
         // VERIFIED KYC CANNOT BE MODIFIED
         // -----------------------------------------------------
 
         if (kyc.getStatus() == KycStatus.VERIFIED) {
 
-            throw new IllegalStateException(
+            throw new SellerKycStateException(
                     "Verified KYC cannot be modified"
             );
         }
-
 
         // -----------------------------------------------------
         // UPDATE DETAILS
@@ -453,7 +456,6 @@ public class SellerKycServiceImpl implements SellerKycService {
                 )
         );
 
-
         // -----------------------------------------------------
         // NEW REVIEW REQUIRED
         // -----------------------------------------------------
@@ -472,13 +474,11 @@ public class SellerKycServiceImpl implements SellerKycService {
                 LocalDateTime.now()
         );
 
-
         SellerKyc updatedKyc =
                 sellerKycRepository.save(kyc);
 
         return mapToResponse(updatedKyc);
     }
-
 
     // =========================================================
     // UPLOAD KYC DOCUMENTS
@@ -497,18 +497,16 @@ public class SellerKycServiceImpl implements SellerKycService {
         Seller seller =
                 getSellerByUserId(userId);
 
-
         SellerKyc kyc =
                 sellerKycRepository
                         .findBySellerId(
                                 seller.getId()
                         )
                         .orElseThrow(() ->
-                                new IllegalArgumentException(
+                                new SellerKycValidationException(
                                         "Submit KYC details before uploading documents"
                                 )
                         );
-
 
         // -----------------------------------------------------
         // VERIFIED KYC CANNOT BE MODIFIED
@@ -516,11 +514,10 @@ public class SellerKycServiceImpl implements SellerKycService {
 
         if (kyc.getStatus() == KycStatus.VERIFIED) {
 
-            throw new IllegalStateException(
+            throw new SellerKycStateException(
                     "Verified KYC documents cannot be modified"
             );
         }
-
 
         // -----------------------------------------------------
         // PAN DOCUMENT
@@ -540,7 +537,6 @@ public class SellerKycServiceImpl implements SellerKycService {
             kyc.setPanDocumentUrl(url);
         }
 
-
         // -----------------------------------------------------
         // AADHAAR DOCUMENT
         // -----------------------------------------------------
@@ -558,7 +554,6 @@ public class SellerKycServiceImpl implements SellerKycService {
 
             kyc.setAadhaarDocumentUrl(url);
         }
-
 
         // -----------------------------------------------------
         // GST DOCUMENT
@@ -578,7 +573,6 @@ public class SellerKycServiceImpl implements SellerKycService {
             kyc.setGstDocumentUrl(url);
         }
 
-
         // -----------------------------------------------------
         // REGISTRATION DOCUMENT
         // -----------------------------------------------------
@@ -596,7 +590,6 @@ public class SellerKycServiceImpl implements SellerKycService {
 
             kyc.setRegistrationDocumentUrl(url);
         }
-
 
         // -----------------------------------------------------
         // ADDRESS DOCUMENT
@@ -616,6 +609,20 @@ public class SellerKycServiceImpl implements SellerKycService {
             kyc.setAddressDocumentUrl(url);
         }
 
+        // -----------------------------------------------------
+        // CHECK WHETHER AT LEAST ONE DOCUMENT WAS PROVIDED
+        // -----------------------------------------------------
+
+        if (!hasFile(panDocument)
+                && !hasFile(aadhaarDocument)
+                && !hasFile(gstDocument)
+                && !hasFile(registrationDocument)
+                && !hasFile(addressDocument)) {
+
+            throw new SellerKycValidationException(
+                    "At least one KYC document is required"
+            );
+        }
 
         // -----------------------------------------------------
         // NEW REVIEW CYCLE
@@ -635,13 +642,11 @@ public class SellerKycServiceImpl implements SellerKycService {
                 LocalDateTime.now()
         );
 
-
         SellerKyc savedKyc =
                 sellerKycRepository.save(kyc);
 
         return mapToResponse(savedKyc);
     }
-
 
     // =========================================================
     // FIND SELLER BY USER ID
@@ -651,22 +656,21 @@ public class SellerKycServiceImpl implements SellerKycService {
             Long userId
     ) {
 
-        if (userId == null) {
+        if (userId == null || userId <= 0) {
 
-            throw new IllegalArgumentException(
-                    "User ID is required"
+            throw new SellerKycValidationException(
+                    "Valid user ID is required"
             );
         }
 
         return sellerRepository
                 .findByUserId(userId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException(
+                        new SellerKycValidationException(
                                 "Seller profile not found"
                         )
                 );
     }
-
 
     // =========================================================
     // PDF VALIDATION
@@ -679,11 +683,10 @@ public class SellerKycServiceImpl implements SellerKycService {
         if (file == null ||
                 file.isEmpty()) {
 
-            throw new IllegalArgumentException(
+            throw new SellerKycValidationException(
                     "Document cannot be empty"
             );
         }
-
 
         // -----------------------------------------------------
         // SIZE
@@ -691,11 +694,10 @@ public class SellerKycServiceImpl implements SellerKycService {
 
         if (file.getSize() > MAX_FILE_SIZE) {
 
-            throw new IllegalArgumentException(
+            throw new SellerKycValidationException(
                     "Document size must not exceed 2 MB"
             );
         }
-
 
         // -----------------------------------------------------
         // CONTENT TYPE
@@ -707,11 +709,10 @@ public class SellerKycServiceImpl implements SellerKycService {
         if (!MediaType.APPLICATION_PDF_VALUE
                 .equalsIgnoreCase(contentType)) {
 
-            throw new IllegalArgumentException(
+            throw new SellerKycValidationException(
                     "Only PDF documents are allowed"
             );
         }
-
 
         // -----------------------------------------------------
         // FILE EXTENSION
@@ -725,12 +726,11 @@ public class SellerKycServiceImpl implements SellerKycService {
                         .toLowerCase(Locale.ROOT)
                         .endsWith(".pdf")) {
 
-            throw new IllegalArgumentException(
+            throw new SellerKycValidationException(
                     "Only .pdf files are allowed"
             );
         }
     }
-
 
     // =========================================================
     // UPLOAD TO SUPABASE STORAGE
@@ -753,7 +753,6 @@ public class SellerKycServiceImpl implements SellerKycService {
                             .toString()
                             + ".pdf";
 
-
             // -------------------------------------------------
             // STORAGE OBJECT PATH
             // -------------------------------------------------
@@ -765,13 +764,11 @@ public class SellerKycServiceImpl implements SellerKycService {
                             + "/"
                             + fileName;
 
-
             /*
              * Example:
              *
              * 10/pan/550e8400-e29b-41d4-a716-446655440000.pdf
              */
-
 
             // -------------------------------------------------
             // SUPABASE STORAGE API
@@ -783,7 +780,6 @@ public class SellerKycServiceImpl implements SellerKycService {
                             + kycBucket
                             + "/"
                             + objectPath;
-
 
             // -------------------------------------------------
             // HEADERS
@@ -806,7 +802,6 @@ public class SellerKycServiceImpl implements SellerKycService {
                     MediaType.APPLICATION_PDF
             );
 
-
             // -------------------------------------------------
             // REQUEST
             // -------------------------------------------------
@@ -816,7 +811,6 @@ public class SellerKycServiceImpl implements SellerKycService {
                             file.getBytes(),
                             headers
                     );
-
 
             // -------------------------------------------------
             // UPLOAD
@@ -830,7 +824,6 @@ public class SellerKycServiceImpl implements SellerKycService {
                             String.class
                     );
 
-
             // -------------------------------------------------
             // RESPONSE VALIDATION
             // -------------------------------------------------
@@ -838,11 +831,10 @@ public class SellerKycServiceImpl implements SellerKycService {
             if (!response.getStatusCode()
                     .is2xxSuccessful()) {
 
-                throw new IllegalStateException(
+                throw new SellerKycDocumentUploadException(
                         "Failed to upload KYC document to Supabase"
                 );
             }
-
 
             // -------------------------------------------------
             // RETURN OBJECT URL
@@ -856,20 +848,23 @@ public class SellerKycServiceImpl implements SellerKycService {
 
         } catch (IOException e) {
 
-            throw new IllegalStateException(
+            throw new SellerKycDocumentUploadException(
                     "Failed to read KYC document",
                     e
             );
 
+        } catch (SellerKycDocumentUploadException e) {
+
+            throw e;
+
         } catch (Exception e) {
 
-            throw new IllegalStateException(
+            throw new SellerKycDocumentUploadException(
                     "Failed to upload KYC document to Supabase",
                     e
             );
         }
     }
-
 
     // =========================================================
     // ENTITY -> RESPONSE DTO
@@ -991,7 +986,6 @@ public class SellerKycServiceImpl implements SellerKycService {
                 .build();
     }
 
-
     // =========================================================
     // MASK AADHAAR
     // =========================================================
@@ -1010,7 +1004,6 @@ public class SellerKycServiceImpl implements SellerKycService {
                 + aadhaarNumber.substring(8);
     }
 
-
     // =========================================================
     // CHECK FILE
     // =========================================================
@@ -1022,7 +1015,6 @@ public class SellerKycServiceImpl implements SellerKycService {
         return file != null &&
                 !file.isEmpty();
     }
-
 
     // =========================================================
     // NORMALIZE STRING
@@ -1044,7 +1036,6 @@ public class SellerKycServiceImpl implements SellerKycService {
                 : trimmed;
     }
 
-
     // =========================================================
     // NORMALIZE UPPERCASE
     // =========================================================
@@ -1059,10 +1050,9 @@ public class SellerKycServiceImpl implements SellerKycService {
         return normalized == null
                 ? null
                 : normalized.toUpperCase(
-                Locale.ROOT
-        );
+                        Locale.ROOT
+                );
     }
-
 
     // =========================================================
     // DEFAULT COUNTRY

@@ -7,8 +7,12 @@ import com.nextcart.nextcart.seller_module.warehouse_module.dto.WarehouseRespons
 import com.nextcart.nextcart.seller_module.warehouse_module.dto.WarehouseUpdateRequest;
 import com.nextcart.nextcart.seller_module.warehouse_module.entity.Warehouse;
 import com.nextcart.nextcart.seller_module.warehouse_module.entity.WarehouseStatus;
+import com.nextcart.nextcart.seller_module.warehouse_module.exceptions.WarehouseNotFoundException;
+import com.nextcart.nextcart.seller_module.warehouse_module.exceptions.WarehouseValidationException;
 import com.nextcart.nextcart.seller_module.warehouse_module.repository.WarehouseRepository;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,11 +26,21 @@ public class WarehouseServiceImpl implements WarehouseService {
     private final WarehouseRepository warehouseRepository;
     private final SellerRepository sellerRepository;
 
+    // =========================================================
+    // CREATE WAREHOUSE
+    // =========================================================
+
     @Override
     public WarehouseResponse createWarehouse(
             Long userId,
             WarehouseCreateRequest request
     ) {
+
+        if (request == null) {
+            throw new WarehouseValidationException(
+                    "Warehouse request is required"
+            );
+        }
 
         Seller seller = getSeller(userId);
 
@@ -50,6 +64,10 @@ public class WarehouseServiceImpl implements WarehouseService {
         return mapToResponse(savedWarehouse);
     }
 
+    // =========================================================
+    // GET MY WAREHOUSES
+    // =========================================================
+
     @Override
     @Transactional(readOnly = true)
     public List<WarehouseResponse> getMyWarehouses(
@@ -65,6 +83,10 @@ public class WarehouseServiceImpl implements WarehouseService {
                 .toList();
     }
 
+    // =========================================================
+    // GET MY WAREHOUSE
+    // =========================================================
+
     @Override
     @Transactional(readOnly = true)
     public WarehouseResponse getMyWarehouse(
@@ -75,16 +97,17 @@ public class WarehouseServiceImpl implements WarehouseService {
         Seller seller = getSeller(userId);
 
         Warehouse warehouse =
-                warehouseRepository
-                        .findByIdAndSeller(warehouseId, seller)
-                        .orElseThrow(() ->
-                                new IllegalArgumentException(
-                                        "Warehouse not found"
-                                )
-                        );
+                getWarehouse(
+                        warehouseId,
+                        seller
+                );
 
         return mapToResponse(warehouse);
     }
+
+    // =========================================================
+    // UPDATE MY WAREHOUSE
+    // =========================================================
 
     @Override
     public WarehouseResponse updateMyWarehouse(
@@ -93,16 +116,19 @@ public class WarehouseServiceImpl implements WarehouseService {
             WarehouseUpdateRequest request
     ) {
 
+        if (request == null) {
+            throw new WarehouseValidationException(
+                    "Warehouse update request is required"
+            );
+        }
+
         Seller seller = getSeller(userId);
 
         Warehouse warehouse =
-                warehouseRepository
-                        .findByIdAndSeller(warehouseId, seller)
-                        .orElseThrow(() ->
-                                new IllegalArgumentException(
-                                        "Warehouse not found"
-                                )
-                        );
+                getWarehouse(
+                        warehouseId,
+                        seller
+                );
 
         if (request.getWarehouseName() != null) {
             warehouse.setWarehouseName(
@@ -161,6 +187,10 @@ public class WarehouseServiceImpl implements WarehouseService {
         return mapToResponse(warehouse);
     }
 
+    // =========================================================
+    // DEACTIVATE WAREHOUSE
+    // =========================================================
+
     @Override
     public void deactivateWarehouse(
             Long userId,
@@ -170,27 +200,67 @@ public class WarehouseServiceImpl implements WarehouseService {
         Seller seller = getSeller(userId);
 
         Warehouse warehouse =
-                warehouseRepository
-                        .findByIdAndSeller(warehouseId, seller)
-                        .orElseThrow(() ->
-                                new IllegalArgumentException(
-                                        "Warehouse not found"
-                                )
-                        );
+                getWarehouse(
+                        warehouseId,
+                        seller
+                );
 
-        warehouse.setStatus(WarehouseStatus.INACTIVE);
+        warehouse.setStatus(
+                WarehouseStatus.INACTIVE
+        );
     }
 
+    // =========================================================
+    // GET SELLER
+    // =========================================================
+
     private Seller getSeller(Long userId) {
+
+        if (userId == null || userId <= 0) {
+            throw new WarehouseValidationException(
+                    "Invalid user id"
+            );
+        }
 
         return sellerRepository
                 .findByUserId(userId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException(
+                        new WarehouseValidationException(
                                 "Seller profile not found"
                         )
                 );
     }
+
+    // =========================================================
+    // GET WAREHOUSE
+    // =========================================================
+
+    private Warehouse getWarehouse(
+            Long warehouseId,
+            Seller seller
+    ) {
+
+        if (warehouseId == null || warehouseId <= 0) {
+            throw new WarehouseValidationException(
+                    "Invalid warehouse id"
+            );
+        }
+
+        return warehouseRepository
+                .findByIdAndSeller(
+                        warehouseId,
+                        seller
+                )
+                .orElseThrow(() ->
+                        new WarehouseNotFoundException(
+                                "Warehouse not found"
+                        )
+                );
+    }
+
+    // =========================================================
+    // RESPONSE MAPPER
+    // =========================================================
 
     private WarehouseResponse mapToResponse(
             Warehouse warehouse
@@ -198,19 +268,45 @@ public class WarehouseServiceImpl implements WarehouseService {
 
         return WarehouseResponse.builder()
                 .id(warehouse.getId())
-                .sellerId(warehouse.getSeller().getId())
-                .warehouseName(warehouse.getWarehouseName())
-                .contactPerson(warehouse.getContactPerson())
-                .phoneNumber(warehouse.getPhoneNumber())
-                .streetAddress(warehouse.getStreetAddress())
-                .landmark(warehouse.getLandmark())
-                .city(warehouse.getCity())
-                .state(warehouse.getState())
-                .postalCode(warehouse.getPostalCode())
-                .country(warehouse.getCountry())
-                .status(warehouse.getStatus())
-                .createdAt(warehouse.getCreatedAt())
-                .updatedAt(warehouse.getUpdatedAt())
+                .sellerId(
+                        warehouse.getSeller().getId()
+                )
+                .warehouseName(
+                        warehouse.getWarehouseName()
+                )
+                .contactPerson(
+                        warehouse.getContactPerson()
+                )
+                .phoneNumber(
+                        warehouse.getPhoneNumber()
+                )
+                .streetAddress(
+                        warehouse.getStreetAddress()
+                )
+                .landmark(
+                        warehouse.getLandmark()
+                )
+                .city(
+                        warehouse.getCity()
+                )
+                .state(
+                        warehouse.getState()
+                )
+                .postalCode(
+                        warehouse.getPostalCode()
+                )
+                .country(
+                        warehouse.getCountry()
+                )
+                .status(
+                        warehouse.getStatus()
+                )
+                .createdAt(
+                        warehouse.getCreatedAt()
+                )
+                .updatedAt(
+                        warehouse.getUpdatedAt()
+                )
                 .build();
     }
 }

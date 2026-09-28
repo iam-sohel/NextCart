@@ -3,6 +3,8 @@ package com.nextcart.nextcart.seller_module.seller.service;
 import com.nextcart.nextcart.seller_module.seller.dto.SellerResponse;
 import com.nextcart.nextcart.seller_module.seller.dto.SellerUpdateRequest;
 import com.nextcart.nextcart.seller_module.seller.entity.Seller;
+import com.nextcart.nextcart.seller_module.seller.exceptions.SellerNotFoundException;
+import com.nextcart.nextcart.seller_module.seller.exceptions.SellerValidationException;
 import com.nextcart.nextcart.seller_module.seller.repository.SellerRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -17,7 +19,6 @@ public class SellerServiceImpl implements SellerService {
 
     private final SellerRepository sellerRepository;
 
-
     // =========================================================
     // GET MY SELLER PROFILE
     // =========================================================
@@ -31,7 +32,6 @@ public class SellerServiceImpl implements SellerService {
         return mapToResponse(seller);
     }
 
-
     // =========================================================
     // UPDATE MY SELLER PROFILE
     // =========================================================
@@ -43,13 +43,12 @@ public class SellerServiceImpl implements SellerService {
     ) {
 
         if (request == null) {
-            throw new IllegalArgumentException(
+            throw new SellerValidationException(
                     "Seller update request is required"
             );
         }
 
-        Seller seller =
-                getSellerByUserId(userId);
+        Seller seller = getSellerByUserId(userId);
 
         if (request.getBusinessName() != null
                 && !request.getBusinessName().isBlank()) {
@@ -65,7 +64,6 @@ public class SellerServiceImpl implements SellerService {
         return mapToResponse(savedSeller);
     }
 
-
     // =========================================================
     // DEACTIVATE SELLER
     // =========================================================
@@ -73,14 +71,12 @@ public class SellerServiceImpl implements SellerService {
     @Override
     public void deactivateMySellerAccount(Long userId) {
 
-        Seller seller =
-                getSellerByUserId(userId);
+        Seller seller = getSellerByUserId(userId);
 
         seller.setActive(false);
 
         sellerRepository.save(seller);
     }
-
 
     // =========================================================
     // GET SELLER
@@ -90,7 +86,7 @@ public class SellerServiceImpl implements SellerService {
 
         if (userId == null || userId <= 0) {
 
-            throw new IllegalArgumentException(
+            throw new SellerValidationException(
                     "Invalid user id"
             );
         }
@@ -98,12 +94,11 @@ public class SellerServiceImpl implements SellerService {
         return sellerRepository
                 .findByUserId(userId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException(
+                        new SellerNotFoundException(
                                 "Seller profile not found"
                         )
                 );
     }
-
 
     // =========================================================
     // RESPONSE MAPPER

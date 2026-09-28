@@ -1,12 +1,15 @@
 package com.nextcart.nextcart.seller_module.analytics.controller;
 
 import com.nextcart.nextcart.auth_module.security.CustomUserDetails;
-import com.nextcart.nextcart.common.dto.ApiResponse;
+import com.nextcart.nextcart.common.dto.CommonResponseDto;
 import com.nextcart.nextcart.seller_module.analytics.dto.SellerAnalyticsResponse;
 import com.nextcart.nextcart.seller_module.analytics.service.SellerAnalyticsService;
-import com.nextcart.nextcart.seller_module.seller.entity.Seller;
-import com.nextcart.nextcart.seller_module.seller.repository.SellerRepository;
+import com.nextcart.nextcart.seller_module.auth.SellerAuthorizationService;
+
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -19,43 +22,42 @@ import java.time.LocalDate;
 @RequestMapping("/api/v1/sellers/analytics")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('SELLER')")
+@SecurityRequirement(name = "bearerAuth")
 public class SellerAnalyticsController {
 
     private final SellerAnalyticsService sellerAnalyticsService;
-    private final SellerRepository sellerRepository;
+    private final SellerAuthorizationService sellerAuthorizationService;
+
+    // =========================================================
+    // GET SELLER ANALYTICS
+    // =========================================================
 
     @GetMapping
-    public ResponseEntity<ApiResponse<SellerAnalyticsResponse>> getAnalytics(
+    public ResponseEntity<CommonResponseDto<SellerAnalyticsResponse>>
+    getAnalytics(
             Authentication authentication,
+
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate from,
+
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate to
     ) {
 
-        Long userId = getUserId(authentication);
-
-        Seller seller = sellerRepository.findByUserId(userId)
-                .orElseThrow(() ->
-                        new IllegalStateException("Seller profile not found"));
-
-        if (!seller.isActive()) {
-            throw new IllegalStateException(
-                    "Seller account is inactive"
-            );
-        }
+        Long sellerId =
+                getAuthenticatedSellerId(authentication);
 
         SellerAnalyticsResponse response =
                 sellerAnalyticsService.getAnalytics(
-                        seller.getId(),
+                        sellerId,
                         from,
                         to
                 );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Seller analytics fetched successfully",
                         response
@@ -63,14 +65,43 @@ public class SellerAnalyticsController {
         );
     }
 
-    private Long getUserId(Authentication authentication) {
+    // =========================================================
+    // AUTHENTICATED SELLER
+    // =========================================================
 
-        Object principal = authentication.getPrincipal();
+    private Long getAuthenticatedSellerId(
+            Authentication authentication) {
 
-        if (principal instanceof CustomUserDetails userDetails) {
-            return userDetails.getUserId();
+        if (authentication == null ||
+                !authentication.isAuthenticated()) {
+
+            throw new IllegalStateException(
+                    "Authenticated seller is required"
+            );
         }
 
-        return Long.valueOf(authentication.getName());
+        Object principal =
+                authentication.getPrincipal();
+
+        if (!(principal instanceof CustomUserDetails userDetails)) {
+
+            throw new IllegalStateException(
+                    "Authenticated user details not found"
+            );
+        }
+
+        Long userId =
+                userDetails.getUserId();
+
+        if (userId == null || userId <= 0) {
+
+            throw new IllegalStateException(
+                    "Authenticated user ID is required"
+            );
+        }
+
+        return sellerAuthorizationService
+                .getAuthorizedSeller(userId)
+                .getId();
     }
 }

@@ -1,6 +1,6 @@
 package com.nextcart.nextcart.seller_module.sellerBank.controller;
 
-import com.nextcart.nextcart.common.dto.ApiResponse;
+import com.nextcart.nextcart.common.dto.CommonResponseDto;
 import com.nextcart.nextcart.seller_module.auth.SellerAuthorizationService;
 import com.nextcart.nextcart.seller_module.sellerBank.dto.SellerBankRequest;
 import com.nextcart.nextcart.seller_module.sellerBank.dto.SellerBankResponse;
@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -23,23 +24,25 @@ import org.springframework.web.bind.annotation.*;
 public class SellerBankController {
 
     private final SellerBankService sellerBankService;
-    private final SellerAuthorizationService sellerAuthorizationService;
 
+    private final SellerAuthorizationService sellerAuthorizationService;
 
     // =========================================================
     // ADD BANK ACCOUNT
     // =========================================================
 
     @PostMapping
-    public ResponseEntity<ApiResponse<SellerBankResponse>>
+    public ResponseEntity<CommonResponseDto<SellerBankResponse>>
     addBankAccount(
             Authentication authentication,
             @Valid @RequestBody SellerBankRequest request
     ) {
 
-        Long userId = getUserId(authentication);
+        Long userId =
+                getUserId(authentication);
 
-        sellerAuthorizationService.getAuthorizedSeller(userId);
+        sellerAuthorizationService
+                .getAuthorizedSeller(userId);
 
         SellerBankResponse response =
                 sellerBankService.addBankAccount(
@@ -47,57 +50,64 @@ public class SellerBankController {
                         request
                 );
 
-        return ResponseEntity.ok(
-                new ApiResponse<>(
-                        true,
-                        "Bank account added successfully",
-                        response
-                )
-        );
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(
+                        new CommonResponseDto<>(
+                                true,
+                                "Bank account added successfully",
+                                response
+                        )
+                );
     }
-
 
     // =========================================================
     // GET MY BANK ACCOUNT
     // =========================================================
 
     @GetMapping
-    public ResponseEntity<ApiResponse<SellerBankResponse>>
+    public ResponseEntity<CommonResponseDto<SellerBankResponse>>
     getMyBankAccount(
             Authentication authentication
     ) {
 
-        Long userId = getUserId(authentication);
+        Long userId =
+                getUserId(authentication);
 
-        sellerAuthorizationService.getAuthorizedSeller(userId);
+        sellerAuthorizationService
+                .getAuthorizedSeller(userId);
 
         SellerBankResponse response =
-                sellerBankService.getMyBankAccount(userId);
+                sellerBankService.getMyBankAccount(
+                        userId
+                );
 
-        return ResponseEntity.ok(
-                new ApiResponse<>(
-                        true,
-                        "Bank account retrieved successfully",
-                        response
-                )
-        );
+        return ResponseEntity
+                .ok(
+                        new CommonResponseDto<>(
+                                true,
+                                "Bank account retrieved successfully",
+                                response
+                        )
+                );
     }
-
 
     // =========================================================
     // UPDATE BANK ACCOUNT
     // =========================================================
 
     @PutMapping
-    public ResponseEntity<ApiResponse<SellerBankResponse>>
+    public ResponseEntity<CommonResponseDto<SellerBankResponse>>
     updateBankAccount(
             Authentication authentication,
             @Valid @RequestBody SellerBankRequest request
     ) {
 
-        Long userId = getUserId(authentication);
+        Long userId =
+                getUserId(authentication);
 
-        sellerAuthorizationService.getAuthorizedSeller(userId);
+        sellerAuthorizationService
+                .getAuthorizedSeller(userId);
 
         SellerBankResponse response =
                 sellerBankService.updateBankAccount(
@@ -105,47 +115,53 @@ public class SellerBankController {
                         request
                 );
 
-        return ResponseEntity.ok(
-                new ApiResponse<>(
-                        true,
-                        "Bank account updated successfully",
-                        response
-                )
-        );
+        return ResponseEntity
+                .ok(
+                        new CommonResponseDto<>(
+                                true,
+                                "Bank account updated successfully",
+                                response
+                        )
+                );
     }
-
 
     // =========================================================
     // DEACTIVATE BANK ACCOUNT
     // =========================================================
 
     @DeleteMapping
-    public ResponseEntity<ApiResponse<Void>>
+    public ResponseEntity<CommonResponseDto<Void>>
     deactivateBankAccount(
             Authentication authentication
     ) {
 
-        Long userId = getUserId(authentication);
+        Long userId =
+                getUserId(authentication);
 
-        sellerAuthorizationService.getAuthorizedSeller(userId);
+        sellerAuthorizationService
+                .getAuthorizedSeller(userId);
 
-        sellerBankService.deactivateBankAccount(userId);
-
-        return ResponseEntity.ok(
-                new ApiResponse<>(
-                        true,
-                        "Bank account deactivated successfully",
-                        null
-                )
+        sellerBankService.deactivateBankAccount(
+                userId
         );
-    }
 
+        return ResponseEntity
+                .ok(
+                        new CommonResponseDto<>(
+                                true,
+                                "Bank account deactivated successfully",
+                                null
+                        )
+                );
+    }
 
     // =========================================================
     // AUTHENTICATED USER ID
     // =========================================================
 
-    private Long getUserId(Authentication authentication) {
+    private Long getUserId(
+            Authentication authentication
+    ) {
 
         if (authentication == null ||
                 !authentication.isAuthenticated()) {
@@ -155,6 +171,17 @@ public class SellerBankController {
             );
         }
 
-        return Long.valueOf(authentication.getName());
+        try {
+
+            return Long.valueOf(
+                    authentication.getName()
+            );
+
+        } catch (NumberFormatException ex) {
+
+            throw new AccessDeniedException(
+                    "Invalid authenticated user"
+            );
+        }
     }
 }

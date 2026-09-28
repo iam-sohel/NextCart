@@ -1,38 +1,46 @@
-package com.nextcart.nextcart.seller_module.order_module.controller;
+package com.nextcart.nextcart.seller_module.order_module;
 
 import com.nextcart.nextcart.auth_module.security.CustomUserDetails;
-import com.nextcart.nextcart.common.dto.ApiResponse;
+import com.nextcart.nextcart.common.dto.CommonResponseDto;
 import com.nextcart.nextcart.order_module.OrderStatus;
 import com.nextcart.nextcart.order_module.dto.OrderResponseDTO;
-import com.nextcart.nextcart.seller_module.seller.entity.Seller;
-import com.nextcart.nextcart.seller_module.seller.repository.SellerRepository;
+import com.nextcart.nextcart.seller_module.auth.SellerAuthorizationService;
 import com.nextcart.nextcart.seller_module.order_module.service.SellerOrderService;
+
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+
 import org.springframework.http.ResponseEntity;
+
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/sellers/orders")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('SELLER')")
+@SecurityRequirement(name = "bearerAuth")
 public class SellerOrderController {
 
     private final SellerOrderService sellerOrderService;
-    private final SellerRepository sellerRepository;
-
+    private final SellerAuthorizationService sellerAuthorizationService;
 
     // =========================================================
     // SELLER - GET MY ORDERS
     // =========================================================
 
     @GetMapping
-    public ResponseEntity<ApiResponse<Page<OrderResponseDTO>>> getMyOrders(
+    public ResponseEntity<
+            CommonResponseDto<Page<OrderResponseDTO>>
+            > getMyOrders(
             Authentication authentication,
             @PageableDefault(
                     size = 20,
@@ -41,7 +49,8 @@ public class SellerOrderController {
             )
             Pageable pageable) {
 
-        Long sellerId = getAuthenticatedSellerId(authentication);
+        Long sellerId =
+                getAuthenticatedSellerId(authentication);
 
         Page<OrderResponseDTO> response =
                 sellerOrderService.getMyOrders(
@@ -50,7 +59,7 @@ public class SellerOrderController {
                 );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Seller orders fetched successfully",
                         response
@@ -58,17 +67,19 @@ public class SellerOrderController {
         );
     }
 
-
     // =========================================================
     // SELLER - GET ORDER BY ID
     // =========================================================
 
     @GetMapping("/{orderId}")
-    public ResponseEntity<ApiResponse<OrderResponseDTO>> getMyOrderById(
+    public ResponseEntity<
+            CommonResponseDto<OrderResponseDTO>
+            > getMyOrderById(
             Authentication authentication,
             @PathVariable Long orderId) {
 
-        Long sellerId = getAuthenticatedSellerId(authentication);
+        Long sellerId =
+                getAuthenticatedSellerId(authentication);
 
         OrderResponseDTO response =
                 sellerOrderService.getMyOrderById(
@@ -77,7 +88,7 @@ public class SellerOrderController {
                 );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Seller order fetched successfully",
                         response
@@ -85,14 +96,14 @@ public class SellerOrderController {
         );
     }
 
-
     // =========================================================
     // SELLER - GET ORDERS BY STATUS
     // =========================================================
 
     @GetMapping("/status/{status}")
-    public ResponseEntity<ApiResponse<Page<OrderResponseDTO>>>
-    getMyOrdersByStatus(
+    public ResponseEntity<
+            CommonResponseDto<Page<OrderResponseDTO>>
+            > getMyOrdersByStatus(
             Authentication authentication,
             @PathVariable OrderStatus status,
             @PageableDefault(
@@ -102,7 +113,8 @@ public class SellerOrderController {
             )
             Pageable pageable) {
 
-        Long sellerId = getAuthenticatedSellerId(authentication);
+        Long sellerId =
+                getAuthenticatedSellerId(authentication);
 
         Page<OrderResponseDTO> response =
                 sellerOrderService.getMyOrdersByStatus(
@@ -112,14 +124,13 @@ public class SellerOrderController {
                 );
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
+                new CommonResponseDto<>(
                         true,
                         "Seller orders fetched successfully",
                         response
                 )
         );
     }
-
 
     // =========================================================
     // AUTHENTICATED SELLER
@@ -146,7 +157,8 @@ public class SellerOrderController {
             );
         }
 
-        Long userId = userDetails.getUserId();
+        Long userId =
+                userDetails.getUserId();
 
         if (userId == null || userId <= 0) {
 
@@ -155,22 +167,8 @@ public class SellerOrderController {
             );
         }
 
-        Seller seller =
-                sellerRepository
-                        .findByUserId(userId)
-                        .orElseThrow(() ->
-                                new IllegalStateException(
-                                        "Seller profile not found"
-                                )
-                        );
-
-        if (!seller.isActive()) {
-
-            throw new IllegalStateException(
-                    "Seller account is inactive"
-            );
-        }
-
-        return seller.getId();
+        return sellerAuthorizationService
+                .getAuthorizedSeller(userId)
+                .getId();
     }
 }
