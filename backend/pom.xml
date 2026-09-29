@@ -19,7 +19,7 @@
          Project Information
          ========================================================= -->
     <groupId>com.nextcart</groupId>
-    <artifactId>nextcart-backend</artifactId>
+    <artifactId>havlook</artifactId>
     <version>0.0.1-SNAPSHOT</version>
 
     <name>NextCart Backend</name>
