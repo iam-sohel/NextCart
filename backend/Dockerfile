@@ -5,7 +5,7 @@ WORKDIR /app
 RUN groupadd --system nextcart && \
     useradd --system --gid nextcart --create-home nextcart
 
-COPY target/nextcart-backend-0.0.1-SNAPSHOT.jar app.jar
+COPY target/*.jar app.jar
 
 RUN chown -R nextcart:nextcart /app
 
