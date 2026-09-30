@@ -20,6 +20,7 @@ permissions:
   contents: read
   id-token: write
 
+
 env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY: nextcart/backend
@@ -253,7 +254,7 @@ jobs:
       # PUSH IMAGE TO ECR
       # ------------------------------------------------------
 
-      - name: Push Docker image to Amazon ECR
+      - name: Push Docker image to ECR
         if: >
           github.event_name == 'push' &&
           github.ref == 'refs/heads/master'
@@ -331,14 +332,15 @@ jobs:
         uses: dawidd6/action-send-mail@v18
 
         with:
-
           server_address: smtp.gmail.com
           server_port: 587
 
           username: ${{ secrets.ALERT_EMAIL_USERNAME }}
           password: ${{ secrets.ALERT_EMAIL_PASSWORD }}
 
-          secure: true
+          # Gmail port 587 uses STARTTLS
+          secure: false
+          starttls: true
 
           from: NextCart CI/CD <${{ secrets.ALERT_EMAIL_USERNAME }}>
 
