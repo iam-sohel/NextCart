@@ -4,6 +4,7 @@ import type { ComponentType } from "react";
 import { useState } from "react";
 
 import Link from "next/link";
+import BrandLogo from "@/components/layout/BrandLogo";
 import { usePathname } from "next/navigation";
 
 import {
@@ -95,27 +96,22 @@ function isActive(pathname: string | null, href: string, exact?: boolean): boole
 
 function AdminBrand() {
   return (
-    <Box sx={{ px: 2.5, py: 2.25 }}>
-      <Typography
-        sx={{
-          fontSize: "1.25rem",
-          fontWeight: 800,
-          letterSpacing: "-0.02em",
-          lineHeight: 1.1,
-          color: "secondary.main",
-        }}
-      >
-        Next
-        <Box component="span" sx={{ color: "primary.main" }}>
-          Cart
-        </Box>
-      </Typography>
+    <Box
+      sx={{
+        px: 2.5,
+        py: 2.25,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "flex-start",
+      }}
+    >
+      <BrandLogo fontSize="1.25rem" />
 
       <Typography
         variant="caption"
         sx={{
           display: "block",
-          mt: 0.25,
+          mt: 0.75,
           color: "text.secondary",
           fontWeight: 700,
           letterSpacing: "0.08em",

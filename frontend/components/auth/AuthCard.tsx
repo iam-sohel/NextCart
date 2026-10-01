@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import BrandLogo from "@/components/layout/BrandLogo";
 
 import { Box, Card, CardContent, Container, Stack, Typography } from "@mui/material";
 
@@ -60,28 +61,9 @@ export default function AuthCard({ title, subtitle, children, footer }: AuthCard
           <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
             <Stack spacing={3}>
               {/* Brand mark — links home, mirrors the navbar logo behavior */}
-              <Box sx={{ textAlign: "center" }}>
-                <Link
-                  href="/"
-                  style={{
-                    textDecoration: "none",
-                    color: "inherit",
-                  }}
-                  aria-label="HavLook home"
-                >
-                  <Typography
-                    component="span"
-                    sx={{
-                      fontSize: "1.25rem",
-                      fontWeight: 800,
-                      color: "secondary.main",
-                      letterSpacing: "-0.01em",
-                    }}
-                  >
-                    HavLook
-                  </Typography>
-                </Link>
-              </Box>
+              <Box sx={{ display: "flex", justifyContent: "center" }}>
+  <BrandLogo fontSize="1.25rem" />
+</Box>
 
               <Stack spacing={1}>
                 <Typography

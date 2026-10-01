@@ -7,7 +7,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "HavLook",
-  description: "India's Next Generation Marketplace",
+  description: "HavLook — Your marketplace for products, brands and everyday essentials.",
 };
 
 export default function RootLayout({

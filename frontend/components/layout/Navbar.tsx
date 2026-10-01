@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+import BrandLogo from "@/components/layout/BrandLogo";
+
 import {
   AppBar,
   Toolbar,
@@ -36,7 +38,6 @@ import LocationOnIcon from "@mui/icons-material/LocationOn";
 import useCartStore from "@/store/cartStore";
 import useWishlistStore from "@/store/wishlistStore";
 import useAuthStore from "@/store/authStore";
-
 /**
  * HAVLOOK — Header / Navbar.
  *
@@ -47,25 +48,6 @@ import useAuthStore from "@/store/authStore";
  * Desktop hierarchy: Logo → Search → Login/Account → Wishlist → Cart → Sign out.
  * Mobile keeps the hamburger drawer with search stacked below the top row.
  */
-
-/** Brand wordmark used in the app bar and the mobile drawer. */
-const BrandMark = ({ fontSize = "1.5rem" }: { fontSize?: string }) => (
-  <Typography
-    sx={{
-      fontSize,
-      fontWeight: 800,
-      letterSpacing: "-0.02em",
-      lineHeight: 1.1,
-      color: "secondary.main",
-      whiteSpace: "nowrap",
-    }}
-  >
-    Next
-    <Box component="span" sx={{ color: "primary.main" }}>
-      Cart
-    </Box>
-  </Typography>
-);
 
 /** Outlined icon-button treatment shared by the wishlist / cart / account icons. */
 const iconLinkSx = {
@@ -230,15 +212,17 @@ export default function Navbar() {
         }}
       >
         {/* Logo */}
-        <Link
-          href="/"
-          style={{
-            textDecoration: "none",
-            flexShrink: 0,
-          }}
-        >
-          <BrandMark />
-        </Link>
+<Link
+  href="/"
+  style={{
+    textDecoration: "none",
+    flexShrink: 0,
+    display: "flex",
+    alignItems: "center",
+  }}
+>
+  <BrandLogo />
+</Link>
 
         {/* Search — the primary interaction of the header */}
         <Box
@@ -415,7 +399,7 @@ export default function Navbar() {
               minWidth: 0,
             }}
           >
-            <BrandMark fontSize="1.25rem" />
+            <BrandLogo fontSize="1.25rem" />
           </Link>
 
           {/* Wishlist */}
@@ -523,7 +507,7 @@ export default function Navbar() {
               textDecoration: "none",
             }}
           >
-            <BrandMark fontSize="1.25rem" />
+            <BrandLogo fontSize="1.25rem" />
           </Link>
 
           <IconButton

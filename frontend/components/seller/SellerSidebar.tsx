@@ -26,6 +26,7 @@ import VerifiedUserIcon from "@mui/icons-material/VerifiedUser";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import StorefrontIcon from "@mui/icons-material/Storefront";
 import SettingsIcon from "@mui/icons-material/Settings";
+import BrandLogo from "@/components/layout/BrandLogo";
 
 /**
  * HAVLOOK — Seller panel sidebar.
@@ -88,26 +89,13 @@ function isActive(pathname: string, href: string, exact: boolean): boolean {
 function SellerBrand() {
   return (
     <Box sx={{ px: 2.5, py: 2.25 }}>
-      <Typography
-        sx={{
-          fontSize: "1.25rem",
-          fontWeight: 800,
-          letterSpacing: "-0.02em",
-          lineHeight: 1.1,
-          color: "secondary.main",
-        }}
-      >
-        Next
-        <Box component="span" sx={{ color: "primary.main" }}>
-          Cart
-        </Box>
-      </Typography>
+      <BrandLogo fontSize="1.25rem" />
 
       <Typography
         variant="caption"
         sx={{
           display: "block",
-          mt: 0.25,
+          mt: 0.75,
           color: "text.secondary",
           fontWeight: 700,
           letterSpacing: "0.08em",
