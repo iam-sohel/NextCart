@@ -30,7 +30,7 @@ public class OpenApiConfig {
                         )
                         .version("1.0.0")
                         .contact(new Contact()
-                                .name("Havlook")
+                                .name("Gesmio")
                         )
                 )
 
@@ -43,9 +43,7 @@ public class OpenApiConfig {
                                 .addSecuritySchemes(
                                         SECURITY_SCHEME_NAME,
                                         new SecurityScheme()
-                                                .type(
-                                                        SecurityScheme.Type.HTTP
-                                                )
+                                                .type(SecurityScheme.Type.HTTP)
                                                 .scheme("bearer")
                                                 .bearerFormat("JWT")
                                 )
@@ -57,9 +55,7 @@ public class OpenApiConfig {
 
                 .addSecurityItem(
                         new SecurityRequirement()
-                                .addList(
-                                        SECURITY_SCHEME_NAME
-                                )
+                                .addList(SECURITY_SCHEME_NAME)
                 );
     }
 }

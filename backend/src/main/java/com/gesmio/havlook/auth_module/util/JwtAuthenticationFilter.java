@@ -66,6 +66,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (user != null && user.isEnabled() && jwtUtil.isTokenValid(token, userId)) {
 
                     CustomUserDetails userDetails = new CustomUserDetails(user);
+                    System.out.println("========== JWT AUTH DEBUG ==========");
+                    System.out.println("User ID       : " + user.getId());
+                    System.out.println("User Email    : " + user.getEmail());
+                    System.out.println("User Role     : " +
+                            (user.getRole() != null ? user.getRole().getName() : "NULL"));
+                    System.out.println("Authorities   : " + userDetails.getAuthorities());
+                    System.out.println("Request       : " +
+                            request.getMethod() + " " + request.getRequestURI());
+                    System.out.println("====================================");
+
 
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
 
