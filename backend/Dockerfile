@@ -2,14 +2,18 @@ FROM eclipse-temurin:21-jre
 
 WORKDIR /app
 
-RUN groupadd --system nextcart && \
-    useradd --system --gid nextcart --create-home nextcart
+# Create a non-root user for Havlook
+RUN groupadd --system havlook && \
+    useradd --system --gid havlook --create-home havlook
 
+# Copy the application JAR
 COPY target/*.jar app.jar
 
-RUN chown -R nextcart:nextcart /app
+# Give ownership to the Havlook user
+RUN chown -R havlook:havlook /app
 
-USER nextcart
+# Run the application as non-root
+USER havlook
 
 EXPOSE 8080
 
