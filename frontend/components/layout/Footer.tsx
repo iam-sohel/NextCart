@@ -7,8 +7,8 @@ export default function Footer() {
     <Box
       sx={{
         mt: 6,
-        bgcolor: "#172337",
-        color: "#fff",
+        bgcolor: "secondary.dark",
+        color: "secondary.contrastText",
         py: 4,
         textAlign: "center",
       }}

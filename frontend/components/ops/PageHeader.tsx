@@ -10,24 +10,32 @@ import { Box, Typography } from "@mui/material";
  * Standard page heading for operations panels: title, optional subtitle,
  * and an optional right-aligned action slot (buttons, chips). Keeps every
  * module's heading hierarchy identical (h2 under the shell's h1).
+ *
+ * `subtitleVariant` and `rowBreakpoint` exist so admin list pages (body2
+ * subtitles, side-by-side from md) can adopt this component with zero
+ * visual change. Defaults preserve the original rendering exactly.
  */
 export default function PageHeader({
   title,
   subtitle,
   actions,
+  subtitleVariant = "body1",
+  rowBreakpoint = "sm",
 }: {
   title: string;
   subtitle?: string;
   actions?: ReactNode;
+  subtitleVariant?: "body1" | "body2";
+  rowBreakpoint?: "sm" | "md";
 }) {
   return (
     <Box
       sx={{
         display: "flex",
-        alignItems: { xs: "flex-start", sm: "center" },
+        alignItems: { xs: "flex-start", [rowBreakpoint]: "center" },
         justifyContent: "space-between",
         gap: 2,
-        flexDirection: { xs: "column", sm: "row" },
+        flexDirection: { xs: "column", [rowBreakpoint]: "row" },
         mb: 3,
       }}
     >
@@ -37,7 +45,7 @@ export default function PageHeader({
         </Typography>
         {subtitle ? (
           <Typography
-            variant="body1"
+            variant={subtitleVariant}
             color="text.secondary"
             sx={{ mt: 0.5 }}
           >

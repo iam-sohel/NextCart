@@ -8,7 +8,6 @@ import {
   Chip,
   CircularProgress,
   Paper,
-  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -23,6 +22,9 @@ import SearchIcon from "@mui/icons-material/Search";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import BlockIcon from "@mui/icons-material/Block";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+
+import AdminTableSkeletonRows from "@/components/admin/AdminTableSkeletonRows";
+import PageHeader from "@/components/ops/PageHeader";
 
 import {
   activateAdminCustomer,
@@ -121,44 +123,23 @@ export default function AdminCustomersPage() {
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
-<Box
-  sx={{
-    mb: 3,
-    display: "flex",
-    flexDirection: { xs: "column", md: "row" },
-    justifyContent: "space-between",
-    alignItems: { xs: "flex-start", md: "center" },
-    gap: 2,
-  }}
->
-        <Box sx={{ minWidth: 0 }}>
-          <Typography
-            variant="h3"
-            component="h2"
-            sx={{ fontWeight: 700 }}
+      <PageHeader
+        title="Customers"
+        subtitle="Manage registered HavLook customers and account status."
+        subtitleVariant="body2"
+        rowBreakpoint="md"
+        actions={
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={() => void loadCustomers()}
+            disabled={loading}
+            sx={{ minHeight: 44, flexShrink: 0 }}
           >
-            Customers
-          </Typography>
-
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ mt: 0.5 }}
-          >
-            Manage registered HavLook customers and account status.
-          </Typography>
-        </Box>
-
-        <Button
-          variant="outlined"
-          startIcon={<RefreshIcon />}
-          onClick={() => void loadCustomers()}
-          disabled={loading}
-          sx={{ minHeight: 44, flexShrink: 0 }}
-        >
-          Refresh
-        </Button>
-      </Box>
+            Refresh
+          </Button>
+        }
+      />
 
       {error && (
         <Alert
@@ -250,24 +231,7 @@ export default function AdminCustomersPage() {
 
             <TableBody>
               {loading ? (
-                <>
-                  {Array.from({ length: 5 }).map(
-                    (_, rowIndex) => (
-                      <TableRow key={rowIndex}>
-                        {Array.from({ length: 7 }).map(
-                          (_, cellIndex) => (
-                            <TableCell key={cellIndex}>
-                              <Skeleton
-                                variant="text"
-                                width="80%"
-                              />
-                            </TableCell>
-                          )
-                        )}
-                      </TableRow>
-                    )
-                  )}
-                </>
+                <AdminTableSkeletonRows columns={7} />
               ) : filteredCustomers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7}>

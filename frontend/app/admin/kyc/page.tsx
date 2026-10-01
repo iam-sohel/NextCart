@@ -8,7 +8,6 @@ import {
   Button,
   Card,
   CardContent,
-  Skeleton,
   Stack,
   Table,
   TableBody,
@@ -23,6 +22,8 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import AdminStatusChip, {
   type AdminStatusTone,
 } from "@/components/admin/AdminStatusChip";
+import AdminTableSkeletonRows from "@/components/admin/AdminTableSkeletonRows";
+import PageHeader from "@/components/ops/PageHeader";
 
 import {
   AdminSellerKyc,
@@ -122,92 +123,62 @@ export default function AdminKycPage() {
 
   return (
     <Box>
-      <Stack
-        direction={{
-          xs: "column",
-          sm: "row",
-        }}
-        spacing={2}
-        sx={{
-          mb: 3,
-          alignItems: {
-            xs: "flex-start",
-            sm: "center",
-          },
-          justifyContent: "space-between",
-        }}
-      >
-        <Box sx={{ minWidth: 0 }}>
-          <Typography
-            variant="h3"
-            component="h2"
-            sx={{
-              fontWeight: 700,
-            }}
+      <PageHeader
+        title="Seller KYC"
+        subtitle="Review seller KYC submissions. Approving KYC records an admin decision — it does not activate the seller account."
+        actions={
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{ flexShrink: 0, flexWrap: "wrap", rowGap: 1 }}
           >
-            Seller KYC
-          </Typography>
+            <Button
+              variant={
+                pendingOnly
+                  ? "contained"
+                  : "outlined"
+              }
+              onClick={() => {
+                setPendingOnly(true);
+                setPage(0);
+              }}
+              aria-pressed={pendingOnly}
+              sx={{ minHeight: 44 }}
+            >
+              Pending
+            </Button>
 
-          <Typography
-            color="text.secondary"
-            sx={{ mt: 0.5 }}
-          >
-            Review seller KYC submissions. Approving KYC records an
-            admin decision — it does not activate the seller account.
-          </Typography>
-        </Box>
+            <Button
+              variant={
+                !pendingOnly
+                  ? "contained"
+                  : "outlined"
+              }
+              onClick={() => {
+                setPendingOnly(false);
+                setPage(0);
+              }}
+              aria-pressed={!pendingOnly}
+              sx={{ minHeight: 44 }}
+            >
+              All KYC
+            </Button>
 
-        <Stack
-          direction="row"
-          spacing={1}
-          sx={{ flexShrink: 0, flexWrap: "wrap", rowGap: 1 }}
-        >
-          <Button
-            variant={
-              pendingOnly
-                ? "contained"
-                : "outlined"
-            }
-            onClick={() => {
-              setPendingOnly(true);
-              setPage(0);
-            }}
-            aria-pressed={pendingOnly}
-            sx={{ minHeight: 44 }}
-          >
-            Pending
-          </Button>
-
-          <Button
-            variant={
-              !pendingOnly
-                ? "contained"
-                : "outlined"
-            }
-            onClick={() => {
-              setPendingOnly(false);
-              setPage(0);
-            }}
-            aria-pressed={!pendingOnly}
-            sx={{ minHeight: 44 }}
-          >
-            All KYC
-          </Button>
-
-          <Button
-            variant="outlined"
-            startIcon={<RefreshIcon />}
-            onClick={() => {
-              void loadKyc();
-            }}
-            disabled={loading}
-            aria-label="Refresh KYC list"
-            sx={{ minHeight: 44 }}
-          >
-            Refresh
-          </Button>
-        </Stack>
-      </Stack>
+            <Button
+              variant="outlined"
+              startIcon={<RefreshIcon />}
+              onClick={() => {
+                void loadKyc();
+              }}
+              disabled={loading}
+              aria-label="Refresh KYC list"
+              sx={{ minHeight: 44 }}
+            >
+              Refresh
+            </Button>
+          </Stack>
+        }
+      />
 
       {error ? (
         <Alert
@@ -288,24 +259,7 @@ export default function AdminKycPage() {
 
               <TableBody>
                 {loading ? (
-                  <>
-                    {Array.from({ length: 5 }).map(
-                      (_, rowIndex) => (
-                        <TableRow key={rowIndex}>
-                          {Array.from({ length: 9 }).map(
-                            (_, cellIndex) => (
-                              <TableCell key={cellIndex}>
-                                <Skeleton
-                                  variant="text"
-                                  width="80%"
-                                />
-                              </TableCell>
-                            ),
-                          )}
-                        </TableRow>
-                      ),
-                    )}
-                  </>
+                  <AdminTableSkeletonRows columns={9} />
                 ) : items.length === 0 ? (
                   <TableRow>
                     <TableCell

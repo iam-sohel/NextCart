@@ -12,7 +12,6 @@ import {
   Paper,
   Select,
   SelectChangeEvent,
-  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -27,6 +26,9 @@ import {
 import RefreshIcon from "@mui/icons-material/Refresh";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import { useRouter } from "next/navigation";
+
+import AdminTableSkeletonRows from "@/components/admin/AdminTableSkeletonRows";
+import PageHeader from "@/components/ops/PageHeader";
 
 import {
   listAdminOrders,
@@ -280,51 +282,23 @@ export default function AdminOrdersPage() {
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
-      <Box
-        sx={{
-          mb: 3,
-          display: "flex",
-          flexDirection: {
-            xs: "column",
-            md: "row",
-          },
-          justifyContent: "space-between",
-          alignItems: {
-            xs: "flex-start",
-            md: "center",
-          },
-          gap: 2,
-        }}
-      >
-        <Box sx={{ minWidth: 0 }}>
-          <Typography
-            variant="h3"
-            component="h2"
-            sx={{ fontWeight: 700 }}
+      <PageHeader
+        title="Orders"
+        subtitle="Manage customer orders, payment status, and order fulfillment."
+        subtitleVariant="body2"
+        rowBreakpoint="md"
+        actions={
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={() => void loadOrders()}
+            disabled={loading}
+            sx={{ minHeight: 44, flexShrink: 0 }}
           >
-            Orders
-          </Typography>
-
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ mt: 0.5 }}
-          >
-            Manage customer orders, payment status,
-            and order fulfillment.
-          </Typography>
-        </Box>
-
-        <Button
-          variant="outlined"
-          startIcon={<RefreshIcon />}
-          onClick={() => void loadOrders()}
-          disabled={loading}
-          sx={{ minHeight: 44, flexShrink: 0 }}
-        >
-          Refresh
-        </Button>
-      </Box>
+            Refresh
+          </Button>
+        }
+      />
 
       {error && (
         <Alert
@@ -481,24 +455,7 @@ export default function AdminOrdersPage() {
 
             <TableBody>
               {loading ? (
-                <>
-                  {Array.from({ length: 5 }).map(
-                    (_, rowIndex) => (
-                      <TableRow key={rowIndex}>
-                        {Array.from({ length: 8 }).map(
-                          (_, cellIndex) => (
-                            <TableCell key={cellIndex}>
-                              <Skeleton
-                                variant="text"
-                                width="80%"
-                              />
-                            </TableCell>
-                          )
-                        )}
-                      </TableRow>
-                    )
-                  )}
-                </>
+                <AdminTableSkeletonRows columns={8} />
               ) : filteredOrders.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8}>

@@ -14,7 +14,6 @@ import {
   MenuItem,
   Paper,
   Select,
-  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -32,6 +31,9 @@ import EditIcon from "@mui/icons-material/Edit";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import BlockIcon from "@mui/icons-material/Block";
 import RestoreIcon from "@mui/icons-material/Restore";
+
+import PageHeader from "@/components/ops/PageHeader";
+import AdminTableSkeletonRows from "@/components/admin/AdminTableSkeletonRows";
 
 import AdminStatusChip from "@/components/admin/AdminStatusChip";
 
@@ -411,69 +413,41 @@ export default function AdminSubCategoriesPage() {
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
-      <Box
-        sx={{
-          mb: 3,
-          display: "flex",
-          flexDirection: {
-            xs: "column",
-            md: "row",
-          },
-          justifyContent: "space-between",
-          alignItems: {
-            xs: "flex-start",
-            md: "center",
-          },
-          gap: 2,
-        }}
-      >
-        <Box sx={{ minWidth: 0 }}>
-          <Typography
-            variant="h3"
-            component="h2"
-            sx={{ fontWeight: 700 }}
+      <PageHeader
+        title="Subcategories"
+        subtitle="Manage product subcategories and their parent categories."
+        subtitleVariant="body2"
+        rowBreakpoint="md"
+        actions={
+          <Box
+            sx={{
+              display: "flex",
+              gap: 1,
+              flexWrap: "wrap",
+            }}
           >
-            Subcategories
-          </Typography>
+            <Button
+              variant="outlined"
+              startIcon={<RefreshIcon />}
+              onClick={() => void loadData()}
+              disabled={loading}
+              aria-label="Refresh subcategory list"
+              sx={{ minHeight: 44 }}
+            >
+              Refresh
+            </Button>
 
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ mt: 0.5 }}
-          >
-            Manage product subcategories and their
-            parent categories.
-          </Typography>
-        </Box>
-
-        <Box
-          sx={{
-            display: "flex",
-            gap: 1,
-            flexWrap: "wrap",
-          }}
-        >
-          <Button
-            variant="outlined"
-            startIcon={<RefreshIcon />}
-            onClick={() => void loadData()}
-            disabled={loading}
-            aria-label="Refresh subcategory list"
-            sx={{ minHeight: 44 }}
-          >
-            Refresh
-          </Button>
-
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={openCreateDialog}
-            sx={{ minHeight: 44 }}
-          >
-            Add Subcategory
-          </Button>
-        </Box>
-      </Box>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={openCreateDialog}
+              sx={{ minHeight: 44 }}
+            >
+              Add Subcategory
+            </Button>
+          </Box>
+        }
+      />
 
       {error && (
         <Alert
@@ -548,24 +522,7 @@ export default function AdminSubCategoriesPage() {
 
             <TableBody>
               {loading ? (
-                <>
-                  {Array.from({ length: 5 }).map(
-                    (_, rowIndex) => (
-                      <TableRow key={rowIndex}>
-                        {Array.from({ length: 5 }).map(
-                          (_, cellIndex) => (
-                            <TableCell key={cellIndex}>
-                              <Skeleton
-                                variant="text"
-                                width="80%"
-                              />
-                            </TableCell>
-                          )
-                        )}
-                      </TableRow>
-                    )
-                  )}
-                </>
+                <AdminTableSkeletonRows columns={5} />
               ) : filteredSubCategories.length ===
                 0 ? (
                 <TableRow>

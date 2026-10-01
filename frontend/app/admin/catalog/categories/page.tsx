@@ -12,7 +12,6 @@ import {
   DialogTitle,
   IconButton,
   Paper,
-  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -31,7 +30,9 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import BlockIcon from "@mui/icons-material/Block";
 import RestoreIcon from "@mui/icons-material/Restore";
 
+import PageHeader from "@/components/ops/PageHeader";
 import AdminStatusChip from "@/components/admin/AdminStatusChip";
+import AdminTableSkeletonRows from "@/components/admin/AdminTableSkeletonRows";
 
 import {
   createAdminCategory,
@@ -188,63 +189,41 @@ export default function AdminCategoriesPage() {
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
-      <Box
-        sx={{
-          mb: 3,
-          display: "flex",
-          flexDirection: { xs: "column", md: "row" },
-          justifyContent: "space-between",
-          alignItems: { xs: "flex-start", md: "center" },
-          gap: 2,
-        }}
-      >
-        <Box sx={{ minWidth: 0 }}>
-          <Typography
-            variant="h3"
-            component="h2"
-            sx={{ fontWeight: 700 }}
+      <PageHeader
+        title="Categories"
+        subtitle="Manage product categories for the HavLook catalog."
+        subtitleVariant="body2"
+        rowBreakpoint="md"
+        actions={
+          <Box
+            sx={{
+              display: "flex",
+              gap: 1,
+              flexWrap: "wrap",
+            }}
           >
-            Categories
-          </Typography>
+            <Button
+              variant="outlined"
+              startIcon={<RefreshIcon />}
+              onClick={() => void loadCategories()}
+              disabled={loading}
+              aria-label="Refresh category list"
+              sx={{ minHeight: 44 }}
+            >
+              Refresh
+            </Button>
 
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ mt: 0.5 }}
-          >
-            Manage product categories for the HavLook
-            catalog.
-          </Typography>
-        </Box>
-
-        <Box
-          sx={{
-            display: "flex",
-            gap: 1,
-            flexWrap: "wrap",
-          }}
-        >
-          <Button
-            variant="outlined"
-            startIcon={<RefreshIcon />}
-            onClick={() => void loadCategories()}
-            disabled={loading}
-            aria-label="Refresh category list"
-            sx={{ minHeight: 44 }}
-          >
-            Refresh
-          </Button>
-
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={openCreateDialog}
-            sx={{ minHeight: 44 }}
-          >
-            Add Category
-          </Button>
-        </Box>
-      </Box>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={openCreateDialog}
+              sx={{ minHeight: 44 }}
+            >
+              Add Category
+            </Button>
+          </Box>
+        }
+      />
 
       {error && (
         <Alert
@@ -316,24 +295,7 @@ export default function AdminCategoriesPage() {
 
             <TableBody>
               {loading ? (
-                <>
-                  {Array.from({ length: 5 }).map(
-                    (_, rowIndex) => (
-                      <TableRow key={rowIndex}>
-                        {Array.from({ length: 5 }).map(
-                          (_, cellIndex) => (
-                            <TableCell key={cellIndex}>
-                              <Skeleton
-                                variant="text"
-                                width="80%"
-                              />
-                            </TableCell>
-                          )
-                        )}
-                      </TableRow>
-                    )
-                  )}
-                </>
+                <AdminTableSkeletonRows columns={5} />
               ) : filteredCategories.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5}>

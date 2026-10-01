@@ -9,7 +9,6 @@ import {
   Button,
   IconButton,
   Paper,
-  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -24,6 +23,9 @@ import {
 import ClearIcon from "@mui/icons-material/Clear";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import SearchIcon from "@mui/icons-material/Search";
+
+import AdminTableSkeletonRows from "@/components/admin/AdminTableSkeletonRows";
+import PageHeader from "@/components/ops/PageHeader";
 
 import AdminStatusChip, {
   type AdminStatusTone,
@@ -155,45 +157,24 @@ export default function AdminProductsPage() {
 
   return (
     <Box>
-      <Box
-        sx={{
-          mb: 3,
-          display: "flex",
-          flexDirection: { xs: "column", md: "row" },
-          justifyContent: "space-between",
-          alignItems: { xs: "flex-start", md: "center" },
-          gap: 2,
-        }}
-      >
-        <Box sx={{ minWidth: 0 }}>
-          <Typography
-            variant="h3"
-            component="h2"
-            sx={{ fontWeight: 700 }}
+      <PageHeader
+        title="Products"
+        subtitle="Manage products available in the HavLook catalog."
+        subtitleVariant="body2"
+        rowBreakpoint="md"
+        actions={
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={() => void loadProducts()}
+            disabled={loading}
+            aria-label="Refresh product list"
+            sx={{ minHeight: 44, flexShrink: 0 }}
           >
-            Products
-          </Typography>
-
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ mt: 0.5 }}
-          >
-            Manage products available in the HavLook catalog.
-          </Typography>
-        </Box>
-
-        <Button
-          variant="outlined"
-          startIcon={<RefreshIcon />}
-          onClick={() => void loadProducts()}
-          disabled={loading}
-          aria-label="Refresh product list"
-          sx={{ minHeight: 44, flexShrink: 0 }}
-        >
-          Refresh
-        </Button>
-      </Box>
+            Refresh
+          </Button>
+        }
+      />
 
       {error && (
         <Alert
@@ -289,17 +270,7 @@ export default function AdminProductsPage() {
 
             <TableBody>
               {loading ? (
-                <>
-                  {Array.from({ length: 5 }).map((_, rowIndex) => (
-                    <TableRow key={rowIndex}>
-                      {Array.from({ length: 8 }).map((_, cellIndex) => (
-                        <TableCell key={cellIndex}>
-                          <Skeleton variant="text" width="80%" />
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </>
+                <AdminTableSkeletonRows columns={8} />
               ) : filteredProducts.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8}>

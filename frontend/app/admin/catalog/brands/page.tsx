@@ -12,7 +12,6 @@ import {
   DialogTitle,
   IconButton,
   Paper,
-  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -30,6 +29,9 @@ import EditIcon from "@mui/icons-material/Edit";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import BlockIcon from "@mui/icons-material/Block";
 import RestoreIcon from "@mui/icons-material/Restore";
+
+import PageHeader from "@/components/ops/PageHeader";
+import AdminTableSkeletonRows from "@/components/admin/AdminTableSkeletonRows";
 
 import AdminStatusChip from "@/components/admin/AdminStatusChip";
 
@@ -175,62 +177,41 @@ export default function AdminBrandsPage() {
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
-      <Box
-        sx={{
-          mb: 3,
-          display: "flex",
-          flexDirection: { xs: "column", md: "row" },
-          justifyContent: "space-between",
-          alignItems: { xs: "flex-start", md: "center" },
-          gap: 2,
-        }}
-      >
-        <Box sx={{ minWidth: 0 }}>
-          <Typography
-            variant="h3"
-            component="h2"
-            sx={{ fontWeight: 700 }}
+      <PageHeader
+        title="Brands"
+        subtitle="Manage product brands for the HavLook catalog."
+        subtitleVariant="body2"
+        rowBreakpoint="md"
+        actions={
+          <Box
+            sx={{
+              display: "flex",
+              gap: 1,
+              flexWrap: "wrap",
+            }}
           >
-            Brands
-          </Typography>
+            <Button
+              variant="outlined"
+              startIcon={<RefreshIcon />}
+              onClick={() => void loadBrands()}
+              disabled={loading}
+              aria-label="Refresh brand list"
+              sx={{ minHeight: 44 }}
+            >
+              Refresh
+            </Button>
 
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ mt: 0.5 }}
-          >
-            Manage product brands for the HavLook catalog.
-          </Typography>
-        </Box>
-
-        <Box
-          sx={{
-            display: "flex",
-            gap: 1,
-            flexWrap: "wrap",
-          }}
-        >
-          <Button
-            variant="outlined"
-            startIcon={<RefreshIcon />}
-            onClick={() => void loadBrands()}
-            disabled={loading}
-            aria-label="Refresh brand list"
-            sx={{ minHeight: 44 }}
-          >
-            Refresh
-          </Button>
-
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={openCreateDialog}
-            sx={{ minHeight: 44 }}
-          >
-            Add Brand
-          </Button>
-        </Box>
-      </Box>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={openCreateDialog}
+              sx={{ minHeight: 44 }}
+            >
+              Add Brand
+            </Button>
+          </Box>
+        }
+      />
 
       {error && (
         <Alert
@@ -295,24 +276,7 @@ export default function AdminBrandsPage() {
 
             <TableBody>
               {loading ? (
-                <>
-                  {Array.from({ length: 5 }).map(
-                    (_, rowIndex) => (
-                      <TableRow key={rowIndex}>
-                        {Array.from({ length: 4 }).map(
-                          (_, cellIndex) => (
-                            <TableCell key={cellIndex}>
-                              <Skeleton
-                                variant="text"
-                                width="80%"
-                              />
-                            </TableCell>
-                          )
-                        )}
-                      </TableRow>
-                    )
-                  )}
-                </>
+                <AdminTableSkeletonRows columns={4} />
               ) : filteredBrands.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4}>

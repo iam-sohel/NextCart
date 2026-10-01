@@ -28,6 +28,8 @@ import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 
 import { useRouter } from "next/navigation";
 
+import PageHeader from "@/components/ops/PageHeader";
+
 import {
   getAdminDashboardRecentOrders,
   getAdminDashboardSummary,
@@ -39,6 +41,7 @@ import type { AdminOrder } from "@/services/adminOrderService";
 import {
   AdminErrorState,
 } from "@/components/admin/AdminStates";
+import AdminTableSkeletonRows from "@/components/admin/AdminTableSkeletonRows";
 
 interface MetricCardProps {
   title: string;
@@ -202,22 +205,6 @@ function getOrderStatusColor(status: string) {
   return "text.primary";
 }
 
-function OrderTableSkeletonRows() {
-  return (
-    <>
-      {Array.from({ length: 5 }).map((_, rowIndex) => (
-        <TableRow key={rowIndex}>
-          {Array.from({ length: 6 }).map((_, cellIndex) => (
-            <TableCell key={cellIndex}>
-              <Skeleton variant="text" width="80%" />
-            </TableCell>
-          ))}
-        </TableRow>
-      ))}
-    </>
-  );
-}
-
 export default function AdminDashboardPage() {
   const router = useRouter();
 
@@ -285,52 +272,22 @@ export default function AdminDashboardPage() {
   return (
     <Box>
       {/* Header */}
-      <Box
-        sx={{
-          mb: 3,
-          display: "flex",
-          flexDirection: {
-            xs: "column",
-            md: "row",
-          },
-          justifyContent: "space-between",
-          alignItems: {
-            xs: "flex-start",
-            md: "center",
-          },
-          gap: 2,
-        }}
-      >
-        <Box sx={{ minWidth: 0 }}>
-          <Typography
-            variant="h3"
-            component="h2"
-            sx={{
-              fontWeight: 700,
-              mb: 0.5,
-            }}
+      <PageHeader
+        title="Admin Console"
+        subtitle="Operational overview of the HavLook marketplace."
+        rowBreakpoint="md"
+        actions={
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={() => void loadDashboard()}
+            disabled={loading}
+            sx={{ minHeight: 44, flexShrink: 0 }}
           >
-            Admin Console
-          </Typography>
-
-          <Typography
-            variant="body1"
-            color="text.secondary"
-          >
-            Operational overview of the HavLook marketplace.
-          </Typography>
-        </Box>
-
-        <Button
-          variant="outlined"
-          startIcon={<RefreshIcon />}
-          onClick={() => void loadDashboard()}
-          disabled={loading}
-          sx={{ minHeight: 44, flexShrink: 0 }}
-        >
-          Refresh
-        </Button>
-      </Box>
+            Refresh
+          </Button>
+        }
+      />
 
       {/* Error — a failed request is never shown as zero data */}
       {error && (
@@ -513,7 +470,7 @@ export default function AdminDashboardPage() {
 
             <TableBody>
               {loading ? (
-                <OrderTableSkeletonRows />
+                <AdminTableSkeletonRows columns={6} />
               ) : recentOrders.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6}>

@@ -22,6 +22,7 @@ import { AdminErrorState } from "@/components/admin/AdminStates";
 import ConfirmActionDialog from "@/components/admin/ConfirmActionDialog";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import useAuthStore from "@/store/authStore";
+import PageHeader from "@/components/ops/PageHeader";
 import {
   activateAdminSeller,
   deactivateAdminSeller,
@@ -247,38 +248,23 @@ export default function AdminSellersPage() {
 
   return (
     <Box>
-      <Box
-        sx={{
-          mb: 3,
-          display: "flex",
-          flexDirection: { xs: "column", md: "row" },
-          justifyContent: "space-between",
-          alignItems: { xs: "flex-start", md: "center" },
-          gap: 2,
-        }}
-      >
-        <Box sx={{ minWidth: 0 }}>
-          <Typography variant="h3" component="h2" sx={{ fontWeight: 700, mb: 0.5 }}>
-            Sellers
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Manage seller accounts and activation state. Activating a seller
-            enables their account — it does not mark them verified. Seller
-            verification and KYC are reviewed separately.
-          </Typography>
-        </Box>
-
-        <Button
-          variant="outlined"
-          startIcon={<RefreshIcon />}
-          onClick={() => void load()}
-          disabled={loading}
-          aria-label="Refresh seller list"
-          sx={{ minHeight: 44, flexShrink: 0 }}
-        >
-          Refresh
-        </Button>
-      </Box>
+      <PageHeader
+        title="Sellers"
+        subtitle="Manage seller accounts and activation state. Activating a seller enables their account — it does not mark them verified. Seller verification and KYC are reviewed separately."
+        rowBreakpoint="md"
+        actions={
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={() => void load()}
+            disabled={loading}
+            aria-label="Refresh seller list"
+            sx={{ minHeight: 44, flexShrink: 0 }}
+          >
+            Refresh
+          </Button>
+        }
+      />
 
       {mutationError ? (
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setMutationError(null)}>
