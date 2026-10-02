@@ -36,49 +36,53 @@ public class SecurityConfig {
 
         http
 
-                // -------------------------------------------------
+                // =========================================================
                 // CORS
-                // -------------------------------------------------
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                // =========================================================
+                .cors(cors ->
+                        cors.configurationSource(corsConfigurationSource())
+                )
 
-                // -------------------------------------------------
+                // =========================================================
                 // CSRF
-                // -------------------------------------------------
+                // =========================================================
                 .csrf(csrf -> csrf.disable())
 
-                // -------------------------------------------------
+                // =========================================================
                 // SESSION MANAGEMENT
-                // -------------------------------------------------
+                // =========================================================
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(
                                 SessionCreationPolicy.STATELESS
                         )
                 )
 
-                // -------------------------------------------------
+                // =========================================================
                 // AUTHORIZATION
-                // -------------------------------------------------
+                // =========================================================
                 .authorizeHttpRequests(auth -> auth
 
                         // =================================================
                         // CORS PREFLIGHT
                         // =================================================
-
-                        .requestMatchers(HttpMethod.OPTIONS, "/**")
+                        .requestMatchers(
+                                HttpMethod.OPTIONS,
+                                "/**"
+                        )
                         .permitAll()
 
                         // =================================================
-                        // SWAGGER / OPEN API
+                        // SWAGGER / OPENAPI
                         // =================================================
-
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**",
-                                "/api/health/**", 
                                 "/swagger-resources/**",
-                                "/webjars/**"
-                        ).permitAll()
+                                "/webjars/**",
+                                "/api/health/**"
+                        )
+                        .permitAll()
 
                         // =================================================
                         // PUBLIC AUTHENTICATION APIs
@@ -86,43 +90,35 @@ public class SecurityConfig {
 
                         .requestMatchers(
                                 HttpMethod.POST,
-                                "/api/v1/auth/login"
-                        ).permitAll()
-
-
-
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/api/v1/auth/customer/login"
-                        ).permitAll()
-
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/api/v1/auth/admin/login"
-                        ).permitAll()
-
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/api/v1/auth/register"
-                        ).permitAll()
-
-                        .requestMatchers(
-                                HttpMethod.POST,
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/customer/login",
+                                "/api/v1/auth/admin/login",
+                                "/api/v1/auth/register",
+                                "/api/v1/auth/register/complete",
                                 "/api/v1/auth/register/seller"
-                        ).permitAll()
+                        )
+                        .permitAll()
 
                         // =================================================
-                        // SELLER SIGNUP OTP APIs
+                        // PHONE OTP WIDGET
                         // =================================================
-                        // New seller has no JWT during signup.
-                        // ONLY these two endpoints are public.
+
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/auth/phone/verify-widget"
+                        )
+                        .permitAll()
+
+                        // =================================================
+                        // SELLER SIGNUP OTP
                         // =================================================
 
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/v1/auth/verify-seller-email-otp",
                                 "/api/v1/auth/verify-seller-phone-otp"
-                        ).permitAll()
+                        )
+                        .permitAll()
 
                         // =================================================
                         // REFRESH TOKEN
@@ -131,7 +127,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/v1/auth/refresh"
-                        ).permitAll()
+                        )
+                        .permitAll()
 
                         // =================================================
                         // PASSWORD RESET
@@ -141,7 +138,8 @@ public class SecurityConfig {
                                 HttpMethod.POST,
                                 "/api/v1/auth/forgot-password",
                                 "/api/v1/auth/reset-password"
-                        ).permitAll()
+                        )
+                        .permitAll()
 
                         // =================================================
                         // PUBLIC PRODUCT / CATALOG APIs
@@ -153,7 +151,8 @@ public class SecurityConfig {
                                 "/api/v1/categories/**",
                                 "/api/v1/subcategories/**",
                                 "/api/v1/brands/**"
-                        ).permitAll()
+                        )
+                        .permitAll()
 
                         // =================================================
                         // ADMIN APIs
@@ -161,7 +160,8 @@ public class SecurityConfig {
 
                         .requestMatchers(
                                 "/api/v1/admin/**"
-                        ).hasRole("ADMIN")
+                        )
+                        .hasRole("ADMIN")
 
                         // =================================================
                         // EVERYTHING ELSE
@@ -171,10 +171,9 @@ public class SecurityConfig {
                         .authenticated()
                 )
 
-                // -------------------------------------------------
-                // JWT FILTER
-                // -------------------------------------------------
-
+                // =========================================================
+                // JWT AUTHENTICATION FILTER
+                // =========================================================
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
@@ -190,7 +189,8 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
-        CorsConfiguration configuration = new CorsConfiguration();
+        CorsConfiguration configuration =
+                new CorsConfiguration();
 
         configuration.setAllowedOrigins(List.of(
                 "http://localhost:3000",
@@ -237,6 +237,7 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
+
         return new BCryptPasswordEncoder();
     }
 
@@ -246,6 +247,7 @@ public class SecurityConfig {
 
     @Bean
     public RestTemplate restTemplate() {
+
         return new RestTemplate();
     }
 
@@ -255,6 +257,7 @@ public class SecurityConfig {
 
     @Bean
     public ObjectMapper objectMapper() {
+
         return new ObjectMapper();
     }
 }
