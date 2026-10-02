@@ -22,6 +22,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -51,8 +52,26 @@ public class SellerKycServiceImpl implements SellerKycService {
     @Value("${supabase.url}")
     private String supabaseUrl;
 
+    /*
+     * New Supabase secret key.
+     *
+     * Example:
+     * sb_secret_...
+     *
+     * This key is sent using the "apikey" header.
+     */
     @Value("${supabase.service-role-key}")
-    private String supabaseServiceRoleKey;
+    private String supabaseSecretKey;
+
+    /*
+     * Legacy Supabase service_role JWT.
+     *
+     * This key is sent using:
+     *
+     * Authorization: Bearer <JWT>
+     */
+    @Value("${supabase.storage-authorization-key}")
+    private String supabaseStorageAuthorizationKey;
 
     @Value("${supabase.kyc-bucket:seller-kyc}")
     private String kycBucket;
@@ -80,16 +99,21 @@ public class SellerKycServiceImpl implements SellerKycService {
     ) {
 
         if (request == null) {
+
             throw new SellerKycValidationException(
                     "KYC request is required"
             );
         }
 
-        Seller seller = getSellerByUserId(userId);
+        Seller seller =
+                getSellerByUserId(userId);
 
-        SellerKyc kyc = sellerKycRepository
-                .findBySellerId(seller.getId())
-                .orElse(null);
+        SellerKyc kyc =
+                sellerKycRepository
+                        .findBySellerId(
+                                seller.getId()
+                        )
+                        .orElse(null);
 
         // -----------------------------------------------------
         // VERIFIED KYC CANNOT BE MODIFIED
@@ -110,6 +134,7 @@ public class SellerKycServiceImpl implements SellerKycService {
         if (kyc == null) {
 
             kyc = SellerKyc.builder()
+
                     .seller(seller)
 
                     .businessType(
@@ -354,6 +379,7 @@ public class SellerKycServiceImpl implements SellerKycService {
     ) {
 
         if (request == null) {
+
             throw new SellerKycValidationException(
                     "KYC update request is required"
             );
@@ -520,6 +546,21 @@ public class SellerKycServiceImpl implements SellerKycService {
         }
 
         // -----------------------------------------------------
+        // CHECK AT LEAST ONE DOCUMENT
+        // -----------------------------------------------------
+
+        if (!hasFile(panDocument)
+                && !hasFile(aadhaarDocument)
+                && !hasFile(gstDocument)
+                && !hasFile(registrationDocument)
+                && !hasFile(addressDocument)) {
+
+            throw new SellerKycValidationException(
+                    "At least one KYC document is required"
+            );
+        }
+
+        // -----------------------------------------------------
         // PAN DOCUMENT
         // -----------------------------------------------------
 
@@ -607,21 +648,6 @@ public class SellerKycServiceImpl implements SellerKycService {
                     );
 
             kyc.setAddressDocumentUrl(url);
-        }
-
-        // -----------------------------------------------------
-        // CHECK WHETHER AT LEAST ONE DOCUMENT WAS PROVIDED
-        // -----------------------------------------------------
-
-        if (!hasFile(panDocument)
-                && !hasFile(aadhaarDocument)
-                && !hasFile(gstDocument)
-                && !hasFile(registrationDocument)
-                && !hasFile(addressDocument)) {
-
-            throw new SellerKycValidationException(
-                    "At least one KYC document is required"
-            );
         }
 
         // -----------------------------------------------------
@@ -745,6 +771,85 @@ public class SellerKycServiceImpl implements SellerKycService {
         try {
 
             // -------------------------------------------------
+            // VALIDATE SUPABASE CONFIG
+            // -------------------------------------------------
+
+            if (supabaseUrl == null ||
+                    supabaseUrl.isBlank()) {
+
+                throw new SellerKycDocumentUploadException(
+                        "Supabase URL is not configured"
+                );
+            }
+
+            if (supabaseSecretKey == null ||
+                    supabaseSecretKey.isBlank()) {
+
+                throw new SellerKycDocumentUploadException(
+                        "Supabase secret key is not configured"
+                );
+            }
+
+            if (supabaseStorageAuthorizationKey == null ||
+                    supabaseStorageAuthorizationKey.isBlank()) {
+
+                throw new SellerKycDocumentUploadException(
+                        "Supabase storage authorization key is not configured"
+                );
+            }
+
+            if (kycBucket == null ||
+                    kycBucket.isBlank()) {
+
+                throw new SellerKycDocumentUploadException(
+                        "Supabase KYC bucket is not configured"
+                );
+            }
+
+            // -------------------------------------------------
+            // NORMALIZE CONFIG
+            // -------------------------------------------------
+
+            String baseUrl =
+                    supabaseUrl.trim();
+
+            while (baseUrl.endsWith("/")) {
+
+                baseUrl =
+                        baseUrl.substring(
+                                0,
+                                baseUrl.length() - 1
+                        );
+            }
+
+            String bucket =
+                    kycBucket.trim();
+
+            String apiKey =
+                    supabaseSecretKey.trim();
+
+            String authorizationKey =
+                    supabaseStorageAuthorizationKey.trim();
+
+            // -------------------------------------------------
+            // VALIDATE KEY TYPES
+            // -------------------------------------------------
+
+            if (!apiKey.startsWith("sb_secret_")) {
+
+                throw new SellerKycDocumentUploadException(
+                        "Invalid Supabase secret key configuration"
+                );
+            }
+
+            if (!authorizationKey.startsWith("eyJ")) {
+
+                throw new SellerKycDocumentUploadException(
+                        "Invalid Supabase storage authorization key configuration"
+                );
+            }
+
+            // -------------------------------------------------
             // UNIQUE FILE NAME
             // -------------------------------------------------
 
@@ -764,20 +869,14 @@ public class SellerKycServiceImpl implements SellerKycService {
                             + "/"
                             + fileName;
 
-            /*
-             * Example:
-             *
-             * 10/pan/550e8400-e29b-41d4-a716-446655440000.pdf
-             */
-
             // -------------------------------------------------
-            // SUPABASE STORAGE API
+            // SUPABASE STORAGE UPLOAD URL
             // -------------------------------------------------
 
             String uploadUrl =
-                    supabaseUrl
+                    baseUrl
                             + "/storage/v1/object/"
-                            + kycBucket
+                            + bucket
                             + "/"
                             + objectPath;
 
@@ -788,19 +887,94 @@ public class SellerKycServiceImpl implements SellerKycService {
             HttpHeaders headers =
                     new HttpHeaders();
 
-            headers.set(
-                    HttpHeaders.AUTHORIZATION,
-                    "Bearer " + supabaseServiceRoleKey
-            );
-
+            /*
+             * New Supabase secret key.
+             */
             headers.set(
                     "apikey",
-                    supabaseServiceRoleKey
+                    apiKey
+            );
+
+            /*
+             * Legacy service_role JWT.
+             */
+            headers.set(
+                    "Authorization",
+                    "Bearer " + authorizationKey
             );
 
             headers.setContentType(
                     MediaType.APPLICATION_PDF
             );
+
+            headers.set(
+                    "x-upsert",
+                    "false"
+            );
+
+            // -------------------------------------------------
+            // SAFE DEBUG
+            // -------------------------------------------------
+
+            System.out.println(
+                    "========== SUPABASE STORAGE DEBUG =========="
+            );
+
+            System.out.println(
+                    "Supabase URL : " + baseUrl
+            );
+
+            System.out.println(
+                    "Bucket       : [" + bucket + "]"
+            );
+
+            System.out.println(
+                    "API key type : "
+                            + (
+                            apiKey.startsWith("sb_secret_")
+                                    ? "NEW SECRET KEY"
+                                    : "UNKNOWN"
+                    )
+            );
+
+            System.out.println(
+                    "API key present : "
+                            + !apiKey.isBlank()
+            );
+
+            System.out.println(
+                    "API key length : "
+                            + apiKey.length()
+            );
+
+            System.out.println(
+                    "Authorization key present : "
+                            + !authorizationKey.isBlank()
+            );
+
+            System.out.println(
+                    "Authorization key JWT : "
+                            + (
+                            authorizationKey
+                                    .split("\\.", -1)
+                                    .length == 3
+                    )
+            );
+
+            System.out.println(
+                    "Object path  : " + objectPath
+            );
+
+            System.out.println(
+                    "============================================"
+            );
+
+            // -------------------------------------------------
+            // FILE BYTES
+            // -------------------------------------------------
+
+            byte[] fileBytes =
+                    file.getBytes();
 
             // -------------------------------------------------
             // REQUEST
@@ -808,7 +982,7 @@ public class SellerKycServiceImpl implements SellerKycService {
 
             HttpEntity<byte[]> request =
                     new HttpEntity<>(
-                            file.getBytes(),
+                            fileBytes,
                             headers
                     );
 
@@ -832,19 +1006,48 @@ public class SellerKycServiceImpl implements SellerKycService {
                     .is2xxSuccessful()) {
 
                 throw new SellerKycDocumentUploadException(
-                        "Failed to upload KYC document to Supabase"
+                        "Supabase upload failed. HTTP "
+                                + response.getStatusCode().value()
+                                + " - "
+                                + response.getBody()
                 );
             }
 
             // -------------------------------------------------
-            // RETURN OBJECT URL
+            // SUCCESS
             // -------------------------------------------------
 
-            return supabaseUrl
+            System.out.println(
+                    "KYC document uploaded successfully"
+            );
+
+            System.out.println(
+                    "Storage path : "
+                            + objectPath
+            );
+
+            // -------------------------------------------------
+            // RETURN STORAGE OBJECT URL
+            // -------------------------------------------------
+
+            return baseUrl
                     + "/storage/v1/object/"
-                    + kycBucket
+                    + bucket
                     + "/"
                     + objectPath;
+
+        } catch (HttpStatusCodeException e) {
+
+            String responseBody =
+                    e.getResponseBodyAsString();
+
+            throw new SellerKycDocumentUploadException(
+                    "Supabase upload failed. HTTP "
+                            + e.getStatusCode().value()
+                            + " - "
+                            + responseBody,
+                    e
+            );
 
         } catch (IOException e) {
 
@@ -860,7 +1063,8 @@ public class SellerKycServiceImpl implements SellerKycService {
         } catch (Exception e) {
 
             throw new SellerKycDocumentUploadException(
-                    "Failed to upload KYC document to Supabase",
+                    "Failed to upload KYC document to Supabase: "
+                            + e.getMessage(),
                     e
             );
         }
@@ -1050,8 +1254,8 @@ public class SellerKycServiceImpl implements SellerKycService {
         return normalized == null
                 ? null
                 : normalized.toUpperCase(
-                        Locale.ROOT
-                );
+                Locale.ROOT
+        );
     }
 
     // =========================================================

@@ -1,10 +1,12 @@
 package com.gesmio.havlook.admin_module.service;
 
+import com.gesmio.havlook.admin_module.exceptions.SellerVerificationNotFoundException;
+import com.gesmio.havlook.seller_module.auth.exceptions.SellerNotFoundException;
 import com.gesmio.havlook.seller_module.seller.repository.SellerRepository;
 import com.gesmio.havlook.seller_module.sellerVerification.entity.SellerVerification;
+import com.gesmio.havlook.seller_module.sellerVerification.entity.SellerVerificationStatus;
 import com.gesmio.havlook.seller_module.sellerVerification.repository.SellerVerificationRepository;
 import com.gesmio.havlook.seller_module.sellerVerification.service.SellerVerificationService;
-import com.gesmio.havlook.seller_module.sellerVerification.entity.SellerVerificationStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -82,9 +84,7 @@ public class AdminSellerVerificationServiceImpl
         return sellerVerificationRepository
                 .findBySellerId(sellerId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "Seller verification record not found"
-                        )
+                        new SellerVerificationNotFoundException(sellerId)
                 );
     }
 
@@ -111,9 +111,7 @@ public class AdminSellerVerificationServiceImpl
                 sellerVerificationRepository
                         .findBySellerId(sellerId)
                         .orElseThrow(() ->
-                                new IllegalArgumentException(
-                                        "Seller verification record not found"
-                                )
+                                new SellerVerificationNotFoundException(sellerId)
                         );
 
         /*
@@ -191,9 +189,7 @@ public class AdminSellerVerificationServiceImpl
                 sellerVerificationRepository
                         .findBySellerId(sellerId)
                         .orElseThrow(() ->
-                                new IllegalArgumentException(
-                                        "Seller verification record not found"
-                                )
+                                new SellerVerificationNotFoundException(sellerId)
                         );
 
         /*
@@ -234,8 +230,8 @@ public class AdminSellerVerificationServiceImpl
 
         sellerRepository.findById(sellerId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "Seller not found"
+                        new SellerNotFoundException(
+                                "Seller not found with ID: " + sellerId
                         )
                 );
     }

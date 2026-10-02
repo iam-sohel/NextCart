@@ -1,48 +1,15 @@
-/**
- * NEXTCART — Admin seller-verification service boundary.
- *
- * Uses only the existing seller-verification endpoints:
- *   GET /api/v1/admin/sellers/verification
- *   GET /api/v1/admin/sellers/verification/pending
- *   GET /api/v1/admin/sellers/verification/{sellerId}
- *   PUT /api/v1/admin/sellers/verification/{sellerId}/approve
- *   PUT /api/v1/admin/sellers/verification/{sellerId}/reject
- *
- * This workflow is separate from direct seller-KYC approval. The backend
- * returns the `SellerVerification` entity, so only the fields needed by the
- * admin UI are mapped; the nested seller association is reduced to its ID
- * and is never retained or rendered.
- */
-
 import { apiRequest, type ApiResult } from "@/lib/api";
 
-export type SellerVerificationStatus =
-  | "NOT_STARTED"
-  | "IN_PROGRESS"
-  | "PASSED"
-  | "FAILED"
-  | "REVIEW"
-  | "APPROVED"
-  | "REJECTED";
-
-export type VerificationCheckStatus =
-  | "NOT_STARTED"
-  | "IN_PROGRESS"
-  | "PASSED"
-  | "FAILED"
-  | "REVIEW";
-
-export interface SellerVerification {
-  id: number | null;
-  sellerId: number | null;
-  overallStatus: SellerVerificationStatus | null;
-  emailStatus: VerificationCheckStatus | null;
+export interface AdminSellerVerification {
+  id: number;
+  overallStatus: string;
+  emailStatus: string;
   emailResult: string | null;
-  mobileStatus: VerificationCheckStatus | null;
+  mobileStatus: string;
   mobileResult: string | null;
-  panStatus: VerificationCheckStatus | null;
+  panStatus: string;
   panResult: string | null;
-  gstinStatus: VerificationCheckStatus | null;
+  gstinStatus: string;
   gstinResult: string | null;
   startedAt: string | null;
   completedAt: string | null;
@@ -53,236 +20,175 @@ export interface SellerVerification {
   updatedAt: string | null;
 }
 
-export interface SellerVerificationPage {
-  content: SellerVerification[];
-  number: number;
-  size: number;
-  totalElements: number;
-  totalPages: number;
-  first: boolean;
-  last: boolean;
-}
-
-export interface SellerVerificationPageQuery {
-  page?: number;
-  size?: number;
-}
-
-export interface RejectSellerVerificationRequest {
-  reason: string;
-}
-
 interface Envelope<T> {
   success?: boolean;
   message?: string;
   data?: T;
 }
 
-const SELLER_VERIFICATION_STATUSES: SellerVerificationStatus[] = [
-  "NOT_STARTED",
-  "IN_PROGRESS",
-  "PASSED",
-  "FAILED",
-  "REVIEW",
-  "APPROVED",
-  "REJECTED",
-];
-
-const VERIFICATION_CHECK_STATUSES: VerificationCheckStatus[] = [
-  "NOT_STARTED",
-  "IN_PROGRESS",
-  "PASSED",
-  "FAILED",
-  "REVIEW",
-];
-
 function unwrap<T>(payload: unknown, fallback: T): T {
-  if (payload && typeof payload === "object" && "data" in payload) {
+  if (
+      payload &&
+      typeof payload === "object" &&
+      "data" in payload
+  ) {
     const envelope = payload as Envelope<T>;
+
     if (envelope.data !== undefined && envelope.data !== null) {
       return envelope.data;
     }
   }
+
   return fallback;
 }
 
-function toCount(value: unknown): number | null {
-  const amount =
-    typeof value === "number" ? value : Number(value as number | string);
-  if (!Number.isInteger(amount) || amount < 0) return null;
-  return amount;
+function toNumber(value: unknown): number | null {
+  const numberValue = Number(value ?? 0);
+
+  return Number.isFinite(numberValue) ? numberValue : null;
 }
 
 function toText(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const text = value.trim();
-  return text ? text : null;
+  return typeof value === "string" && value.trim()
+      ? value.trim()
+      : null;
 }
 
-function toSellerVerificationStatus(
-  value: unknown,
-): SellerVerificationStatus | null {
-  return typeof value === "string" &&
-    (SELLER_VERIFICATION_STATUSES as string[]).includes(value)
-    ? (value as SellerVerificationStatus)
-    : null;
-}
-
-function toVerificationCheckStatus(
-  value: unknown,
-): VerificationCheckStatus | null {
-  return typeof value === "string" &&
-    (VERIFICATION_CHECK_STATUSES as string[]).includes(value)
-    ? (value as VerificationCheckStatus)
-    : null;
-}
-
-function normaliseVerification(
-  verification: SellerVerification & { seller?: { id?: unknown } | null },
-): SellerVerification | null {
-  if (!verification || typeof verification !== "object") return null;
-
-  const sellerId = toCount(verification.seller?.id);
-
-  return {
-    id: toCount(verification.id),
-    sellerId,
-    overallStatus: toSellerVerificationStatus(verification.overallStatus),
-    emailStatus: toVerificationCheckStatus(verification.emailStatus),
-    emailResult: toText(verification.emailResult),
-    mobileStatus: toVerificationCheckStatus(verification.mobileStatus),
-    mobileResult: toText(verification.mobileResult),
-    panStatus: toVerificationCheckStatus(verification.panStatus),
-    panResult: toText(verification.panResult),
-    gstinStatus: toVerificationCheckStatus(verification.gstinStatus),
-    gstinResult: toText(verification.gstinResult),
-    startedAt: toText(verification.startedAt),
-    completedAt: toText(verification.completedAt),
-    reviewedAt: toText(verification.reviewedAt),
-    reviewedBy: toCount(verification.reviewedBy),
-    rejectionReason: toText(verification.rejectionReason),
-    createdAt: toText(verification.createdAt),
-    updatedAt: toText(verification.updatedAt),
-  };
-}
-
-function normalisePage(
-  page: SellerVerificationPage | null,
-): SellerVerificationPage | null {
-  if (!page || typeof page !== "object" || !Array.isArray(page.content)) {
+function normalizeVerification(
+    value: any
+): AdminSellerVerification | null {
+  if (!value || typeof value !== "object") {
     return null;
   }
 
-  const content = page.content
-    .map((verification) =>
-      normaliseVerification(
-        verification as SellerVerification & {
-          seller?: { id?: unknown } | null;
-        },
-      ),
-    )
-    .filter(
-      (verification): verification is SellerVerification =>
-        verification !== null,
-    );
+  const id = toNumber(value.id);
+
+  if (!id || id <= 0) {
+    return null;
+  }
 
   return {
-    content,
-    number: toCount(page.number) ?? 0,
-    size: toCount(page.size) ?? content.length,
-    totalElements: toCount(page.totalElements) ?? content.length,
-    totalPages: toCount(page.totalPages) ?? (content.length > 0 ? 1 : 0),
-    first: page.first !== false,
-    last: page.last !== false,
+    id,
+    overallStatus: String(value.overallStatus ?? ""),
+    emailStatus: String(value.emailStatus ?? ""),
+    emailResult: toText(value.emailResult),
+    mobileStatus: String(value.mobileStatus ?? ""),
+    mobileResult: toText(value.mobileResult),
+    panStatus: String(value.panStatus ?? ""),
+    panResult: toText(value.panResult),
+    gstinStatus: String(value.gstinStatus ?? ""),
+    gstinResult: toText(value.gstinResult),
+    startedAt: toText(value.startedAt),
+    completedAt: toText(value.completedAt),
+    reviewedAt: toText(value.reviewedAt),
+    reviewedBy: toNumber(value.reviewedBy),
+    rejectionReason: toText(value.rejectionReason),
+    createdAt: toText(value.createdAt),
+    updatedAt: toText(value.updatedAt),
   };
 }
-
-function pageQuery(query: SellerVerificationPageQuery = {}): string {
-  const params = new URLSearchParams();
-  const page = query.page ?? 0;
-  const size = query.size ?? 20;
-
-  params.set("page", Number.isInteger(page) && page >= 0 ? String(page) : "0");
-  params.set(
-    "size",
-    Number.isInteger(size) && size > 0 && size <= 100 ? String(size) : "20",
-  );
-
-  return params.toString();
-}
-
-const ENDPOINTS = {
-  list: "/api/v1/admin/sellers/verification",
-  pending: "/api/v1/admin/sellers/verification/pending",
-  bySellerId: (sellerId: number) =>
-    `/api/v1/admin/sellers/verification/${encodeURIComponent(String(sellerId))}`,
-  approve: (sellerId: number) =>
-    `/api/v1/admin/sellers/verification/${encodeURIComponent(String(sellerId))}/approve`,
-  reject: (sellerId: number) =>
-    `/api/v1/admin/sellers/verification/${encodeURIComponent(String(sellerId))}/reject`,
-} as const;
 
 function validSellerId(sellerId: number): boolean {
   return Number.isInteger(sellerId) && sellerId > 0;
 }
 
-/** GET /api/v1/admin/sellers/verification */
-export async function listSellerVerifications(
-  query: SellerVerificationPageQuery = {},
-  signal?: AbortSignal,
-): Promise<ApiResult<SellerVerificationPage>> {
+const ENDPOINTS = {
+  bySellerId: (sellerId: number) =>
+      `/api/v1/admin/sellers/verification/${encodeURIComponent(
+          String(sellerId)
+      )}`,
+
+  approve: (sellerId: number) =>
+      `/api/v1/admin/sellers/verification/${encodeURIComponent(
+          String(sellerId)
+      )}/approve`,
+
+  reject: (sellerId: number) =>
+      `/api/v1/admin/sellers/verification/${encodeURIComponent(
+          String(sellerId)
+      )}/reject`,
+} as const;
+
+export async function getAdminSellerVerification(
+    sellerId: number
+): Promise<ApiResult<AdminSellerVerification>> {
+  if (!validSellerId(sellerId)) {
+    return {
+      ok: false,
+      status: 400,
+      message: "Invalid seller ID.",
+    };
+  }
+
   const res = await apiRequest<
-    Envelope<SellerVerificationPage> | SellerVerificationPage
-  >(`${ENDPOINTS.list}?${pageQuery(query)}`, { method: "GET", signal });
+      Envelope<AdminSellerVerification> | AdminSellerVerification
+  >(ENDPOINTS.bySellerId(sellerId), {
+    method: "GET",
+  });
 
   if (!res.ok) return res;
 
-  const page = normalisePage(
-    unwrap<SellerVerificationPage | null>(res.data, null),
+  const verification = normalizeVerification(
+      unwrap<AdminSellerVerification | null>(res.data, null)
   );
 
-  if (!page) {
+  if (!verification) {
     return {
       ok: false,
       status: res.status,
-      message: "The server returned an invalid verification list.",
+      message: "The server returned invalid verification data.",
     };
   }
 
-  return { ok: true, status: res.status, data: page };
+  return {
+    ok: true,
+    status: res.status,
+    data: verification,
+  };
 }
 
-/** GET /api/v1/admin/sellers/verification/pending */
-export async function listPendingSellerVerifications(
-  query: SellerVerificationPageQuery = {},
-  signal?: AbortSignal,
-): Promise<ApiResult<SellerVerificationPage>> {
+export async function approveAdminSellerVerification(
+    sellerId: number
+): Promise<ApiResult<AdminSellerVerification>> {
+  if (!validSellerId(sellerId)) {
+    return {
+      ok: false,
+      status: 400,
+      message: "Invalid seller ID.",
+    };
+  }
+
   const res = await apiRequest<
-    Envelope<SellerVerificationPage> | SellerVerificationPage
-  >(`${ENDPOINTS.pending}?${pageQuery(query)}`, { method: "GET", signal });
+      Envelope<AdminSellerVerification> | AdminSellerVerification
+  >(ENDPOINTS.approve(sellerId), {
+    method: "PUT",
+  });
 
   if (!res.ok) return res;
 
-  const page = normalisePage(
-    unwrap<SellerVerificationPage | null>(res.data, null),
+  const verification = normalizeVerification(
+      unwrap<AdminSellerVerification | null>(res.data, null)
   );
 
-  if (!page) {
+  if (!verification) {
     return {
       ok: false,
       status: res.status,
-      message: "The server returned an invalid verification list.",
+      message: "The server returned invalid verification data.",
     };
   }
 
-  return { ok: true, status: res.status, data: page };
+  return {
+    ok: true,
+    status: res.status,
+    data: verification,
+  };
 }
 
-/** GET /api/v1/admin/sellers/verification/{sellerId} */
-export async function getSellerVerification(
-  sellerId: number,
-  signal?: AbortSignal,
-): Promise<ApiResult<SellerVerification>> {
+export async function rejectAdminSellerVerification(
+    sellerId: number,
+    reason: string
+): Promise<ApiResult<AdminSellerVerification>> {
   if (!validSellerId(sellerId)) {
     return {
       ok: false,
@@ -291,103 +197,50 @@ export async function getSellerVerification(
     };
   }
 
-  const res = await apiRequest<Envelope<SellerVerification> | SellerVerification>(
-    ENDPOINTS.bySellerId(sellerId),
-    { method: "GET", signal },
-  );
+  const cleanReason = reason.trim();
 
-  if (!res.ok) return res;
-
-  const verification = normaliseVerification(
-    unwrap<SellerVerification | null>(res.data, null) as SellerVerification & {
-      seller?: { id?: unknown } | null;
-    },
-  );
-
-  if (!verification) {
-    return {
-      ok: false,
-      status: res.status,
-      message: "The server returned an invalid verification record.",
-    };
-  }
-
-  return { ok: true, status: res.status, data: verification };
-}
-
-/** PUT /api/v1/admin/sellers/verification/{sellerId}/approve */
-export async function approveSellerVerification(
-  sellerId: number,
-  signal?: AbortSignal,
-): Promise<ApiResult<SellerVerification>> {
-  if (!validSellerId(sellerId)) {
+  if (!cleanReason) {
     return {
       ok: false,
       status: 400,
-      message: "Invalid seller ID.",
+      message: "Rejection reason is required.",
     };
   }
 
-  const res = await apiRequest<Envelope<SellerVerification> | SellerVerification>(
-    ENDPOINTS.approve(sellerId),
-    { method: "PUT", signal },
-  );
-
-  if (!res.ok) return res;
-
-  const verification = normaliseVerification(
-    unwrap<SellerVerification | null>(res.data, null) as SellerVerification & {
-      seller?: { id?: unknown } | null;
-    },
-  );
-
-  if (!verification) {
-    return {
-      ok: false,
-      status: res.status,
-      message: "The server returned an invalid verification record.",
-    };
-  }
-
-  return { ok: true, status: res.status, data: verification };
-}
-
-/** PUT /api/v1/admin/sellers/verification/{sellerId}/reject */
-export async function rejectSellerVerification(
-  sellerId: number,
-  payload: RejectSellerVerificationRequest,
-  signal?: AbortSignal,
-): Promise<ApiResult<SellerVerification>> {
-  if (!validSellerId(sellerId)) {
+  if (cleanReason.length > 1000) {
     return {
       ok: false,
       status: 400,
-      message: "Invalid seller ID.",
+      message: "Rejection reason must not exceed 1000 characters.",
     };
   }
 
-  const res = await apiRequest<Envelope<SellerVerification> | SellerVerification>(
-    ENDPOINTS.reject(sellerId),
-    { method: "PUT", body: payload, signal },
-  );
+  const res = await apiRequest<
+      Envelope<AdminSellerVerification> | AdminSellerVerification
+  >(ENDPOINTS.reject(sellerId), {
+    method: "PUT",
+    body: JSON.stringify({
+      reason: cleanReason,
+    }),
+  });
 
   if (!res.ok) return res;
 
-  const verification = normaliseVerification(
-    unwrap<SellerVerification | null>(res.data, null) as SellerVerification & {
-      seller?: { id?: unknown } | null;
-    },
+  const verification = normalizeVerification(
+      unwrap<AdminSellerVerification | null>(res.data, null)
   );
 
   if (!verification) {
     return {
       ok: false,
       status: res.status,
-      message: "The server returned an invalid verification record.",
+      message: "The server returned invalid verification data.",
     };
   }
 
-  return { ok: true, status: res.status, data: verification };
+  return {
+    ok: true,
+    status: res.status,
+    data: verification,
+  };
 }
-
-export type { ApiResult };

@@ -1,7 +1,6 @@
 package com.gesmio.havlook.auth_module.service;
 
 import com.gesmio.havlook.auth_module.dto.*;
-import com.gesmio.havlook.auth_module.dto.*;
 import com.gesmio.havlook.auth_module.entity.EmailOtp;
 import com.gesmio.havlook.auth_module.entity.PasswordResetOtp;
 import com.gesmio.havlook.auth_module.entity.PendingRegistration;
@@ -574,7 +573,7 @@ public class AuthServiceImpl implements AuthService {
         if (user.getRole() == null
                 || user.getRole().getName() == null
                 || !expectedRole.equalsIgnoreCase(
-                        user.getRole().getName())) {
+                user.getRole().getName())) {
 
             throw new InvalidCredentialsException(
                     "Invalid email/phone or password"
@@ -1155,14 +1154,7 @@ public class AuthServiceImpl implements AuthService {
             );
         }
 
-        Role sellerRole =
-                roleRepository
-                        .findByNameIgnoreCase(SELLER_ROLE)
-                        .orElseThrow(() ->
-                                new InvalidAuthRequestException(
-                                        "SELLER role is not configured"
-                                )
-                        );
+        Role sellerRole = getRequiredRole(SELLER_ROLE);
 
         User user = new User();
 
@@ -1202,6 +1194,37 @@ public class AuthServiceImpl implements AuthService {
         pendingSellerRegistrationRepository.delete(
                 pendingSeller
         );
+    }
+
+
+    // =========================================================
+    // REQUIRED ROLE
+    // =========================================================
+
+    private Role getRequiredRole(String roleName) {
+
+        String normalizedRole = roleName.trim();
+
+        System.out.println("========== ROLE DEBUG ==========");
+        System.out.println("Requested role = [" + normalizedRole + "]");
+
+        System.out.println(
+                "Database roles = " +
+                        roleRepository.findAll()
+                                .stream()
+                                .map(role -> "[" + role.getId() + " : " + role.getName() + "]")
+                                .toList()
+        );
+
+        System.out.println("================================");
+
+        return roleRepository
+                .findByNameIgnoreCase(normalizedRole)
+                .orElseThrow(() ->
+                        new InvalidAuthRequestException(
+                                normalizedRole + " role is not configured"
+                        )
+                );
     }
 
 
