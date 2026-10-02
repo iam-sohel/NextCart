@@ -11,7 +11,6 @@ on:
 
   workflow_dispatch:
 
-
 # ============================================================
 # GLOBAL PERMISSIONS
 # ============================================================
@@ -20,12 +19,10 @@ permissions:
   contents: read
   id-token: write
 
-
 env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY: nextcart/backend
   AWS_ROLE_ARN: arn:aws:iam::289981265262:role/GitHubActions-NextCart-ECR
-
 
 # ============================================================
 # JOBS
@@ -54,7 +51,6 @@ jobs:
         with:
           fetch-depth: 0
 
-
       # ------------------------------------------------------
       # SECRET SCANNING
       # ------------------------------------------------------
@@ -63,7 +59,6 @@ jobs:
         uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
 
       # ------------------------------------------------------
       # DEPENDENCY / FILESYSTEM VULNERABILITY SCAN
@@ -78,7 +73,6 @@ jobs:
           ignore-unfixed: true
           exit-code: '1'
           format: table
-
 
   # ==========================================================
   # 2. BACKEND BUILD / TEST / ECR
@@ -106,7 +100,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-
       # ------------------------------------------------------
       # JAVA 21
       # ------------------------------------------------------
@@ -118,7 +111,6 @@ jobs:
           java-version: '21'
           cache: maven
 
-
       # ------------------------------------------------------
       # MAVEN WRAPPER
       # ------------------------------------------------------
@@ -126,27 +118,35 @@ jobs:
       - name: Make Maven Wrapper executable
         run: chmod +x mvnw
 
-
       # ------------------------------------------------------
       # BACKEND BUILD + TEST
       # ------------------------------------------------------
 
       - name: Build and verify backend
         env:
+          # JWT
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+          # DATABASE
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
 
+          # RAZORPAY
           RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
           RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
           RAZORPAY_WEBHOOK_SECRET: ${{ secrets.RAZORPAY_WEBHOOK_SECRET }}
 
+          # MAIL
           MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
           MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
 
+          # MSG91
           MSG91_AUTH_KEY: ${{ secrets.MSG91_AUTH_KEY }}
 
+          # SUPABASE
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          SUPABASE_STORAGE_AUTH_KEY: ${{ secrets.SUPABASE_STORAGE_AUTH_KEY }}
 
+          # SELLER VERIFICATION
           SANDBOX_API_KEY: ${{ secrets.SANDBOX_API_KEY }}
           SANDBOX_API_SECRET: ${{ secrets.SANDBOX_API_SECRET }}
 
@@ -159,7 +159,6 @@ jobs:
             --batch-mode \
             --no-transfer-progress \
             clean verify
-
 
       # ======================================================
       # AWS OIDC
@@ -182,7 +181,6 @@ jobs:
 
           allowed-account-ids: '289981265262'
 
-
       # ------------------------------------------------------
       # VERIFY AWS IDENTITY
       # ------------------------------------------------------
@@ -196,7 +194,6 @@ jobs:
 
         working-directory: .
 
-
       # ======================================================
       # ECR
       # ======================================================
@@ -209,7 +206,6 @@ jobs:
         id: login-ecr
 
         uses: aws-actions/amazon-ecr-login@v2.1.6
-
 
       # ------------------------------------------------------
       # DOCKER BUILD
@@ -230,7 +226,6 @@ jobs:
             -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" \
             .
 
-
       # ------------------------------------------------------
       # DOCKER IMAGE VULNERABILITY SCAN
       # ------------------------------------------------------
@@ -249,7 +244,6 @@ jobs:
           exit-code: '1'
           format: table
 
-
       # ------------------------------------------------------
       # PUSH IMAGE TO ECR
       # ------------------------------------------------------
@@ -266,7 +260,6 @@ jobs:
         run: |
           docker push \
             "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-
 
       # ------------------------------------------------------
       # PRINT PUBLISHED IMAGE
@@ -299,7 +292,6 @@ jobs:
           echo "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
           echo "=========================================="
-
 
   # ==========================================================
   # 3. FAILURE ALERT
@@ -374,7 +366,6 @@ jobs:
             Run ID:
             ${{ github.run_id }}
 
-
             ============================================================
             JOB STATUS
             ============================================================
@@ -384,7 +375,6 @@ jobs:
 
             Backend Build / ECR:
             ${{ needs.backend-build.result }}
-
 
             ============================================================
             POSSIBLE REASONS
@@ -404,7 +394,6 @@ jobs:
 
             7. ECR authentication or push failure.
 
-
             ============================================================
             DEPLOYMENT STATUS
             ============================================================
@@ -414,13 +403,11 @@ jobs:
 
             No deployment should proceed from this failed run.
 
-
             ============================================================
             GITHUB ACTION RUN
             ============================================================
 
             https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
 
             ============================================================
             SECURITY NOTICE
@@ -428,7 +415,6 @@ jobs:
 
             Do NOT expose secrets, credentials, tokens,
             passwords, or private keys in logs or issues.
-
 
             ============================================================
             END
