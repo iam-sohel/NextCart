@@ -649,53 +649,6 @@ export function normalizeBackendProductDetails(
 }
 
 /* -------------------------------------------------------------------------- */
-/* Inventory merge                                                            */
-/* -------------------------------------------------------------------------- */
-
-export function mergeVariantInventory(
-  product: Product,
-  inventories: BackendInventoryDto[],
-): Product {
-  if (
-    !product.variants?.length
-  ) {
-    return product;
-  }
-
-  const variants =
-    product.variants.map(
-      (variant) => {
-        const inventory =
-          inventories.find(
-            (item) =>
-              item.variantId !==
-                undefined &&
-              String(item.variantId) ===
-                String(variant.id),
-          );
-
-        if (!inventory) {
-          return variant;
-        }
-
-        return {
-          ...variant,
-
-          inventory:
-            normalizeInventory(
-              inventory,
-            ),
-        };
-      },
-    );
-
-  return {
-    ...product,
-    variants,
-  };
-}
-
-/* -------------------------------------------------------------------------- */
 /* Generic normalization entry point                                          */
 /* -------------------------------------------------------------------------- */
 

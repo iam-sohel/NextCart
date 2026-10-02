@@ -31,6 +31,28 @@ export interface InventoryState {
 const LOW_STOCK_THRESHOLD = 5;
 
 /**
+ * Backend cart rule (CartItemAddRequestDTO / CartItemUpdateRequestDTO):
+ * quantity is an integer in [1, 99]. The backend always re-validates on
+ * submit, so the UI ceiling below is a convenience, never authority.
+ */
+export const MAX_CART_LINE_QUANTITY = 99;
+
+/**
+ * Highest quantity the UI should offer for the given stock state.
+ *
+ * Uses the backend-reported count when one exists. When the backend only
+ * reports a status (IN_STOCK / LOW_STOCK with no counts — the current
+ * customer product contract), a purchasable status falls back to the
+ * backend's own per-line maximum instead of 0 so the selector stays
+ * usable. Out-of-stock always yields 0.
+ */
+export function quantityCeiling(state: InventoryState): number {
+  if (state.status === "out_of_stock") return 0;
+  if (state.available > 0) return state.available;
+  return MAX_CART_LINE_QUANTITY;
+}
+
+/**
  * Build an InventoryState from the backend payload. Accepts either the
  * backend-shaped object (quantity/reservedQty + optional stockStatus) or
  * the legacy flat "stock" integer used by the current mock data — both
@@ -143,7 +165,12 @@ export function clampQuantity(
 export function stockLabel(state: InventoryState): string {
   if (state.status === "out_of_stock") return "Out of stock";
   if (state.status === "low_stock") {
-    return `Only ${state.available} left`;
+    // A known count ("Only N left"); without a count we state the status
+    // instead of inventing a number.
+    if (state.available > 0) {
+      return `Only ${state.available} left`;
+    }
+    return "Low stock";
   }
   return "In stock";
 }

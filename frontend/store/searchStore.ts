@@ -354,9 +354,6 @@ const useSearchStore =
         // Enrich products with detail data (images, prices, ratings, etc.)
         const enrichedProducts = await enrichProductListWithDetails(
           products,
-          {
-            loadInventory: false,
-          },
         );
 
         const nextState = get();

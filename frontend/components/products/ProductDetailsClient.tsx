@@ -7,6 +7,7 @@ import { Box, Container, Grid } from "@mui/material";
 import type { Product, ProductVariant } from "@/types/product";
 import {
   deriveInventory,
+  quantityCeiling,
   type InventoryState,
 } from "@/utils/inventory";
 
@@ -193,7 +194,7 @@ function clampQuantityToInventory(
   inventory: InventoryState,
 ): number {
   if (inventory.status === "out_of_stock") return 1;
-  const max = inventory.available;
+  const max = quantityCeiling(inventory);
   if (!Number.isFinite(requested) || requested < 1) return 1;
   if (requested > max) return max;
   return requested;

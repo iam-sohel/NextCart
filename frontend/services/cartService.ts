@@ -150,13 +150,14 @@ export async function getCart(
 /**
  * POST /api/v1/cart/items
  *
- * Backend requires:
- *   productId
+ * Backend contract (CartItemAddRequestDTO):
  *   productVariantId
  *   quantity
+ *
+ * `productId` is intentionally NOT sent — the backend DTO does not declare
+ * it. Callers keep the product ID locally for UI metadata only.
  */
 export async function addItemToCart(
-  productId: number,
   variantId: number,
   quantity: number,
   signal?: AbortSignal,
@@ -167,7 +168,6 @@ export async function addItemToCart(
       method: "POST",
 
       body: {
-        productId,
         productVariantId: variantId,
         quantity,
       },

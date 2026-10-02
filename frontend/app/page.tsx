@@ -41,9 +41,7 @@ export default async function HomePage() {
     result.source === "backend" ? result.products : [];
 
   if (allProducts.length > 0) {
-    allProducts = await enrichProductListWithDetails(allProducts, {
-      loadInventory: false,
-    });
+    allProducts = await enrichProductListWithDetails(allProducts);
   }
 
   const hasProducts = allProducts.length > 0;

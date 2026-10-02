@@ -69,9 +69,7 @@ export default async function ProductDetailsPage(props: PageProps) {
     .sort((a, b) => Number(b.rating) - Number(a.rating))
     .slice(0, 4);
 
-  const related = await enrichProductListWithDetails(relatedCandidates, {
-    loadInventory: false,
-  });
+  const related = await enrichProductListWithDetails(relatedCandidates);
 
   return (
     <>

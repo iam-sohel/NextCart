@@ -36,9 +36,7 @@ export default async function ProductGrid() {
   const products: Product[] =
     list.source === "error" ? [] : list.products;
 
-  const enriched = await enrichProductListWithDetails(products, {
-    loadInventory: false,
-  });
+  const enriched = await enrichProductListWithDetails(products);
 
   return (
     <Grid container spacing={3}>

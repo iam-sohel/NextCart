@@ -4,8 +4,8 @@ import { Box, Divider, Stack, Typography } from "@mui/material";
 
 import type { Product, ProductVariant } from "@/types/product";
 import type { InventoryState } from "@/utils/inventory";
+import { quantityCeiling } from "@/utils/inventory";
 
-import DeliveryChecker from "./DeliveryChecker";
 import ProductActions from "./ProductActions";
 import ProductBreadcrumb from "./ProductBreadcrumb";
 import ProductDescription from "./ProductDescription";
@@ -148,12 +148,12 @@ export default function ProductInfo({
       </Stack>
 
       <Box sx={{ mt: 2 }}>
-        <QuantitySelector
-          value={quantity}
-          onChange={onQuantityChange}
-          max={inventory.status === "out_of_stock" ? 0 : inventory.available}
-          disabled={!canPurchase}
-        />
+          <QuantitySelector
+            value={quantity}
+            onChange={onQuantityChange}
+            max={quantityCeiling(inventory)}
+            disabled={!canPurchase}
+          />
       </Box>
 
       <Box sx={{ mt: { xs: 2.5, md: 3 } }}>
@@ -169,8 +169,6 @@ export default function ProductInfo({
           addDisabledReason={addDisabledReason}
         />
       </Box>
-
-      <DeliveryChecker productId={product.id} />
 
       <ProductDescription
         description={product.description}

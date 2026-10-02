@@ -17,10 +17,7 @@ import type {
 
 import { toCardProduct, type CardProduct } from "@/types/product";
 
-import type { PincodeCheckResult } from "@/types/delivery";
-
 import {
-  mergeVariantInventory,
   normalizeBackendProduct,
   normalizeBackendProductDetails,
   type BackendProductDetailsDto,
@@ -65,12 +62,6 @@ const ENDPOINTS = {
 
   searchProducts: (keyword: string) =>
     `/api/v1/products/search?keyword=${encodeURIComponent(keyword)}`,
-
-  /* -------------------------------- Filter ------------------------------- */
-
-  filterProducts: (params: string) =>
-    `/api/v1/products/filter${params ? `?${params}` : ""}`,
-
   /* ------------------------------ Category ------------------------------- */
 
   categoryProducts: (categoryId: string | number) =>
@@ -109,29 +100,6 @@ const ENDPOINTS = {
 
   productInformationByProduct: (productId: string | number) =>
     `/api/v1/product-information/${encodeURIComponent(String(productId))}`,
-
-  /* ----------------------------- Inventory ------------------------------- */
-
-  inventoryByVariant: (variantId: string | number) =>
-    `/api/v1/inventory/variant/${encodeURIComponent(String(variantId))}`,
-
-  inventory: (variantId: string | number) =>
-    `/api/v1/inventory/${encodeURIComponent(String(variantId))}`,
-
-  /* ------------------------------- Reviews ------------------------------- */
-
-  productReviews: (id: string | number) =>
-    `/api/v1/products/${encodeURIComponent(String(id))}/reviews`,
-
-  /* ------------------------------- Related ------------------------------- */
-
-  productRelated: (id: string | number) =>
-    `/api/v1/products/${encodeURIComponent(String(id))}/related`,
-
-  /* ------------------------------- Delivery ------------------------------ */
-
-  deliveryCheck: (pincode: string) =>
-    `/api/delivery/check?pincode=${encodeURIComponent(pincode)}`,
 } as const;
 
 /* -------------------------------------------------------------------------- */
@@ -198,9 +166,8 @@ interface BackendProductDetailsResponse {
  *
  *   GET /products/slug/{slug}/details
  *        ↓
- *   normalize details
- *        ↓
- *   load variant inventory
+ *   normalize details (variants carry the backend's own
+ *   `stockStatus` / `available` fields — no separate inventory call)
  */
 export async function getProductBySlug(
   slug: string,
@@ -249,49 +216,6 @@ export async function getProductBySlug(
 
     let product: Product =
       normalizeBackendProductDetails(details);
-
-    /*
-     * ProductDetailsResponse does not currently
-     * contain inventory.
-     *
-     * Load inventory separately for each variant.
-     */
-    if (
-      product.variants &&
-      product.variants.length > 0
-    ) {
-      const inventoryByVariant =
-        await loadVariantInventory(
-          product.variants,
-          signal,
-        );
-
-      const variantInventoryEntries =
-        Object.entries(
-          inventoryByVariant,
-        ) as Array<[
-          string,
-          VariantInventory,
-        ]>;
-
-      product =
-        mergeVariantInventory(
-          product,
-          variantInventoryEntries.map(
-            ([variantId, inventory]) => ({
-              variantId,
-              quantity: inventory.quantity,
-              reservedStock:
-                inventory.reservedQuantity ??
-                inventory.reservedQty,
-              availableStock:
-                inventory.availableQuantity,
-              stockStatus:
-                inventory.stockStatus,
-            }),
-          ),
-        );
-    }
 
     return {
       ok: true,
@@ -396,12 +320,10 @@ export async function getProductDetailsById(
   id: string | number,
   options: {
     signal?: AbortSignal;
-    loadInventory?: boolean;
   } = {},
 ): Promise<ApiResult<Product>> {
   const {
     signal,
-    loadInventory = true,
   } = options;
 
   const result =
@@ -444,114 +366,11 @@ export async function getProductDetailsById(
     };
   }
 
-  if (
-    loadInventory &&
-    product.variants &&
-    product.variants.length > 0
-  ) {
-    const inventoryByVariant =
-      await loadVariantInventory(
-        product.variants,
-        signal,
-      );
-
-    product =
-      mergeVariantInventory(
-        product,
-        Object.entries(
-          inventoryByVariant,
-        ).map(
-          ([variantId, inventory]) => ({
-            variantId,
-            quantity: inventory.quantity,
-            reservedStock:
-              inventory.reservedQuantity ??
-              inventory.reservedQty,
-            availableStock:
-              inventory.availableQuantity,
-            stockStatus:
-              inventory.stockStatus,
-          }),
-        ),
-      );
-  }
-
   return {
     ok: true,
     status: result.status,
     data: product,
   };
-}
-
-/* -------------------------------------------------------------------------- */
-/* Per-variant inventory                                                      */
-/* -------------------------------------------------------------------------- */
-
-interface VariantInventory {
-  quantity?: number;
-  reservedQuantity?: number;
-  reservedQty?: number;
-  availableQuantity?: number;
-  stockStatus?: string;
-}
-
-const VARIANT_INVENTORY_CONCURRENCY = 4;
-
-/**
- * Fetch inventory for product variants in small parallel batches.
- */
-async function loadVariantInventory(
-  variants: {
-    id: string | number;
-  }[],
-  signal?: AbortSignal,
-): Promise<
-  Record<string | number, VariantInventory>
-> {
-  const out: Record<
-    string | number,
-    VariantInventory
-  > = {};
-
-  for (
-    let i = 0;
-    i < variants.length;
-    i += VARIANT_INVENTORY_CONCURRENCY
-  ) {
-    const batch = variants.slice(
-      i,
-      i + VARIANT_INVENTORY_CONCURRENCY,
-    );
-
-    const responses =
-      await Promise.all(
-        batch.map((variant) =>
-          apiRequest<VariantInventory>(
-            ENDPOINTS.inventoryByVariant(
-              variant.id,
-            ),
-            {
-              method: "GET",
-              signal,
-            },
-          ),
-        ),
-      );
-
-    responses.forEach(
-      (response, index) => {
-        if (!response || !response.ok) {
-          return;
-        }
-
-        out[
-          String(batch[index].id)
-        ] = response.data;
-      },
-    );
-  }
-
-  return out;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -570,7 +389,6 @@ export async function enrichProductListWithDetails(
   products: Product[],
   options: {
     signal?: AbortSignal;
-    loadInventory?: boolean;
   } = {},
 ): Promise<Product[]> {
   if (
@@ -582,7 +400,6 @@ export async function enrichProductListWithDetails(
 
   const {
     signal,
-    loadInventory = false,
   } = options;
 
   const out: Product[] =
@@ -605,7 +422,6 @@ export async function enrichProductListWithDetails(
             product.id,
             {
               signal,
-              loadInventory,
             },
           ).catch(() => null),
         ),
@@ -663,9 +479,27 @@ export async function searchProducts(
     return result;
   }
 
-  const raw = result.data;
+  /*
+   * Backend wraps the list in the standard envelope:
+   *   { success, message, data: [...] }
+   * so the array lives one level deeper than `result.data`.
+   */
+  const raw =
+    result.data as
+      | BackendProductDto[]
+      | { data?: unknown }
+      | null
+      | undefined;
 
-  if (!Array.isArray(raw)) {
+  const list = Array.isArray(raw)
+    ? raw
+    : Array.isArray(
+        (raw as { data?: unknown } | null)?.data,
+      )
+      ? ((raw as { data?: unknown }).data as BackendProductDto[])
+      : null;
+
+  if (!list) {
     return {
       ok: false,
       status: 500,
@@ -676,7 +510,7 @@ export async function searchProducts(
     };
   }
 
-  const products = raw
+  const products = list
     .map((dto) => {
       try {
         return normalizeBackendProduct(
@@ -703,128 +537,6 @@ export async function searchProducts(
 /* -------------------------------------------------------------------------- */
 /* Catalogue                                                                  */
 /* -------------------------------------------------------------------------- */
-
-/**
- * Fetch products directly from the backend.
- *
- * Backend response:
- *
- * ApiResponse
- *   -> data
- *      -> content
- *
- * Therefore:
- *
- * result.data.data.content
- *
- * contains the actual product array.
- */
-export async function listBackendProducts(
-  signal?: AbortSignal,
-): Promise<ApiResult<Product[]>> {
-  const result =
-    await apiRequest<BackendProductPageResponse>(
-      ENDPOINTS.products,
-      {
-        method: "GET",
-        signal,
-      },
-    );
-
-  if (!result.ok) {
-    return result;
-  }
-
-  const page = result.data?.data;
-
-  if (!page || !Array.isArray(page.content)) {
-    return {
-      ok: false,
-      status: 500,
-      message: "Backend returned an unexpected product catalogue payload.",
-      errorCode: "PRODUCT_CATALOGUE_INVALID_PAYLOAD",
-    };
-  }
-
-  const products = page.content
-    .map((dto) => {
-      try {
-        return normalizeBackendProductDetails(dto);
-      } catch {
-        return null;
-      }
-    })
-    .filter((product): product is Product => product !== null);
-
-  return {
-    ok: true,
-    status: result.status,
-    data: products,
-  };
-}
-
-/* -------------------------------------------------------------------------- */
-/* Filter                                                                     */
-/* -------------------------------------------------------------------------- */
-
-/**
- * Filter products through the backend.
- *
- * Supported parameters:
- * - categoryId
- * - subCategoryId
- * - keyword
- */
-export async function filterBackendProducts(
-  params: {
-    categoryId?: number;
-    subCategoryId?: number;
-    keyword?: string;
-  },
-  signal?: AbortSignal,
-): Promise<ApiResult<Product[]>> {
-  const searchParams =
-    new URLSearchParams();
-
-  if (
-    params.categoryId !==
-    undefined
-  ) {
-    searchParams.set(
-      "categoryId",
-      String(params.categoryId),
-    );
-  }
-
-  if (
-    params.subCategoryId !==
-    undefined
-  ) {
-    searchParams.set(
-      "subCategoryId",
-      String(params.subCategoryId),
-    );
-  }
-
-  if (
-    params.keyword?.trim()
-  ) {
-    searchParams.set(
-      "keyword",
-      params.keyword.trim(),
-    );
-  }
-
-  return apiRequest<Product[]>(
-    ENDPOINTS.filterProducts(
-      searchParams.toString(),
-    ),
-    {
-      method: "GET",
-      signal,
-    },
-  );
-}
 
 /* -------------------------------------------------------------------------- */
 /* Category APIs                                                              */
@@ -888,107 +600,6 @@ export async function getProductsByBrand(
     ),
     {
       method: "GET",
-      signal,
-    },
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Product reviews                                                            */
-/* -------------------------------------------------------------------------- */
-
-export async function getProductReviews(
-  productId: string | number,
-  signal?: AbortSignal,
-): Promise<
-  ApiResult<{
-    summary: ReviewSummary;
-    reviews: Review[];
-  }>
-> {
-  return apiRequest<{
-    summary: ReviewSummary;
-    reviews: Review[];
-  }>(
-    ENDPOINTS.productReviews(
-      productId,
-    ),
-    {
-      method: "GET",
-      signal,
-    },
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Related products                                                           */
-/* -------------------------------------------------------------------------- */
-
-export async function getRelatedProducts(
-  productId: string | number,
-  signal?: AbortSignal,
-): Promise<ApiResult<Product[]>> {
-  return apiRequest<Product[]>(
-    ENDPOINTS.productRelated(
-      productId,
-    ),
-    {
-      method: "GET",
-      signal,
-    },
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Inventory                                                                  */
-/* -------------------------------------------------------------------------- */
-
-export async function getInventory(
-  variantId: string | number,
-  signal?: AbortSignal,
-): Promise<
-  ApiResult<{
-    available: number;
-    quantity: number;
-    reservedQty: number;
-  }>
-> {
-  return apiRequest<{
-    available: number;
-    quantity: number;
-    reservedQty: number;
-  }>(
-    ENDPOINTS.inventory(
-      variantId,
-    ),
-    {
-      method: "GET",
-      signal,
-    },
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Delivery                                                                   */
-/* -------------------------------------------------------------------------- */
-
-export async function checkPincodeServiceability(
-  pincode: string,
-  productId: string | number,
-  signal?: AbortSignal,
-): Promise<
-  ApiResult<PincodeCheckResult>
-> {
-  return apiRequest<PincodeCheckResult>(
-    ENDPOINTS.deliveryCheck(
-      pincode,
-    ),
-    {
-      method: "GET",
-      headers: {
-        "X-Product-Id":
-          String(productId),
-      },
       signal,
     },
   );

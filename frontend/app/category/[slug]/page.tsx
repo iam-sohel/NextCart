@@ -46,9 +46,6 @@ export default async function CategoryPage(props: PageProps) {
 
   const enrichedProducts = await enrichProductListWithDetails(
     categoryProducts,
-    {
-      loadInventory: false,
-    },
   );
 
   return (

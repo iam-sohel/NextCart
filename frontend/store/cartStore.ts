@@ -443,11 +443,10 @@ const useCartStore =
       });
 
       try {
+        // productVariantId + quantity only. The backend add-item DTO does
+        // not accept productId; input.productId stays local for metadata.
         const result =
           await addItemToCart(
-            Number(
-              input.productId,
-            ),
             variantId,
             quantity,
           );
