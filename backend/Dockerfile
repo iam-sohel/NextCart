@@ -2,14 +2,24 @@ FROM eclipse-temurin:21-jre
 
 WORKDIR /app
 
-RUN groupadd --system nextcart && \
-    useradd --system --gid nextcart --create-home nextcart
+# Update OS packages to patched versions
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-COPY target/nextcart-backend-0.0.1-SNAPSHOT.jar app.jar
+# Create a non-root user
+RUN groupadd --system havlook && \
+    useradd --system --gid havlook --create-home havlook
 
-RUN chown -R nextcart:nextcart /app
+# Copy the application JAR
+COPY target/*.jar app.jar
 
-USER nextcart
+# Give ownership to the non-root user
+RUN chown -R havlook:havlook /app
+
+# Run the application as non-root
+USER havlook
 
 EXPOSE 8080
 

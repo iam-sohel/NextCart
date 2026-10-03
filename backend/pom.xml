@@ -11,41 +11,78 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.7</version>
+        <version>4.0.8</version>
         <relativePath/>
     </parent>
 
     <!-- =========================================================
          Project Information
          ========================================================= -->
-    <groupId>com.nextcart</groupId>
-    <artifactId>nextcart-backend</artifactId>
+    <groupId>com.gesmio</groupId>
+    <artifactId>havlook</artifactId>
     <version>0.0.1-SNAPSHOT</version>
 
-    <name>NextCart Backend</name>
-    <description>E-commerce platform backend</description>
+    <name>Havlook Backend</name>
+    <description>Havlook e-commerce platform backend</description>
 
     <!-- =========================================================
          Project Properties
          ========================================================= -->
     <properties>
-
-        <!-- Java -->
         <java.version>21</java.version>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <!-- Security-patched PostgreSQL JDBC Driver -->
-        <postgresql.version>42.7.13</postgresql.version>
+        <!-- JWT -->
+        <jjwt.version>0.12.3</jjwt.version>
 
-        <!-- Security-patched Tomcat -->
-        <tomcat.version>11.0.26</tomcat.version>
+        <!-- ModelMapper -->
+        <modelmapper.version>3.2.0</modelmapper.version>
 
-        <!-- Secure OkHttp version for Razorpay SDK -->
+        <!-- Razorpay -->
+        <razorpay.version>1.4.10</razorpay.version>
+
+        <!-- OkHttp -->
         <okhttp.version>4.12.0</okhttp.version>
 
+        <!-- SpringDoc -->
+        <springdoc.version>3.0.3</springdoc.version>
+        <tomcat.version>11.0.25</tomcat.version>
+        <!-- Spring Dotenv -->
+        <dotenv.version>5.1.0</dotenv.version>
     </properties>
+
+
+<dependencyManagement>
+        <dependencies>
+
+            <!-- Jackson 2.x -->
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>2.21.7</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>2.21.7</version>
+            </dependency>
+
+            <!-- Jackson 3.x -->
+            <dependency>
+                <groupId>tools.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>3.1.7</version>
+            </dependency>
+
+            <dependency>
+                <groupId>tools.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>3.1.7</version>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
 
     <!-- =========================================================
          Dependencies
@@ -53,29 +90,11 @@
     <dependencies>
 
         <!-- =====================================================
-             Swagger / OpenAPI
-             ===================================================== -->
-        <dependency>
-            <groupId>org.springdoc</groupId>
-            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-            <version>3.0.3</version>
-        </dependency>
-
-        <!-- =====================================================
              Spring Boot Web
              ===================================================== -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-
-        <!-- =====================================================
-             Spring Dotenv
-             ===================================================== -->
-        <dependency>
-            <groupId>me.paulschwarz</groupId>
-            <artifactId>springboot4-dotenv</artifactId>
-            <version>5.1.0</version>
         </dependency>
 
         <!-- =====================================================
@@ -103,7 +122,15 @@
         </dependency>
 
         <!-- =====================================================
-             PostgreSQL Driver
+             Email / Gmail SMTP
+             ===================================================== -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
+        <!-- =====================================================
+             PostgreSQL
              ===================================================== -->
         <dependency>
             <groupId>org.postgresql</groupId>
@@ -112,12 +139,30 @@
         </dependency>
 
         <!-- =====================================================
+             Swagger / OpenAPI
+             ===================================================== -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>${springdoc.version}</version>
+        </dependency>
+
+        <!-- =====================================================
+             Spring Dotenv
+             ===================================================== -->
+        <dependency>
+            <groupId>me.paulschwarz</groupId>
+            <artifactId>springboot4-dotenv</artifactId>
+            <version>${dotenv.version}</version>
+        </dependency>
+
+        <!-- =====================================================
              JWT API
              ===================================================== -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
-            <version>0.12.3</version>
+            <version>${jjwt.version}</version>
         </dependency>
 
         <!-- =====================================================
@@ -126,7 +171,7 @@
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-impl</artifactId>
-            <version>0.12.3</version>
+            <version>${jjwt.version}</version>
             <scope>runtime</scope>
         </dependency>
 
@@ -136,7 +181,7 @@
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-jackson</artifactId>
-            <version>0.12.3</version>
+            <version>${jjwt.version}</version>
             <scope>runtime</scope>
         </dependency>
 
@@ -146,7 +191,7 @@
         <dependency>
             <groupId>org.modelmapper</groupId>
             <artifactId>modelmapper</artifactId>
-            <version>3.2.0</version>
+            <version>${modelmapper.version}</version>
         </dependency>
 
         <!-- =====================================================
@@ -169,35 +214,16 @@
         </dependency>
 
         <!-- =====================================================
-             Testing
-             ===================================================== -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- =====================================================
-             Email / Gmail SMTP
-             ===================================================== -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-mail</artifactId>
-        </dependency>
-
-        <!-- =====================================================
              Razorpay Java SDK
              ===================================================== -->
         <dependency>
             <groupId>com.razorpay</groupId>
             <artifactId>razorpay-java</artifactId>
-            <version>1.4.10</version>
+            <version>${razorpay.version}</version>
         </dependency>
 
         <!-- =====================================================
-             Secure OkHttp Override
-             Razorpay 1.4.10 brings OkHttp 3.10.0.
-             These explicit dependencies force the patched version.
+             OkHttp
              ===================================================== -->
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
@@ -217,6 +243,15 @@
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- =====================================================
+             Testing
+             ===================================================== -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
 
@@ -244,7 +279,6 @@
                         </exclude>
                     </excludes>
                 </configuration>
-
             </plugin>
 
             <!-- =================================================
@@ -255,8 +289,6 @@
                 <artifactId>maven-compiler-plugin</artifactId>
 
                 <configuration>
-                    <source>21</source>
-                    <target>21</target>
                     <parameters>true</parameters>
 
                     <annotationProcessorPaths>
@@ -267,7 +299,6 @@
                     </annotationProcessorPaths>
 
                 </configuration>
-
             </plugin>
 
         </plugins>

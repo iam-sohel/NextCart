@@ -1,0 +1,12 @@
+package com.gesmio.havlook.seller_module.inventory_module.exceptions;
+
+public class InventoryValidationException extends RuntimeException {
+
+    public InventoryValidationException(String message) {
+        super(message);
+    }
+
+    public InventoryValidationException(String message, Throwable cause) {
+        super(message, cause);
+    }
+}

@@ -34,8 +34,8 @@ function unwrap<T>(response: any): T {
  * with try/catch, so signatures stay unchanged.
  */
 function throwIfFailed(
-  response: { ok: boolean; message?: string },
-  fallback: string,
+    response: { ok: boolean; message?: string },
+    fallback: string,
 ): void {
   if (!response.ok) {
     throw new Error(response.message || fallback);
@@ -56,8 +56,8 @@ function normalizeCustomer(value: any): AdminCustomer {
 
 function normalizePage(value: any): AdminCustomerPage {
   const content = Array.isArray(value?.content)
-    ? value.content.map(normalizeCustomer)
-    : [];
+      ? value.content.map(normalizeCustomer)
+      : [];
 
   return {
     content,
@@ -65,7 +65,7 @@ function normalizePage(value: any): AdminCustomerPage {
     size: Number(value?.size ?? content.length),
     totalElements: Number(value?.totalElements ?? content.length),
     totalPages: Number(
-      value?.totalPages ?? (content.length > 0 ? 1 : 0)
+        value?.totalPages ?? (content.length > 0 ? 1 : 0)
     ),
     first: value?.first,
     last: value?.last,
@@ -73,14 +73,14 @@ function normalizePage(value: any): AdminCustomerPage {
 }
 
 export async function listAdminCustomers(
-  page = 0,
-  size = 20
+    page = 0,
+    size = 20
 ): Promise<AdminCustomerPage> {
   const response = await apiRequest(
-    `/api/v1/admin/customers?page=${page}&size=${size}&sort=id,desc`,
-    {
-      method: "GET",
-    }
+      `/api/v1/admin/customers?page=${page}&size=${size}&sort=id,desc`,
+      {
+        method: "GET",
+      }
   );
 
   throwIfFailed(response, "Unable to load customers.");
@@ -89,13 +89,13 @@ export async function listAdminCustomers(
 }
 
 export async function getAdminCustomer(
-  customerId: number
+    customerId: number
 ): Promise<AdminCustomer> {
   const response = await apiRequest(
-    `/api/v1/admin/customers/${customerId}`,
-    {
-      method: "GET",
-    }
+      `/api/v1/admin/customers/${customerId}`,
+      {
+        method: "GET",
+      }
   );
 
   throwIfFailed(response, "Unable to load customer.");
@@ -104,26 +104,26 @@ export async function getAdminCustomer(
 }
 
 export async function activateAdminCustomer(
-  customerId: number
+    customerId: number
 ): Promise<void> {
   const response = await apiRequest(
-    `/api/v1/admin/customers/${customerId}/activate`,
-    {
-      method: "PUT",
-    }
+      `/api/v1/admin/customers/${customerId}/activate`,
+      {
+        method: "PUT",
+      }
   );
 
   throwIfFailed(response, "Unable to activate customer.");
 }
 
 export async function deactivateAdminCustomer(
-  customerId: number
+    customerId: number
 ): Promise<void> {
   const response = await apiRequest(
-    `/api/v1/admin/customers/${customerId}/deactivate`,
-    {
-      method: "PUT",
-    }
+      `/api/v1/admin/customers/${customerId}/deactivate`,
+      {
+        method: "PUT",
+      }
   );
 
   throwIfFailed(response, "Unable to deactivate customer.");

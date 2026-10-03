@@ -1,0 +1,20 @@
+package com.gesmio.havlook.seller_module.sellerVerification.service;
+
+public interface GstService {
+
+    GstVerificationResult verify(String gstin);
+
+    record GstVerificationResult(
+            boolean passed,
+            String status,
+            String gstin,
+            String legalName,
+            String tradeName,
+            String constitution,
+            String taxPayerType,
+            String registrationDate,
+            String primaryAddress,
+            String message
+    ) {
+    }
+}
