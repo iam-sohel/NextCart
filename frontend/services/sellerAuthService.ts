@@ -118,6 +118,7 @@ export const sellerAuthService = {
       {
         method: "POST",
         body,
+        token: null,
         skipAuthRefresh: true,
         signal,
       },
@@ -165,6 +166,7 @@ export const sellerAuthService = {
       {
         method: "POST",
         body,
+        token: null,
         skipAuthRefresh: true,
         signal,
       },
@@ -192,6 +194,7 @@ export const sellerAuthService = {
       {
         method: "POST",
         body,
+        token: null,
         skipAuthRefresh: true,
         signal,
       },
