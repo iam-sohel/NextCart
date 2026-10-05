@@ -27,7 +27,6 @@ import com.gesmio.havlook.seller_module.inventory_module.entity.InventoryItem;
 import com.gesmio.havlook.seller_module.inventory_module.repository.InventoryItemRepository;
 import com.gesmio.havlook.seller_module.inventory_module.repository.InventoryRepository;
 import com.gesmio.havlook.seller_module.product.dto.*;
-import com.gesmio.havlook.seller_module.product.dto.*;
 import com.gesmio.havlook.seller_module.product.exceptions.SellerNotFoundException;
 import com.gesmio.havlook.seller_module.product.exceptions.SellerProductAlreadyExistsException;
 import com.gesmio.havlook.seller_module.product.exceptions.SellerProductImageException;
@@ -53,6 +52,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -91,7 +91,10 @@ public class SellerProductServiceImpl implements SellerProductService {
     private String supabaseUrl;
 
     @Value("${supabase.service-role-key}")
-    private String supabaseServiceRoleKey;
+    private String supabaseSecretKey;
+
+    @Value("${supabase.storage-authorization-key}")
+    private String supabaseStorageAuthorizationKey;
 
     @Value("${supabase.product-bucket:product-images}")
     private String productBucket;
@@ -350,10 +353,6 @@ public class SellerProductServiceImpl implements SellerProductService {
                 "SKU"
         );
 
-        // -----------------------------------------------------
-        // SKU DUPLICATE CHECK
-        // -----------------------------------------------------
-
         if (productVariantRepository
                 .existsBySkuIgnoreCase(sku)) {
 
@@ -362,34 +361,18 @@ public class SellerProductServiceImpl implements SellerProductService {
             );
         }
 
-        // -----------------------------------------------------
-        // ATTRIBUTES
-        // -----------------------------------------------------
-
         validateVariantAttributes(
                 request.getAttributes()
         );
-
-        // -----------------------------------------------------
-        // PRICE
-        // -----------------------------------------------------
 
         if (request.getPrice() != null) {
             validatePrice(request.getPrice());
         }
 
-        // -----------------------------------------------------
-        // INVENTORY
-        // -----------------------------------------------------
-
         validateInventories(
                 seller,
                 request.getInventories()
         );
-
-        // -----------------------------------------------------
-        // CREATE VARIANT
-        // -----------------------------------------------------
 
         ProductVariantEntity variant =
                 ProductVariantEntity.builder()
@@ -528,10 +511,6 @@ public class SellerProductServiceImpl implements SellerProductService {
                                 )
                         );
 
-        // -----------------------------------------------------
-        // ACTIVE WAREHOUSE
-        // -----------------------------------------------------
-
         if (warehouse.getStatus() != WarehouseStatus.ACTIVE) {
 
             throw new SellerProductWarehouseException(
@@ -539,10 +518,6 @@ public class SellerProductServiceImpl implements SellerProductService {
                             + warehouse.getId()
             );
         }
-
-        // -----------------------------------------------------
-        // QUANTITY
-        // -----------------------------------------------------
 
         int quantity =
                 request.getQuantity() == null
@@ -568,10 +543,6 @@ public class SellerProductServiceImpl implements SellerProductService {
 
         int available = quantity - reserved;
 
-        // -----------------------------------------------------
-        // GET / CREATE WAREHOUSE INVENTORY
-        // -----------------------------------------------------
-
         Inventory inventory =
                 inventoryRepository
                         .findByWarehouse(warehouse)
@@ -582,10 +553,6 @@ public class SellerProductServiceImpl implements SellerProductService {
                                                 .build()
                                 )
                         );
-
-        // -----------------------------------------------------
-        // DUPLICATE VARIANT IN WAREHOUSE
-        // -----------------------------------------------------
 
         if (inventoryItemRepository
                 .existsByInventoryIdAndProductVariantId(
@@ -598,10 +565,6 @@ public class SellerProductServiceImpl implements SellerProductService {
                             + warehouse.getId()
             );
         }
-
-        // -----------------------------------------------------
-        // CREATE ITEM
-        // -----------------------------------------------------
 
         InventoryItem item =
                 InventoryItem.builder()
@@ -672,89 +635,101 @@ public class SellerProductServiceImpl implements SellerProductService {
             MultipartFile file,
             String objectPath
     ) {
-
         try {
-
-            String uploadUrl =
-                    supabaseUrl
-                            + "/storage/v1/object/"
-                            + productBucket
-                            + "/"
-                            + objectPath;
-
-            HttpHeaders headers = new HttpHeaders();
-
-            headers.set(
-                    HttpHeaders.AUTHORIZATION,
-                    "Bearer " + supabaseServiceRoleKey
-            );
-
-            headers.set(
-                    "apikey",
-                    supabaseServiceRoleKey
-            );
-
-            String contentType = file.getContentType();
-
-            if (contentType == null ||
-                    contentType.isBlank()) {
-
-                throw new SellerProductImageException(
-                        "Product image content type is required"
-                );
+            if (supabaseUrl == null || supabaseUrl.isBlank()) {
+                throw new SellerProductImageException("Supabase URL is not configured");
+            }
+            if (supabaseSecretKey == null || supabaseSecretKey.isBlank()) {
+                throw new SellerProductImageException("Supabase secret key is not configured");
+            }
+            if (supabaseStorageAuthorizationKey == null || supabaseStorageAuthorizationKey.isBlank()) {
+                throw new SellerProductImageException("Supabase storage authorization key is not configured");
+            }
+            if (productBucket == null || productBucket.isBlank()) {
+                throw new SellerProductImageException("Product image bucket is not configured");
             }
 
-            headers.setContentType(
-                    MediaType.parseMediaType(contentType)
-            );
+            String cleanSupabaseUrl = supabaseUrl.trim().replaceAll("/+$", "");
+            String apiKey = supabaseSecretKey.trim();
+            String authorizationKey = supabaseStorageAuthorizationKey.trim();
+            String cleanBucket = productBucket.trim();
 
-            HttpEntity<byte[]> httpEntity =
-                    new HttpEntity<>(
-                            file.getBytes(),
-                            headers
-                    );
+            if (objectPath == null || objectPath.trim().isEmpty()) {
+                throw new SellerProductImageException("Product image object path is required");
+            }
+
+            String cleanObjectPath = objectPath.trim();
+
+            if (!apiKey.startsWith("sb_secret_")) {
+                throw new SellerProductImageException("Invalid Supabase secret key configuration");
+            }
+
+            if (!authorizationKey.startsWith("eyJ")) {
+                throw new SellerProductImageException("Invalid Supabase storage authorization key configuration");
+            }
+
+            String uploadUrl = cleanSupabaseUrl
+                    + "/storage/v1/object/"
+                    + cleanBucket
+                    + "/"
+                    + cleanObjectPath;
+
+            HttpHeaders headers = new HttpHeaders();
+            String contentType = file.getContentType();
+
+            if (contentType == null || contentType.trim().isEmpty()) {
+                contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
+            }
+
+            headers.setContentType(MediaType.parseMediaType(contentType));
+            headers.set("apikey", apiKey);
+            headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + authorizationKey);
+            headers.set("x-upsert", "false");
+
+            HttpEntity<byte[]> requestEntity =
+                    new HttpEntity<>(file.getBytes(), headers);
 
             ResponseEntity<String> response =
                     restTemplate.exchange(
                             uploadUrl,
                             HttpMethod.POST,
-                            httpEntity,
+                            requestEntity,
                             String.class
                     );
 
-            if (!response.getStatusCode()
-                    .is2xxSuccessful()) {
-
+            if (!response.getStatusCode().is2xxSuccessful()) {
                 throw new SellerProductImageException(
-                        "Failed to upload product image to Supabase"
+                        "Supabase upload failed. HTTP "
+                                + response.getStatusCode().value()
+                                + " - "
+                                + response.getBody()
                 );
             }
 
-            // -------------------------------------------------
-            // PUBLIC PRODUCT IMAGE URL
-            // -------------------------------------------------
-
-            return supabaseUrl
+            return cleanSupabaseUrl
                     + "/storage/v1/object/public/"
-                    + productBucket
+                    + cleanBucket
                     + "/"
-                    + objectPath;
+                    + cleanObjectPath;
 
-        } catch (IOException e) {
-
+        } catch (HttpStatusCodeException e) {
             throw new SellerProductImageException(
-                    "Failed to read product image",
+                    "Supabase upload failed. HTTP "
+                            + e.getStatusCode().value()
+                            + " - "
+                            + e.getResponseBodyAsString(),
                     e
             );
-
-        } catch (SellerProductImageException e) {
-
-            throw e;
-
-        } catch (Exception e) {
-
+        } catch (IOException e) {
             throw new SellerProductImageException(
-                    "Failed to upload product image",
+                    "Failed to read product image file: " + e.getMessage(),
+                    e
+            );
+        } catch (SellerProductImageException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new SellerProductImageException(
+                    "Failed to upload product image: " + e.getMessage(),
                     e
             );
         }
@@ -810,6 +785,7 @@ public class SellerProductServiceImpl implements SellerProductService {
     ) {
 
         if (price == null) {
+
             throw new SellerProductPriceException(
                     "Price data is required"
             );
@@ -897,12 +873,14 @@ public class SellerProductServiceImpl implements SellerProductService {
             return;
         }
 
-        Set<String> names = new HashSet<>();
+        Set<String> names =
+                new HashSet<>();
 
         for (SellerProductSpecificationRequest specification
                 : specifications) {
 
             if (specification == null) {
+
                 throw new SellerProductValidationException(
                         "Specification data is required"
                 );
@@ -941,12 +919,14 @@ public class SellerProductServiceImpl implements SellerProductService {
             return;
         }
 
-        Set<String> skus = new HashSet<>();
+        Set<String> skus =
+                new HashSet<>();
 
         for (SellerProductVariantRequest variant
                 : variants) {
 
             if (variant == null) {
+
                 throw new SellerProductValidationException(
                         "Product variant data is required"
                 );
@@ -986,12 +966,14 @@ public class SellerProductServiceImpl implements SellerProductService {
             );
         }
 
-        Set<String> names = new HashSet<>();
+        Set<String> names =
+                new HashSet<>();
 
         for (SellerProductVariantAttributeRequest attribute
                 : attributes) {
 
             if (attribute == null) {
+
                 throw new SellerProductValidationException(
                         "Variant attribute data is required"
                 );
@@ -1036,12 +1018,14 @@ public class SellerProductServiceImpl implements SellerProductService {
             return;
         }
 
-        Set<Long> warehouseIds = new HashSet<>();
+        Set<Long> warehouseIds =
+                new HashSet<>();
 
         for (SellerProductInventoryRequest inventory
                 : inventories) {
 
             if (inventory == null) {
+
                 throw new SellerProductInventoryException(
                         "Inventory data is required"
                 );
@@ -1097,7 +1081,8 @@ public class SellerProductServiceImpl implements SellerProductService {
                             ? 0
                             : inventory.getReservedQuantity();
 
-            if (quantity < 0 || reserved < 0) {
+            if (quantity < 0 ||
+                    reserved < 0) {
 
                 throw new SellerProductInventoryException(
                         "Inventory quantity cannot be negative"

@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,6 +26,16 @@ public interface InventoryItemRepository
 
     List<InventoryItem> findByProductVariantId(
             Long productVariantId
+    );
+
+    /*
+     * QUERY OPTIMIZATION
+     *
+     * Fetch inventory for all product variants in one query
+     * instead of executing one query per variant.
+     */
+    List<InventoryItem> findByProductVariantIdIn(
+            Collection<Long> variantIds
     );
 
     Optional<InventoryItem> findByInventoryIdAndProductVariantId(

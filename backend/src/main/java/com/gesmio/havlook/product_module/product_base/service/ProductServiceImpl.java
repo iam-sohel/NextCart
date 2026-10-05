@@ -61,6 +61,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -238,16 +239,16 @@ public class ProductServiceImpl implements ProductService {
         // =====================================================
         // ACTIVE VARIANTS
         // =====================================================
+        // OPTIMIZATION:
+        // Filter ACTIVE variants directly in the database.
+        // Inactive variants are not loaded into application memory.
 
         List<ProductVariantEntity> variants =
                 productVariantRepository
-                        .findByProductEntity_Id(productId)
-                        .stream()
-                        .filter(variant ->
-                                variant.getStatus()
-                                        == ProductVariantStatus.ACTIVE
-                        )
-                        .toList();
+                        .findByProductEntity_IdAndStatus(
+                                productId,
+                                ProductVariantStatus.ACTIVE
+                        );
 
 
         // =====================================================
@@ -263,6 +264,7 @@ public class ProductServiceImpl implements ProductService {
         // =====================================================
         // BATCH LOAD ATTRIBUTES
         // =====================================================
+        // Existing optimization preserved.
 
         Map<Long, List<VariantAttributeEntity>>
                 attributesByVariantId;
@@ -285,6 +287,74 @@ public class ProductServiceImpl implements ProductService {
                                             attribute ->
                                                     attribute
                                                             .getVariant()
+                                                            .getId()
+                                    )
+                            );
+        }
+
+
+        // =====================================================
+        // BATCH LOAD PRICES
+        // =====================================================
+        // OPTIMIZATION:
+        // One query for all variant prices.
+
+        Map<Long, ProductVariantPriceEntity>
+                pricesByVariantId;
+
+        if (variantIds.isEmpty()) {
+
+            pricesByVariantId =
+                    Collections.emptyMap();
+
+        } else {
+
+            pricesByVariantId =
+                    productVariantPriceRepository
+                            .findByProductVariantIdIn(
+                                    variantIds
+                            )
+                            .stream()
+                            .collect(
+                                    Collectors.toMap(
+                                            price ->
+                                                    price
+                                                            .getProductVariant()
+                                                            .getId(),
+                                            price -> price,
+                                            (first, second) -> first
+                                    )
+                            );
+        }
+
+
+        // =====================================================
+        // BATCH LOAD INVENTORY
+        // =====================================================
+        // OPTIMIZATION:
+        // One query for inventory of all variants.
+
+        Map<Long, List<InventoryItem>>
+                inventoryByVariantId;
+
+        if (variantIds.isEmpty()) {
+
+            inventoryByVariantId =
+                    Collections.emptyMap();
+
+        } else {
+
+            inventoryByVariantId =
+                    inventoryItemRepository
+                            .findByProductVariantIdIn(
+                                    variantIds
+                            )
+                            .stream()
+                            .collect(
+                                    Collectors.groupingBy(
+                                            item ->
+                                                    item
+                                                            .getProductVariant()
                                                             .getId()
                                     )
                             );
@@ -326,9 +396,10 @@ public class ProductServiceImpl implements ProductService {
                             // ---------------------------------
 
                             ProductVariantPriceResponse price =
-                                    productVariantPriceRepository
-                                            .findByProductVariantId(
-                                                    variantId
+                                    Optional.ofNullable(
+                                                    pricesByVariantId.get(
+                                                            variantId
+                                                    )
                                             )
                                             .map(
                                                     this::toPriceResponse
@@ -341,9 +412,10 @@ public class ProductServiceImpl implements ProductService {
                             // ---------------------------------
 
                             List<InventoryItem> inventoryItems =
-                                    inventoryItemRepository
-                                            .findByProductVariantId(
-                                                    variantId
+                                    inventoryByVariantId
+                                            .getOrDefault(
+                                                    variantId,
+                                                    Collections.emptyList()
                                             );
 
 
@@ -522,12 +594,10 @@ public class ProductServiceImpl implements ProductService {
                                 .getId()
                 )
                 .attributeName(
-                        attribute
-                                .getAttributeName()
+                        attribute.getAttributeName()
                 )
                 .attributeValue(
-                        attribute
-                                .getAttributeValue()
+                        attribute.getAttributeValue()
                 )
                 .build();
     }
@@ -655,10 +725,14 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ProductResponse> searchProducts(String keyword) {
+    public List<ProductResponse> searchProducts(
+            String keyword
+    ) {
 
         String normalizedKeyword =
-                keyword == null ? "" : keyword.trim();
+                keyword == null
+                        ? ""
+                        : keyword.trim();
 
         if (normalizedKeyword.isEmpty()) {
 
@@ -692,10 +766,11 @@ public class ProductServiceImpl implements ProductService {
                 productRepository
                         .findById(id)
                         .orElseThrow(
-                                () -> new ProductNotFoundException(
-                                        "Product not found with id: "
-                                                + id
-                                )
+                                () ->
+                                        new ProductNotFoundException(
+                                                "Product not found with id: "
+                                                        + id
+                                        )
                         );
 
         validateSlugForUpdate(
@@ -750,10 +825,11 @@ public class ProductServiceImpl implements ProductService {
                 productRepository
                         .findById(id)
                         .orElseThrow(
-                                () -> new ProductNotFoundException(
-                                        "Product not found with id: "
-                                                + id
-                                )
+                                () ->
+                                        new ProductNotFoundException(
+                                                "Product not found with id: "
+                                                        + id
+                                        )
                         );
 
         if (product.getStatus() ==
@@ -781,10 +857,11 @@ public class ProductServiceImpl implements ProductService {
                 productRepository
                         .findById(id)
                         .orElseThrow(
-                                () -> new ProductNotFoundException(
-                                        "Product not found with id: "
-                                                + id
-                                )
+                                () ->
+                                        new ProductNotFoundException(
+                                                "Product not found with id: "
+                                                        + id
+                                        )
                         );
 
         if (product.getStatus() ==
@@ -826,10 +903,11 @@ public class ProductServiceImpl implements ProductService {
                         ProductStatus.ACTIVE
                 )
                 .orElseThrow(
-                        () -> new ProductNotFoundException(
-                                "Product not found with id: "
-                                        + id
-                        )
+                        () ->
+                                new ProductNotFoundException(
+                                        "Product not found with id: "
+                                                + id
+                                )
                 );
     }
 
@@ -859,10 +937,11 @@ public class ProductServiceImpl implements ProductService {
                         ProductStatus.ACTIVE
                 )
                 .orElseThrow(
-                        () -> new ProductNotFoundException(
-                                "Product not found with slug: "
-                                        + normalizedSlug
-                        )
+                        () ->
+                                new ProductNotFoundException(
+                                        "Product not found with slug: "
+                                                + normalizedSlug
+                                )
                 );
     }
 
@@ -954,10 +1033,11 @@ public class ProductServiceImpl implements ProductService {
                         CategoryStatus.ACTIVE
                 )
                 .orElseThrow(
-                        () -> new ProductValidationException(
-                                "Active category not found with id: "
-                                        + categoryId
-                        )
+                        () ->
+                                new ProductValidationException(
+                                        "Active category not found with id: "
+                                                + categoryId
+                                )
                 );
     }
 
@@ -983,10 +1063,11 @@ public class ProductServiceImpl implements ProductService {
                         SubCategoryStatus.ACTIVE
                 )
                 .orElseThrow(
-                        () -> new ProductValidationException(
-                                "Active subcategory not found with id: "
-                                        + subCategoryId
-                        )
+                        () ->
+                                new ProductValidationException(
+                                        "Active subcategory not found with id: "
+                                                + subCategoryId
+                                )
                 );
     }
 
@@ -1012,10 +1093,11 @@ public class ProductServiceImpl implements ProductService {
                         BrandStatus.ACTIVE
                 )
                 .orElseThrow(
-                        () -> new ProductValidationException(
-                                "Active brand not found with id: "
-                                        + brandId
-                        )
+                        () ->
+                                new ProductValidationException(
+                                        "Active brand not found with id: "
+                                                + brandId
+                                )
                 );
     }
 
