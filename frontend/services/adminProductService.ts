@@ -143,7 +143,7 @@ export async function createAdminProduct(
     "/api/v1/products",
     {
       method: "POST",
-      body: JSON.stringify(payload),
+      body: payload,
     }
   );
 
@@ -160,7 +160,7 @@ export async function updateAdminProduct(
     `/api/v1/products/${productId}`,
     {
       method: "PUT",
-      body: JSON.stringify(payload),
+      body: payload,
     }
   );
 

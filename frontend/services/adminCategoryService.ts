@@ -88,7 +88,7 @@ export async function createAdminCategory(
     `/api/v1/admin/categories`,
     {
       method: "POST",
-      body: JSON.stringify({ name }),
+      body: { name },
     }
   );
 
@@ -103,7 +103,7 @@ export async function updateAdminCategory(
     `/api/v1/admin/categories/${id}`,
     {
       method: "PUT",
-      body: JSON.stringify({ name }),
+      body: { name },
     }
   );
 

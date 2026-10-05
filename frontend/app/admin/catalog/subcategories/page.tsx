@@ -150,10 +150,10 @@ async function createSubCategory(
     "/api/v1/admin/subcategories",
     {
       method: "POST",
-      body: JSON.stringify({
+      body: {
         name,
         categoryId,
-      }),
+      },
     }
   );
 
@@ -171,10 +171,10 @@ async function updateSubCategory(
     `/api/v1/admin/subcategories/${id}`,
     {
       method: "PUT",
-      body: JSON.stringify({
+      body: {
         name,
         categoryId,
-      }),
+      },
     }
   );
 

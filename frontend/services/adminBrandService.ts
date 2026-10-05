@@ -84,7 +84,7 @@ export async function createAdminBrand(
     `/api/v1/admin/brands`,
     {
       method: "POST",
-      body: JSON.stringify({ name }),
+      body: { name },
     }
   );
 
@@ -99,7 +99,7 @@ export async function updateAdminBrand(
     `/api/v1/admin/brands/${id}`,
     {
       method: "PUT",
-      body: JSON.stringify({ name }),
+      body: { name },
     }
   );
 

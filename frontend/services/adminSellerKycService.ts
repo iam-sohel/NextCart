@@ -246,9 +246,9 @@ export async function rejectAdminSellerKyc(
     ENDPOINTS.reject(sellerId),
     {
       method: "PUT",
-      body: JSON.stringify({
+      body: {
         rejectionReason: cleanReason,
-      }),
+      },
     }
   );
 

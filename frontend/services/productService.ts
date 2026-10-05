@@ -135,6 +135,24 @@ interface BackendProductPageResponse {
   data?: BackendProductPage;
 }
 
+interface BackendProductSummaryPageResponse {
+  success?: boolean;
+  message?: string;
+  data?: {
+    content?: BackendProductDto[];
+    totalElements?: number;
+    totalPages?: number;
+    number?: number;
+    size?: number;
+  };
+}
+
+interface BackendProductResponse {
+  success?: boolean;
+  message?: string;
+  data?: BackendProductDto;
+}
+
 interface BackendProductDetailsResponse {
   success?: boolean;
   message?: string;
@@ -252,8 +270,8 @@ export async function getProductById(
   signal?: AbortSignal,
 ): Promise<ApiResult<Product>> {
   const result =
-    await apiRequest<BackendProductDetailsResponse>(
-      ENDPOINTS.productDetailsById(id),
+    await apiRequest<BackendProductResponse>(
+      ENDPOINTS.productById(id),
       {
         method: "GET",
         signal,
@@ -264,35 +282,33 @@ export async function getProductById(
     return result;
   }
 
-  let product: Product;
+  const productDto = result.data?.data;
+
+  if (!productDto) {
+    return {
+      ok: false,
+      status: 500,
+      message: "Product payload is missing.",
+      errorCode: "PRODUCT_INVALID_PAYLOAD",
+    };
+  }
 
   try {
-    const details = result.data?.data;
+    const product = normalizeBackendProduct(productDto);
 
-    if (!details) {
-      return {
-        ok: false,
-        status: 500,
-        message: "Product details payload is missing.",
-        errorCode: "PRODUCT_DETAILS_INVALID_PAYLOAD",
-      };
-    }
-
-    product = normalizeBackendProductDetails(details);
+    return {
+      ok: true,
+      status: result.status,
+      data: product,
+    };
   } catch {
     return {
       ok: false,
       status: 500,
-      message: "Failed to normalize product details.",
+      message: "Failed to normalize product.",
       errorCode: "PRODUCT_NORMALIZATION_FAILED",
     };
   }
-
-  return {
-    ok: true,
-    status: result.status,
-    data: product,
-  };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -548,19 +564,64 @@ export async function searchProducts(
  * Backend:
  * GET /api/v1/products/category/{categoryId}
  */
+async function normalizeProductSummaryPage(
+  result: ApiResult<BackendProductSummaryPageResponse>,
+): Promise<ApiResult<Product[]>> {
+  if (!result.ok) {
+    return result;
+  }
+
+  const content = result.data?.data?.content;
+
+  if (!Array.isArray(content)) {
+    return {
+      ok: false,
+      status: 500,
+      message: "Product page payload is missing.",
+      errorCode: "PRODUCT_PAGE_INVALID_PAYLOAD",
+    };
+  }
+
+  const products = content
+    .map((dto) => {
+      try {
+        return normalizeBackendProduct(dto);
+      } catch {
+        return null;
+      }
+    })
+    .filter((product): product is Product => product !== null);
+
+  return {
+    ok: true,
+    status: result.status,
+    data: products,
+  };
+}
+
+/**
+ * Get products by category.
+ *
+ * Backend:
+ * GET /api/v1/products/category/{categoryId}
+ *
+ * Response:
+ * CommonResponseDto<Page<ProductResponse>>
+ */
 export async function getProductsByCategory(
   categoryId: string | number,
   signal?: AbortSignal,
 ): Promise<ApiResult<Product[]>> {
-  return apiRequest<Product[]>(
-    ENDPOINTS.categoryProducts(
-      categoryId,
-    ),
-    {
-      method: "GET",
-      signal,
-    },
-  );
+  const result =
+    await apiRequest<BackendProductSummaryPageResponse>(
+      ENDPOINTS.categoryProducts(categoryId),
+      {
+        method: "GET",
+        signal,
+      },
+    );
+
+  return normalizeProductSummaryPage(result);
 }
 
 /**
@@ -568,20 +629,24 @@ export async function getProductsByCategory(
  *
  * Backend:
  * GET /api/v1/products/subcategory/{subCategoryId}
+ *
+ * Response:
+ * CommonResponseDto<Page<ProductResponse>>
  */
 export async function getProductsBySubCategory(
   subCategoryId: string | number,
   signal?: AbortSignal,
 ): Promise<ApiResult<Product[]>> {
-  return apiRequest<Product[]>(
-    ENDPOINTS.subCategoryProducts(
-      subCategoryId,
-    ),
-    {
-      method: "GET",
-      signal,
-    },
-  );
+  const result =
+    await apiRequest<BackendProductSummaryPageResponse>(
+      ENDPOINTS.subCategoryProducts(subCategoryId),
+      {
+        method: "GET",
+        signal,
+      },
+    );
+
+  return normalizeProductSummaryPage(result);
 }
 
 /**
@@ -589,20 +654,24 @@ export async function getProductsBySubCategory(
  *
  * Backend:
  * GET /api/v1/products/brand/{brandId}
+ *
+ * Response:
+ * CommonResponseDto<Page<ProductResponse>>
  */
 export async function getProductsByBrand(
   brandId: string | number,
   signal?: AbortSignal,
 ): Promise<ApiResult<Product[]>> {
-  return apiRequest<Product[]>(
-    ENDPOINTS.brandProducts(
-      brandId,
-    ),
-    {
-      method: "GET",
-      signal,
-    },
-  );
+  const result =
+    await apiRequest<BackendProductSummaryPageResponse>(
+      ENDPOINTS.brandProducts(brandId),
+      {
+        method: "GET",
+        signal,
+      },
+    );
+
+  return normalizeProductSummaryPage(result);
 }
 
 /* -------------------------------------------------------------------------- */

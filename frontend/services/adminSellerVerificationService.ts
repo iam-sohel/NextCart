@@ -219,9 +219,9 @@ export async function rejectAdminSellerVerification(
     Envelope<AdminSellerVerification> | AdminSellerVerification
   >(ENDPOINTS.reject(sellerId), {
     method: "PUT",
-    body: JSON.stringify({
+    body: {
       reason: cleanReason,
-    }),
+    },
   });
 
   if (!res.ok) return res;
