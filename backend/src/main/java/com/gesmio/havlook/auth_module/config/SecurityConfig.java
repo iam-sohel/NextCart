@@ -87,7 +87,6 @@ public class SecurityConfig {
                         // =================================================
                         // PUBLIC AUTHENTICATION APIs
                         // =================================================
-
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/v1/auth/login",
@@ -100,9 +99,18 @@ public class SecurityConfig {
                         .permitAll()
 
                         // =================================================
+                        // EMAIL OTP
+                        // =================================================
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/auth/email/send-otp",
+                                "/api/v1/auth/email/verify-otp"
+                        )
+                        .permitAll()
+
+                        // =================================================
                         // PHONE OTP WIDGET
                         // =================================================
-
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/v1/auth/phone/verify-widget"
@@ -112,7 +120,6 @@ public class SecurityConfig {
                         // =================================================
                         // SELLER SIGNUP OTP
                         // =================================================
-
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/v1/auth/verify-seller-email-otp",
@@ -123,7 +130,6 @@ public class SecurityConfig {
                         // =================================================
                         // REFRESH TOKEN
                         // =================================================
-
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/v1/auth/refresh"
@@ -133,7 +139,6 @@ public class SecurityConfig {
                         // =================================================
                         // PASSWORD RESET
                         // =================================================
-
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/v1/auth/forgot-password",
@@ -144,7 +149,6 @@ public class SecurityConfig {
                         // =================================================
                         // PUBLIC PRODUCT / CATALOG APIs
                         // =================================================
-
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/v1/products/**",
@@ -157,7 +161,6 @@ public class SecurityConfig {
                         // =================================================
                         // ADMIN APIs
                         // =================================================
-
                         .requestMatchers(
                                 "/api/v1/admin/**"
                         )
@@ -166,7 +169,6 @@ public class SecurityConfig {
                         // =================================================
                         // EVERYTHING ELSE
                         // =================================================
-
                         .anyRequest()
                         .authenticated()
                 )

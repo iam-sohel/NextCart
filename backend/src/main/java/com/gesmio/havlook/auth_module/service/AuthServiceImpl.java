@@ -81,6 +81,11 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
 
+        System.out.println("========== REGISTER API HIT ==========");
+        System.out.println("Email: " + request.getEmail());
+        System.out.println("======================================");
+
+
         validateRegisterRequest(request);
 
         String email = normalizeEmail(request.getEmail());
