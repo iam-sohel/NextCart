@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { createTheme, type ThemeOptions } from "@mui/material/styles";
 
@@ -13,7 +13,7 @@ import shadows from "./shadows";
  * This file is the assembler. It pulls in the four geometry primitives
  * (palette, typography, spacing, shadows) and adds:
  *   - shape (border radius)
- *   - component overrides (MuiButton, MuiCard, …)
+ *   - component overrides (MuiButton, MuiCard, â€¦)
  *
  * Why a single theme?
  *   - One place to change the entire app's look-and-feel.
@@ -21,18 +21,18 @@ import shadows from "./shadows";
  *   - We never duplicate colours, sizes, or radii in component code.
  *
  * Component overrides are layered on top of MUI's defaults. They are
- * INTENTIONALLY conservative — we only override the things that consistently
+ * INTENTIONALLY conservative â€” we only override the things that consistently
  * look wrong with MUI defaults on a cream commerce canvas. Anything we don't
  * override keeps MUI's accessible, well-tested default.
  *
- * MUI shadow contract: 25 entries (index 0–24). We have 9 unique values, so
- * theme/index.ts pads the rest with our card shadow so elevation 3, 4, …, 24
+ * MUI shadow contract: 25 entries (index 0â€“24). We have 9 unique values, so
+ * theme/index.ts pads the rest with our card shadow so elevation 3, 4, â€¦, 24
  * still feel native instead of falling back to MUI's dark default.
  */
 
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Shadows: pad to 25 with our card shadow so all elevations feel native
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PAD_SHADOW = "0px 1px 3px rgba(31, 27, 23, 0.08), 0px 1px 2px rgba(31, 27, 23, 0.04)";
 
 const resolvedShadows: string[] = [...shadows];
@@ -56,18 +56,18 @@ const theme = createTheme({
   },
 
   components: {
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // MuiButton
     //
     // The workhorse component. Most commerce actions go through here:
-    //   - "Add to Cart", "Buy Now", "Login", "Apply Coupon", pagination…
+    //   - "Add to Cart", "Buy Now", "Login", "Apply Coupon", paginationâ€¦
     //
     // We keep:
     //   - radius 6px (matches shape.borderRadius)
     //   - no uppercase (commerce buttons read better as Title Case)
     //   - tight padding (commerce density)
     //   - subtle hover lift on contained buttons
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     MuiButton: {
       defaultProps: {
         disableElevation: true, // We manage elevation via shadow tokens instead
@@ -115,13 +115,13 @@ const theme = createTheme({
       },
     },
 
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // MuiCard
     //
     // Product cards, deal cards, info panels. We want a clean white surface
     // sitting on the cream canvas with a hairline border instead of a heavy
     // shadow. This is the cornerstone of the Amazon/Flipkart feel.
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     MuiCard: {
       defaultProps: {
         elevation: 0,
@@ -136,15 +136,15 @@ const theme = createTheme({
       },
     },
 
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // MuiPaper
     //
     // Generic surface used by MANY MUI internals (Dialog, Drawer, Menu,
-    // Popover, Snackbar, Accordion…). We deliberately do NOT add a global
-    // border — a forced border on Paper can clip children inside menus
+    // Popover, Snackbar, Accordionâ€¦). We deliberately do NOT add a global
+    // border â€” a forced border on Paper can clip children inside menus
     // and dialogs and break elevation stacking. If a Paper needs a border
     // it can opt in via variant="outlined" or local sx.
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     MuiPaper: {
       styleOverrides: {
         root: {
@@ -157,45 +157,69 @@ const theme = createTheme({
       },
     },
 
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // MuiTextField / MuiOutlinedInput
     //
     // Used by the search bar, login form, checkout, filters. Compact
     // height, modest radius, orange focus ring instead of the heavy
     // default MUI blue.
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     MuiTextField: {
       defaultProps: {
         variant: "outlined",
         size: "small",
       },
     },
-    MuiOutlinedInput: {
-      styleOverrides: {
-        root: {
-          borderRadius: 6,
-          backgroundColor: palette.background.paper,
-          fontSize: "0.875rem",
-          "& fieldset": {
-            borderColor: palette.divider,
-          },
-          "&:hover fieldset": {
-            borderColor: "rgba(31, 27, 23, 0.32)",
-          },
-          "&.Mui-focused fieldset": {
-            borderColor: palette.primary.main,
-            borderWidth: "1px",
-          },
-        },
-        input: {
-          padding: "8px 12px",
-          "&::placeholder": {
-            color: palette.text.secondary,
-            opacity: 1,
-          },
-        },
+MuiOutlinedInput: {
+  styleOverrides: {
+    root: {
+      borderRadius: 6,
+      backgroundColor: palette.background.paper,
+      fontSize: "0.875rem",
+      color: palette.text.primary,
+
+      "& fieldset": {
+        borderColor: palette.divider,
+      },
+
+      "&:hover fieldset": {
+        borderColor: palette.grey[500],
+      },
+
+      "&.Mui-focused fieldset": {
+        borderColor: palette.primary.main,
+        borderWidth: "2px",
+      },
+
+      "&.Mui-error fieldset": {
+        borderColor: palette.error.main,
+      },
+
+      "&.Mui-disabled": {
+        backgroundColor: palette.action.disabledBackground,
+      },
+
+      "&.Mui-disabled fieldset": {
+        borderColor: palette.action.disabled,
       },
     },
+
+    input: {
+      padding: "8px 12px",
+      color: palette.text.primary,
+
+      "&::placeholder": {
+        color: palette.text.secondary,
+        opacity: 1,
+      },
+
+      "&:disabled": {
+        color: palette.text.disabled,
+        WebkitTextFillColor: palette.text.disabled,
+      },
+    },
+  },
+},
     MuiInput: {
       styleOverrides: {
         root: {
@@ -209,23 +233,96 @@ const theme = createTheme({
         },
       },
     },
-    MuiInputLabel: {
+MuiInputLabel: {
+  styleOverrides: {
+    root: {
+      fontSize: "0.8125rem",
+      color: palette.text.secondary,
+
+      "&.Mui-focused": {
+        color: palette.primary.main,
+      },
+
+      "&.Mui-error": {
+        color: palette.error.main,
+      },
+
+      "&.Mui-disabled": {
+        color: palette.text.disabled,
+      },
+    },
+  },
+},
+
+    MuiAlert: {
       styleOverrides: {
         root: {
-          fontSize: "0.8125rem",
+          borderRadius: 6,
+          fontSize: "0.875rem",
+          fontWeight: 500,
+          color: palette.text.primary,
+        },
+        message: {
+          color: palette.text.primary,
+        },
+        icon: {
+          color: "inherit",
         },
       },
     },
 
-    // ─────────────────────────────────────────────────────────────
+
+MuiFormHelperText: {
+  styleOverrides: {
+    root: {
+      color: palette.text.secondary,
+      fontSize: "0.75rem",
+
+      "&.Mui-error": {
+        color: palette.error.main,
+        fontWeight: 500,
+      },
+    },
+  },
+},
+
+
+MuiRadio: {
+  styleOverrides: {
+    root: {
+      color: palette.grey[500],
+
+      "&.Mui-checked": {
+        color: palette.primary.main,
+      },
+
+      "&.Mui-disabled": {
+        color: palette.text.disabled,
+      },
+    },
+  },
+},
+
+MuiFormControlLabel: {
+  styleOverrides: {
+    label: {
+      color: palette.text.primary,
+
+      "&.Mui-disabled": {
+        color: palette.text.disabled,
+      },
+    },
+  },
+},
+
     // MuiChip
     //
     // Tags, badges, capsules. Compact, thin-bordered, semi-rounded.
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     MuiChip: {
       styleOverrides: {
         root: {
-          borderRadius: 999, // pill — feels right for chips
+          borderRadius: 999, // pill â€” feels right for chips
           fontSize: "0.75rem",
           fontWeight: 600,
           height: 24,
@@ -241,11 +338,11 @@ const theme = createTheme({
       },
     },
 
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // MuiAppBar
     //
     // Sticky header. Light surface, hairline shadow, no heavy elevation.
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     MuiAppBar: {
       defaultProps: {
         elevation: 0,
@@ -261,11 +358,11 @@ const theme = createTheme({
       },
     },
 
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // MuiBadge
     //
     // Cart count, wishlist count, notification dot. Orange = emphasis.
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     MuiBadge: {
       styleOverrides: {
         badge: {
@@ -279,13 +376,13 @@ const theme = createTheme({
       },
     },
 
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // MuiTypography
     //
     // Default colour matches text.primary so unclassed Typography inherits
     // our dark warm neutral. We also explicitly map variants to the right
     // HTML tag for accessibility (h1..h6, paragraphs for body).
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     MuiTypography: {
       defaultProps: {
         variantMapping: {
@@ -308,12 +405,12 @@ const theme = createTheme({
       },
     },
 
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // MuiContainer
     //
     // Standard layout container. 24px gutter, 1240px max width for the
-    // largest breakpoint — tight enough to feel commerce-grade.
-    // ─────────────────────────────────────────────────────────────
+    // largest breakpoint â€” tight enough to feel commerce-grade.
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     MuiContainer: {
       styleOverrides: {
         root: {
@@ -326,20 +423,27 @@ const theme = createTheme({
       },
     },
 
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // MuiIconButton
     //
     // Wishlist, cart, account icons. Faint orange wash on hover so
     // the entire interactive toolset feels cohesive.
-    // ─────────────────────────────────────────────────────────────
-    MuiIconButton: {
-      styleOverrides: {
-        root: {
-          transition: "all 0.18s ease",
-          "&:hover": {
-            backgroundColor: "rgba(241, 90, 41, 0.06)",
-          },
-        },
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+MuiIconButton: {
+  styleOverrides: {
+    root: {
+      color: palette.text.secondary,
+      transition: "background-color 0.18s ease, color 0.18s ease",
+
+      "&:hover": {
+        backgroundColor: "rgba(241, 90, 41, 0.06)",
+        color: palette.primary.main,
+      },
+
+      "&.Mui-disabled": {
+        color: palette.text.disabled,
+      },
+    },
         sizeMedium: {
           padding: 8,
         },
@@ -349,12 +453,12 @@ const theme = createTheme({
       },
     },
 
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // MuiDivider
     //
     // 1px line biased a touch lighter than the canvas divider so it works
     // inside white surfaces too.
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     MuiDivider: {
       styleOverrides: {
         root: {
@@ -363,11 +467,11 @@ const theme = createTheme({
       },
     },
 
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // MuiLink
     //
     // Brand-orange links under-on-canvas. Default underline on hover.
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     MuiLink: {
       defaultProps: {
         underline: "hover",
@@ -379,11 +483,11 @@ const theme = createTheme({
       },
     },
 
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // MuiTooltip
     //
     // Compact, dark surface, small text.
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     MuiTooltip: {
       styleOverrides: {
         tooltip: {
@@ -399,15 +503,15 @@ const theme = createTheme({
       },
     },
 
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // MuiGrid
     //
     // In MUI v9 / Material 6, Grid v2 is the consolidated `Grid` export.
     // The old MuiGrid2 key from earlier drafts is invalid in MUI 9 and will
     // throw a TypeScript error. We don't actually need to override anything
-    // here — Grid is fine on its own — but we declare the key for clarity
+    // here â€” Grid is fine on its own â€” but we declare the key for clarity
     // and to keep the door open for future tweaks.
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     MuiGrid: {
       styleOverrides: {
         root: {},
@@ -417,3 +521,6 @@ const theme = createTheme({
 });
 
 export default theme;
+
+
+

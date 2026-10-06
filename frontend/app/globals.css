@@ -23,12 +23,13 @@
   --havlook-surface: #FFFFFF;        /* White — cards / panels / app bar */
 
   /* Text */
-  --havlook-text: #1F1B17;           /* Warm dark */
-  --havlook-muted: #6B6259;          /* Muted warm brown */
-  --havlook-disabled: rgba(31, 27, 23, 0.38);
+/* Text */
+--havlook-text: #1F1B17;
+--havlook-muted: #4F4740;
+--havlook-disabled: rgba(31, 27, 23, 0.48);
 
-  /* Structural */
-  --havlook-border: #E2D9CC;
+/* Structural */
+--havlook-border: #CFC4B5;
   --havlook-radius-compact: 4px;
   --havlook-radius-default: 6px;
   --havlook-radius-soft: 8px;
