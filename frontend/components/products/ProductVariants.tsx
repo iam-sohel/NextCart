@@ -97,17 +97,24 @@ export default function ProductVariants({
   };
 
   const isAxisValueAvailable = (axis: string, value: string) => {
-    // An option is "available" when at least one variant matching this
-    // axis value is sellable (has inventory > 0 or no inventory field).
+    // The backend already calculates variant availability.
+    // Prefer that authoritative value before falling back to inventory.
     return variants.some((v) => {
       if (readAxis(v, axis) !== value) return false;
+
+      if (typeof v.available === "boolean") {
+        return v.available;
+      }
+
       if (v.inventory) {
         const available =
           typeof v.inventory.available === "number"
             ? v.inventory.available
             : (v.inventory.quantity ?? 0) - (v.inventory.reservedQty ?? 0);
+
         return available > 0;
       }
+
       return true;
     });
   };
@@ -245,8 +252,11 @@ function axesPresent(variants: ProductVariant[]): string[] {
   const ordered: string[] = [];
 
   const consider = (key: string) => {
-    if (seen.has(key)) return;
-    seen.add(key);
+    const normalizedKey = normalizeAxisKey(key);
+
+    if (seen.has(normalizedKey)) return;
+
+    seen.add(normalizedKey);
     ordered.push(key);
   };
 
@@ -294,10 +304,19 @@ function readAxis(
   axis: string,
 ): string | number | null | undefined {
   // Dynamic map first — the backend's source of truth.
-  if (variant.attributes && Object.prototype.hasOwnProperty.call(variant.attributes, axis)) {
-    return variant.attributes[axis] as string | number | null;
+  if (variant.attributes && typeof variant.attributes === "object") {
+    const targetAxis = normalizeAxisKey(axis);
+
+    const matchingKey = Object.keys(variant.attributes).find(
+      (key) => normalizeAxisKey(key) === targetAxis,
+    );
+
+    if (matchingKey) {
+      return variant.attributes[matchingKey] as string | number | null;
+    }
   }
-  switch (axis) {
+
+  switch (normalizeAxisKey(axis)) {
     case "size":
       return variant.size;
     case "color":
@@ -307,4 +326,8 @@ function readAxis(
     default:
       return undefined;
   }
+}
+
+function normalizeAxisKey(key: string): string {
+  return key.trim().toLowerCase();
 }
