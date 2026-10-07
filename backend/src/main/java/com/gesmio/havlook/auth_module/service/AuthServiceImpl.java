@@ -1,24 +1,12 @@
 package com.gesmio.havlook.auth_module.service;
 
 import com.gesmio.havlook.auth_module.dto.*;
-import com.gesmio.havlook.auth_module.entity.EmailOtp;
-import com.gesmio.havlook.auth_module.entity.PasswordResetOtp;
-import com.gesmio.havlook.auth_module.entity.PendingRegistration;
-import com.gesmio.havlook.auth_module.entity.PendingSellerRegistration;
-import com.gesmio.havlook.auth_module.entity.RefreshToken;
-import com.gesmio.havlook.auth_module.exceptions.InvalidAuthRequestException;
-import com.gesmio.havlook.auth_module.exceptions.InvalidCredentialsException;
-import com.gesmio.havlook.auth_module.exceptions.OtpVerificationException;
-import com.gesmio.havlook.auth_module.exceptions.PendingRegistrationNotFoundException;
-import com.gesmio.havlook.auth_module.exceptions.RegistrationExpiredException;
-import com.gesmio.havlook.auth_module.exceptions.RegistrationVerificationException;
-import com.gesmio.havlook.auth_module.exceptions.TokenException;
-import com.gesmio.havlook.auth_module.repository.EmailOtpRepository;
-import com.gesmio.havlook.auth_module.repository.PasswordResetOtpRepository;
-import com.gesmio.havlook.auth_module.repository.PendingRegistrationRepository;
-import com.gesmio.havlook.auth_module.repository.PendingSellerRegistrationRepository;
-import com.gesmio.havlook.auth_module.repository.PhoneOtpRepository;
+import com.gesmio.havlook.auth_module.entity.*;
+import com.gesmio.havlook.auth_module.exceptions.*;
+import com.gesmio.havlook.auth_module.repository.*;
 import com.gesmio.havlook.auth_module.util.JwtUtil;
+import com.gesmio.havlook.customer_module.entity.Customer;
+import com.gesmio.havlook.customer_module.repository.CustomerRepository;
 import com.gesmio.havlook.seller_module.seller.entity.Seller;
 import com.gesmio.havlook.seller_module.seller.repository.SellerRepository;
 import com.gesmio.havlook.user_module.entity.Role;
@@ -60,6 +48,8 @@ public class AuthServiceImpl implements AuthService {
 
     private final SellerRepository sellerRepository;
 
+    private final CustomerRepository customerRepository;
+
     private final EmailOtpRepository emailOtpRepository;
     private final PhoneOtpRepository phoneOtpRepository;
     private final PasswordResetOtpRepository passwordResetOtpRepository;
@@ -84,7 +74,6 @@ public class AuthServiceImpl implements AuthService {
         System.out.println("========== REGISTER API HIT ==========");
         System.out.println("Email: " + request.getEmail());
         System.out.println("======================================");
-
 
         validateRegisterRequest(request);
 
@@ -445,9 +434,22 @@ public class AuthServiceImpl implements AuthService {
         user.setRole(customerRole);
         user.setEnabled(true);
 
+        // Create User
         User savedUser =
                 userRepository.save(user);
 
+        // Create Customer profile
+        if (!customerRepository.existsByUserId(savedUser.getId())) {
+
+            Customer customer = Customer.builder()
+                    .user(savedUser)
+                    .active(true)
+                    .build();
+
+            customerRepository.save(customer);
+        }
+
+        // Delete temporary registration
         pendingRegistrationRepository.delete(
                 pendingRegistration
         );
