@@ -108,7 +108,7 @@ public class CartController {
     // =========================================================
 
     @DeleteMapping("/items/{itemId}")
-    public ResponseEntity<CommonResponseDto<Void>> removeItem(
+    public ResponseEntity<CommonResponseDto<CartResponseDTO>> removeItem(
             Authentication authentication,
 
             @PathVariable
@@ -117,16 +117,17 @@ public class CartController {
 
         String userEmail = authentication.getName();
 
-        cartService.removeItem(
-                userEmail,
-                itemId
-        );
+        CartResponseDTO response =
+                cartService.removeItem(
+                        userEmail,
+                        itemId
+                );
 
         return ResponseEntity.ok(
                 new CommonResponseDto<>(
                         true,
                         "Cart item removed successfully",
-                        null
+                        response
                 )
         );
     }

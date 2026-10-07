@@ -64,6 +64,28 @@ function toNumber(v: unknown): number {
   return 0;
 }
 
+interface BackendCartEnvelope {
+  success?: boolean;
+  message?: string;
+  data?: CartResponseWire | null;
+}
+
+function unwrapCartResponse(
+  payload: BackendCartEnvelope | CartResponseWire,
+): CartResponseWire {
+  if (
+    payload &&
+    typeof payload === "object" &&
+    "data" in payload &&
+    payload.data &&
+    typeof payload.data === "object"
+  ) {
+    return payload.data;
+  }
+
+  return payload as CartResponseWire;
+}
+
 function normaliseItem(raw: CartItemWire): CartItemWire {
   return {
     ...raw,
@@ -143,7 +165,7 @@ export async function getCart(
   return {
     ok: true,
     status: res.status,
-    data: normaliseCart(res.data),
+    data: normaliseCart(unwrapCartResponse(res.data)),
   };
 }
 
@@ -183,7 +205,7 @@ export async function addItemToCart(
   return {
     ok: true,
     status: res.status,
-    data: normaliseCart(res.data),
+    data: normaliseCart(unwrapCartResponse(res.data)),
   };
 }
 
@@ -209,7 +231,7 @@ export async function updateCartItem(
   return {
     ok: true,
     status: res.status,
-    data: normaliseCart(res.data),
+    data: normaliseCart(unwrapCartResponse(res.data)),
   };
 }
 
@@ -233,7 +255,7 @@ export async function removeCartItem(
   return {
     ok: true,
     status: res.status,
-    data: normaliseCart(res.data),
+    data: normaliseCart(unwrapCartResponse(res.data)),
   };
 }
 

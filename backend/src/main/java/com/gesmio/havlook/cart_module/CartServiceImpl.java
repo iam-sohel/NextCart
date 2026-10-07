@@ -199,7 +199,7 @@ public class CartServiceImpl implements CartService {
     // =========================================================
 
     @Override
-    public void removeItem(
+    public CartResponseDTO removeItem(
             String userIdentifier,
             Long itemId) {
 
@@ -225,6 +225,8 @@ public class CartServiceImpl implements CartService {
         cart.removeItem(cartItem);
 
         cartItemRepository.delete(cartItem);
+
+        return buildCartResponse(cart);
     }
 
     // =========================================================

@@ -19,7 +19,7 @@ public interface CartService {
             CartItemUpdateRequestDTO request
     );
 
-    void removeItem(
+    CartResponseDTO removeItem(
             String userIdentifier,
             Long itemId
     );
