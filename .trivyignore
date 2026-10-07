@@ -1,0 +1,5 @@
+# GHSA-vfj7-8cjw-p6xm / CVE-2026-93687
+# braces@3.0.3 is currently an unfixed development-only transitive dependency
+# via eslint-config-next -> @next/eslint-plugin-next -> fast-glob -> micromatch.
+# Production dependencies verified clean with: npm audit --omit=dev
+GHSA-vfj7-8cjw-p6xm
