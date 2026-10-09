@@ -1,5 +1,38 @@
 import { apiRequest } from "@/lib/api";
 
+function asRecord(value: unknown): Record<string, unknown> {
+  if (
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value)
+  ) {
+    return value as Record<string, unknown>;
+  }
+
+  return {};
+}
+
+function asNullableText(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+function asOptionalBoolean(value: unknown): boolean | undefined {
+  return typeof value === "boolean" ? value : undefined;
+}
+
+function asKycStatus(value: unknown): KycStatus {
+  if (
+    value === "PENDING" ||
+    value === "UNDER_REVIEW" ||
+    value === "VERIFIED" ||
+    value === "REJECTED"
+  ) {
+    return value;
+  }
+
+  return "PENDING";
+}
+
 export type KycStatus =
   | "PENDING"
   | "UNDER_REVIEW"
@@ -61,16 +94,26 @@ const ENDPOINTS = {
   pending: "/api/v1/admin/sellers/kyc/pending",
 };
 
-function unwrap<T>(response: any): T {
+function unwrap<T>(response: unknown): T {
+  // Handle the apiRequest() result wrapper.
+  const apiResult = asRecord(response);
+
+  const payload =
+    apiResult.ok === true && "data" in apiResult
+      ? apiResult.data
+      : response;
+
+  // Handle the backend CommonResponse envelope.
+  const envelope = asRecord(payload);
+
   if (
-    response &&
-    typeof response === "object" &&
-    "data" in response
+    envelope.success === true &&
+    "data" in envelope
   ) {
-    return response.data as T;
+    return envelope.data as T;
   }
 
-  return response as T;
+  return payload as T;
 }
 
 /**
@@ -87,96 +130,98 @@ function throwIfFailed(
   }
 }
 
-function normaliseKyc(value: any): AdminSellerKyc {
+function normaliseKyc(value: unknown): AdminSellerKyc {
+  const record = asRecord(value);
   return {
-    id: Number(value?.id ?? 0),
-    sellerId: Number(value?.sellerId ?? 0),
+    id: Number(record.id ?? 0),
+    sellerId: Number(record.sellerId ?? 0),
 
-    businessType: value?.businessType ?? null,
+    businessType: asNullableText(record.businessType),
 
-    gstNumber: value?.gstNumber ?? null,
-    gstDocumentUrl: value?.gstDocumentUrl ?? null,
+    gstNumber: asNullableText(record.gstNumber),
+    gstDocumentUrl: asNullableText(record.gstDocumentUrl),
 
     registrationNumber:
-      value?.registrationNumber ?? null,
+      asNullableText(record.registrationNumber),
     registrationDocumentUrl:
-      value?.registrationDocumentUrl ?? null,
+      asNullableText(record.registrationDocumentUrl),
 
-    ownerName: value?.ownerName ?? null,
-    dateOfBirth: value?.dateOfBirth ?? null,
+    ownerName: asNullableText(record.ownerName),
+    dateOfBirth: asNullableText(record.dateOfBirth),
 
-    panNumber: value?.panNumber ?? null,
+    panNumber: asNullableText(record.panNumber),
     panDocumentUrl:
-      value?.panDocumentUrl ?? null,
+      asNullableText(record.panDocumentUrl),
 
     aadhaarNumber:
-      value?.aadhaarNumber ?? null,
+      asNullableText(record.aadhaarNumber),
     aadhaarDocumentUrl:
-      value?.aadhaarDocumentUrl ?? null,
+      asNullableText(record.aadhaarDocumentUrl),
 
     businessAddress:
-      value?.businessAddress ?? null,
+      asNullableText(record.businessAddress),
 
-    city: value?.city ?? null,
-    state: value?.state ?? null,
+    city: asNullableText(record.city),
+    state: asNullableText(record.state),
     postalCode:
-      value?.postalCode ?? null,
+      asNullableText(record.postalCode),
     country:
-      value?.country ?? null,
+      asNullableText(record.country),
 
     addressDocumentUrl:
-      value?.addressDocumentUrl ?? null,
+      asNullableText(record.addressDocumentUrl),
 
     status:
-      value?.status ?? "PENDING",
+      asKycStatus(record.status),
 
     rejectionReason:
-      value?.rejectionReason ?? null,
+      asNullableText(record.rejectionReason),
 
     submittedAt:
-      value?.submittedAt ?? null,
+      asNullableText(record.submittedAt),
 
     reviewedAt:
-      value?.reviewedAt ?? null,
+      asNullableText(record.reviewedAt),
 
     reviewedBy:
-      value?.reviewedBy == null
+      record.reviewedBy == null
         ? null
-        : Number(value.reviewedBy),
+        : Number(record.reviewedBy),
 
     createdAt:
-      value?.createdAt ?? null,
+      asNullableText(record.createdAt),
 
     updatedAt:
-      value?.updatedAt ?? null,
+      asNullableText(record.updatedAt),
   };
 }
 
-function normalisePage(value: any): AdminSellerKycPage {
-  const content = Array.isArray(value?.content)
-    ? value.content.map(normaliseKyc)
+function normalisePage(value: unknown): AdminSellerKycPage {
+  const record = asRecord(value);
+  const content = Array.isArray(record.content)
+    ? record.content.map(normaliseKyc)
     : [];
 
   return {
     content,
 
-    page: Number(value?.page ?? 0),
+    page: Number(record.page ?? 0),
 
     size: Number(
-      value?.size ?? content.length,
+      record.size ?? content.length,
     ),
 
     totalElements: Number(
-      value?.totalElements ?? content.length,
+      record.totalElements ?? content.length,
     ),
 
     totalPages: Number(
-      value?.totalPages ??
+      record.totalPages ??
         (content.length ? 1 : 0),
     ),
 
-    first: value?.first,
-    last: value?.last,
+    first: asOptionalBoolean(record.first),
+    last: asOptionalBoolean(record.last),
   };
 }
 
@@ -208,7 +253,7 @@ export async function listAdminKyc(
   throwIfFailed(response, "Unable to load seller KYC.");
 
   return normalisePage(
-    unwrap<any>(response),
+    unwrap<unknown>(response),
   );
 }
 
@@ -225,7 +270,7 @@ export async function getAdminKyc(
   throwIfFailed(response, "Unable to load seller KYC.");
 
   return normaliseKyc(
-    unwrap<any>(response),
+    unwrap<unknown>(response),
   );
 }
 
