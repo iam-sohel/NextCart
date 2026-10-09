@@ -1,14 +1,25 @@
+
 package com.gesmio.havlook.auth_module.service;
 
+import java.net.http.HttpClient;
+import java.time.Duration;
+import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
-
-import java.util.Map;
+import org.springframework.web.client.RestClientException;
 
 @Service
 public class Msg91WidgetService {
+
+    private static final Logger log =
+            LoggerFactory.getLogger(Msg91WidgetService.class);
 
     private static final String VERIFY_ACCESS_TOKEN_URL =
             "https://control.msg91.com/api/v5/widget/verifyAccessToken";
@@ -17,108 +28,93 @@ public class Msg91WidgetService {
     private final String authKey;
 
     public Msg91WidgetService(
-            @Value("${msg91.auth-key}") String authKey
-    ) {
+            @Value("${msg91.auth-key:}") String authKey) {
+
         this.authKey = authKey;
-        this.restClient = RestClient.create();
+
+        HttpClient httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(3))
+                .build();
+
+        JdkClientHttpRequestFactory requestFactory =
+                new JdkClientHttpRequestFactory(httpClient);
+
+        requestFactory.setReadTimeout(Duration.ofSeconds(5));
+
+        this.restClient = RestClient.builder()
+                .requestFactory(requestFactory)
+                .build();
     }
 
     /**
      * Verifies the access token returned by MSG91 Widget.
      *
      * @param accessToken token received from MSG91 Widget
-     * @return true when MSG91 confirms successful verification
+     * @return true only when MSG91 explicitly confirms success
      */
     public boolean verifyAccessToken(String accessToken) {
 
-        // ---------------------------------------------------------
         // 1. Validate access token
-        // ---------------------------------------------------------
         if (accessToken == null || accessToken.isBlank()) {
             throw new IllegalArgumentException(
-                    "MSG91 access token is required"
-            );
+                    "MSG91 access token is required");
         }
 
-        // ---------------------------------------------------------
-        // 2. Validate MSG91 auth key
-        // ---------------------------------------------------------
+        // 2. Validate configuration
         if (authKey == null || authKey.isBlank()) {
             throw new IllegalStateException(
-                    "MSG91 auth key is not configured"
-            );
+                    "MSG91 verification is not configured");
         }
 
-        // ---------------------------------------------------------
         // 3. Prepare request body
-        // ---------------------------------------------------------
         Map<String, Object> requestBody = Map.of(
                 "authkey", authKey,
                 "access-token", accessToken.trim()
         );
 
-        try {
+        final Map<String, Object> response;
 
-            // -----------------------------------------------------
-            // 4. Call MSG91 Widget access-token verification API
-            // -----------------------------------------------------
-            Map<?, ?> response = restClient
-                    .post()
+        try {
+            // 4. Call MSG91 verification API
+            response = restClient.post()
                     .uri(VERIFY_ACCESS_TOKEN_URL)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(requestBody)
                     .retrieve()
-                    .body(Map.class);
+                    .body(new ParameterizedTypeReference<
+                            Map<String, Object>>() {});
 
-            // -----------------------------------------------------
-            // 5. Log complete MSG91 response
-            // -----------------------------------------------------
-            System.out.println("==============================================");
-            System.out.println("MSG91 WIDGET ACCESS TOKEN VERIFICATION");
-            System.out.println("==============================================");
-            System.out.println("Response: " + response);
+        } catch (RestClientException ex) {
 
-            if (response == null || response.isEmpty()) {
-
-                System.out.println("MSG91 RESPONSE: EMPTY");
-
-                System.out.println("==============================================");
-
-                return false;
-            }
-
-            // -----------------------------------------------------
-            // 6. Extract response fields
-            // -----------------------------------------------------
-            Object type = response.get("type");
-            Object message = response.get("message");
-            Object code = response.get("code");
-
-            System.out.println("MSG91 TYPE    : " + type);
-            System.out.println("MSG91 MESSAGE : " + message);
-            System.out.println("MSG91 CODE    : " + code);
-            System.out.println("==============================================");
-
-            // -----------------------------------------------------
-            // 7. Check successful response
-            // -----------------------------------------------------
-            return "success".equalsIgnoreCase(
-                    String.valueOf(type)
-            );
-
-        } catch (Exception ex) {
-
-            System.out.println("==============================================");
-            System.out.println("MSG91 WIDGET VERIFICATION EXCEPTION");
-            System.out.println("==============================================");
-            System.out.println("Exception : " + ex.getClass().getName());
-            System.out.println("Message   : " + ex.getMessage());
-            System.out.println("==============================================");
+            // Never log the token, auth key, response body,
+            // or raw exception message.
+            log.warn(
+                    "MSG91 widget verification request failed; errorType={}",
+                    ex.getClass().getSimpleName());
 
             throw new IllegalStateException(
-                    "Unable to verify MSG91 Widget access token",
-                    ex
-            );
+                    "MSG91 verification service is unavailable");
         }
+
+        // 5. Reject empty responses
+        if (response == null || response.isEmpty()) {
+            log.warn(
+                    "MSG91 widget verification returned an empty response");
+            return false;
+        }
+
+        // 6. Check the provider's success status
+        Object type = response.get("type");
+
+        boolean verified = type instanceof String
+                && "success".equalsIgnoreCase((String) type);
+
+        if (!verified) {
+            log.info(
+                    "MSG91 widget token verification was rejected");
+        }
+
+        // 7. Return the verification result
+        return verified;
     }
 }
