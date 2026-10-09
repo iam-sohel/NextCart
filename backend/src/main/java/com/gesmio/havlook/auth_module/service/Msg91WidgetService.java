@@ -1,4 +1,3 @@
-
 package com.gesmio.havlook.auth_module.service;
 
 import java.net.http.HttpClient;
@@ -47,7 +46,7 @@ public class Msg91WidgetService {
     }
 
     /**
-     * Verifies the access token returned by MSG91 Widget.
+     * Verifies the access token returned by the MSG91 Widget.
      *
      * @param accessToken token received from MSG91 Widget
      * @return true only when MSG91 explicitly confirms success
@@ -62,6 +61,8 @@ public class Msg91WidgetService {
 
         // 2. Validate configuration
         if (authKey == null || authKey.isBlank()) {
+            log.error("MSG91 verification is not configured");
+
             throw new IllegalStateException(
                     "MSG91 verification is not configured");
         }
@@ -82,12 +83,13 @@ public class Msg91WidgetService {
                     .body(requestBody)
                     .retrieve()
                     .body(new ParameterizedTypeReference<
-                            Map<String, Object>>() {});
+                            Map<String, Object>>() {
+                    });
 
         } catch (RestClientException ex) {
 
-            // Never log the token, auth key, response body,
-            // or raw exception message.
+            // Do not log credentials, tokens, response bodies,
+            // or raw exception messages.
             log.warn(
                     "MSG91 widget verification request failed; errorType={}",
                     ex.getClass().getSimpleName());
@@ -100,10 +102,11 @@ public class Msg91WidgetService {
         if (response == null || response.isEmpty()) {
             log.warn(
                     "MSG91 widget verification returned an empty response");
+
             return false;
         }
 
-        // 6. Check the provider's success status
+        // 6. Check provider's explicit success status
         Object type = response.get("type");
 
         boolean verified = type instanceof String
@@ -114,7 +117,7 @@ public class Msg91WidgetService {
                     "MSG91 widget token verification was rejected");
         }
 
-        // 7. Return the verification result
+        // 7. Return verification result
         return verified;
     }
 }
