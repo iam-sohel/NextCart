@@ -191,25 +191,37 @@ export default function CheckoutPage() {
    * Synchronize the cart after a successful order/payment.
    */
 const finishSuccessfulOrder = useCallback(
-  async (orderId: number, orderNumber?: string) => {
-    await clearCart();
-    void fetchCart();
+    async (orderId: number, orderNumber?: string) => {
+      // Validate the identifier before changing cart state.
+      if (!Number.isInteger(orderId) || orderId <= 0) {
+        setError(
+          "Order was created, but the order ID was not returned."
+        );
+        return;
+      }
 
-    if (!Number.isInteger(orderId) || orderId <= 0) {
-      setError(
-        "Order was created, but the order ID was not returned."
-      );
-      return;
-    }
+      let cartSyncFailed = false;
 
-    const redirectUrl = orderNumber
-      ? `/order-success?orderNumber=${encodeURIComponent(orderNumber)}`
-      : `/order-success?orderId=${encodeURIComponent(String(orderId))}`;
+      try {
+        await clearCart();
+      } catch {
+        // Order creation/payment verification already succeeded.
+        // A cart cleanup error must not block order confirmation.
+        cartSyncFailed = true;
+      }
 
-    router.push(redirectUrl);
-  },
-  [clearCart, fetchCart, router]
-);
+      const orderIdentifier = orderNumber
+        ? `orderNumber=${encodeURIComponent(orderNumber)}`
+        : `orderId=${encodeURIComponent(String(orderId))}`;
+
+      const redirectUrl = `/order-success?${orderIdentifier}${
+        cartSyncFailed ? "&cartSync=failed" : ""
+      }`;
+
+      router.push(redirectUrl);
+    },
+    [clearCart, router]
+  );
 
   /**
    * Open Razorpay Checkout for an already-created HavLook order.
@@ -450,16 +462,22 @@ const finishSuccessfulOrder = useCallback(
 
       if (!result.ok) {
         setError(result.message || "Unable to place the order.");
+        setSubmitting(false);
         return;
       }
 
       const orderNumber = result.data.orderNumber;
       const orderId = Number(result.data.id);
 
-      if (!orderNumber || !Number.isFinite(orderId)) {
+      if (
+        !orderNumber ||
+        !Number.isInteger(orderId) ||
+        orderId <= 0
+      ) {
         setError(
-          "The order was created, but required order information was not returned."
+          "The order may have been created, but its confirmation details are incomplete. Check your orders before retrying."
         );
+        setSubmitting(false);
         return;
       }
 

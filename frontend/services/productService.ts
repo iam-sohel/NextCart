@@ -232,7 +232,7 @@ export async function getProductBySlug(
       };
     }
 
-    let product: Product =
+    const product: Product =
       normalizeBackendProductDetails(details);
 
     return {

@@ -57,9 +57,17 @@ export default async function HomePage() {
 
   /* --------------------------- Featured subset -------------------------- */
 
-  const featuredProducts = allProducts
-    .filter((product) => product.featured)
-    .slice(0, 8);
+  const explicitlyFeatured = allProducts.filter(
+    (product) => product.featured === true,
+  );
+
+  // Keep backend-curated featured products first. When the backend has
+  // not flagged any products, use the catalogue order as a safe fallback.
+  const featuredProducts = (
+    explicitlyFeatured.length > 0
+      ? explicitlyFeatured
+      : allProducts
+  ).slice(0, 8);
 
   /* ----------------------------- Deals subset --------------------------- */
 
@@ -67,14 +75,14 @@ export default async function HomePage() {
     .filter(
       (product) =>
         typeof product.discount === "number" &&
-        product.discount > 0,
+        Number.isFinite(product.discount) &&
+        product.discount > 0 &&
+        product.discount <= 100,
     )
     .slice(0, 8)
     .map((product) => ({
       ...product,
-      offer: product.discount
-        ? `${product.discount}% OFF`
-        : "Best Price",
+      offer: `${product.discount}% OFF`,
     }));
 
   /* ------------------------ Electronics subset -------------------------- */
@@ -88,9 +96,18 @@ export default async function HomePage() {
     "Gaming",
   ]);
 
+  const normalizeCategory = (category?: string | null) =>
+    (category ?? "").trim().toLocaleLowerCase("en-IN");
+
+  const electronicsCategoryKeys = new Set(
+    Array.from(ELECTRONICS_CATEGORIES, normalizeCategory),
+  );
+
   const electronicsProducts = allProducts
     .filter((product) =>
-      ELECTRONICS_CATEGORIES.has(product.category),
+      electronicsCategoryKeys.has(
+        normalizeCategory(product.category),
+      ),
     )
     .slice(0, 8);
 
@@ -102,9 +119,15 @@ export default async function HomePage() {
     "Footwear",
   ]);
 
+  const fashionCategoryKeys = new Set(
+    Array.from(FASHION_CATEGORIES, normalizeCategory),
+  );
+
   const fashionProducts = allProducts
     .filter((product) =>
-      FASHION_CATEGORIES.has(product.category),
+      fashionCategoryKeys.has(
+        normalizeCategory(product.category),
+      ),
     )
     .slice(0, 8);
 

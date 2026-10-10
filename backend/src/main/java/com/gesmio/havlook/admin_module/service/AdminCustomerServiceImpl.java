@@ -140,21 +140,13 @@ public class AdminCustomerServiceImpl
     ) {
 
         return CustomerResponse.builder()
-                .firstName(
-                        customer.getUser().getFirstName()
-                )
-                .lastName(
-                        customer.getUser().getLastName()
-                )
-                .email(
-                        customer.getUser().getEmail()
-                )
-                .phone(
-                        customer.getUser().getPhone()
-                )
-                .active(
-                        customer.isActive()
-                )
+                .customerId(customer.getId())
+                .userId(customer.getUser().getId())
+                .firstName(customer.getUser().getFirstName())
+                .lastName(customer.getUser().getLastName())
+                .email(customer.getUser().getEmail())
+                .phone(customer.getUser().getPhone())
+                .active(customer.isActive())
                 .build();
     }
 }

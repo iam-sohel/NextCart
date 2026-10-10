@@ -351,10 +351,6 @@ public class PaymentServiceImpl implements PaymentService {
 
             if (!validSignature) {
 
-                markPaymentFailed(
-                        transaction,
-                        "Razorpay signature verification failed"
-                );
 
                 throw new PaymentVerificationException(
                         "Payment signature verification failed"
@@ -425,14 +421,6 @@ public class PaymentServiceImpl implements PaymentService {
 
         } catch (Exception exception) {
 
-            if (transaction.getStatus() !=
-                    PaymentStatusEnum.SUCCESS) {
-
-                markPaymentFailed(
-                        transaction,
-                        safeMessage(exception)
-                );
-            }
 
             throw new PaymentGatewayException(
                     "Payment verification failed",
@@ -581,10 +569,6 @@ public class PaymentServiceImpl implements PaymentService {
             if (razorpayAmount !=
                     transaction.getAmountInPaise()) {
 
-                markPaymentFailed(
-                        transaction,
-                        "Razorpay amount does not match order amount"
-                );
 
                 throw new PaymentVerificationException(
                         "Payment amount mismatch"

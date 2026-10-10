@@ -131,8 +131,17 @@ function AdminSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       item.children?.some((child) => isActive(pathname, child.href)) ??
       false,
   );
-  const [catalogManuallyOpen, setCatalogManuallyOpen] = useState(false);
-  const catalogOpen = catalogManuallyOpen || catalogActive;
+  const [catalogOverride, setCatalogOverride] = useState<{
+    pathname: string | null;
+    open: boolean;
+  } | null>(null);
+
+  // A manual choice applies only to the route where it was made.
+  // On route changes, expansion follows the active Catalog route again.
+  const catalogOpen =
+    catalogOverride?.pathname === pathname
+      ? catalogOverride.open
+      : catalogActive;
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
@@ -142,7 +151,7 @@ function AdminSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <List
         component="nav"
         aria-label="Admin navigation"
-        sx={{ px: 1.5, py: 1, overflowY: "auto" }}
+        sx={{ px: 1.5, py: 1, flex: 1, minHeight: 0, overflowY: "auto" }}
       >
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
@@ -199,7 +208,7 @@ function AdminSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           return (
             <Box key={item.href}>
               <ListItemButton
-                onClick={() => setCatalogManuallyOpen(!catalogOpen)}
+                onClick={() => setCatalogOverride({ pathname, open: !catalogOpen })}
                 selected={catalogActive}
                 aria-expanded={catalogOpen}
                 aria-controls="admin-catalog-navigation"

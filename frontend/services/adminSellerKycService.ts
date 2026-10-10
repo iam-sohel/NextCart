@@ -73,13 +73,15 @@ function toText(value: unknown): string | null {
     : null;
 }
 
-function normalizeKyc(value: any): AdminSellerKyc | null {
-  if (!value || typeof value !== "object") {
+function normalizeKyc(value: unknown): AdminSellerKyc | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
     return null;
   }
 
-  const id = toNumber(value.id);
-  const sellerId = toNumber(value.sellerId);
+  const record = value as Record<string, unknown>;
+
+  const id = toNumber(record.id);
+  const sellerId = toNumber(record.sellerId);
 
   if (!id || id <= 0 || !sellerId || sellerId <= 0) {
     return null;
@@ -89,40 +91,40 @@ function normalizeKyc(value: any): AdminSellerKyc | null {
     id,
     sellerId,
 
-    businessType: toText(value.businessType),
+    businessType: toText(record.businessType),
 
-    gstNumber: toText(value.gstNumber),
-    gstDocumentUrl: toText(value.gstDocumentUrl),
+    gstNumber: toText(record.gstNumber),
+    gstDocumentUrl: toText(record.gstDocumentUrl),
 
-    registrationNumber: toText(value.registrationNumber),
-    registrationDocumentUrl: toText(value.registrationDocumentUrl),
+    registrationNumber: toText(record.registrationNumber),
+    registrationDocumentUrl: toText(record.registrationDocumentUrl),
 
-    ownerName: toText(value.ownerName),
-    dateOfBirth: toText(value.dateOfBirth),
+    ownerName: toText(record.ownerName),
+    dateOfBirth: toText(record.dateOfBirth),
 
-    panNumber: toText(value.panNumber),
-    panDocumentUrl: toText(value.panDocumentUrl),
+    panNumber: toText(record.panNumber),
+    panDocumentUrl: toText(record.panDocumentUrl),
 
-    aadhaarNumber: toText(value.aadhaarNumber),
-    aadhaarDocumentUrl: toText(value.aadhaarDocumentUrl),
+    aadhaarNumber: toText(record.aadhaarNumber),
+    aadhaarDocumentUrl: toText(record.aadhaarDocumentUrl),
 
-    businessAddress: toText(value.businessAddress),
-    city: toText(value.city),
-    state: toText(value.state),
-    postalCode: toText(value.postalCode),
-    country: toText(value.country),
+    businessAddress: toText(record.businessAddress),
+    city: toText(record.city),
+    state: toText(record.state),
+    postalCode: toText(record.postalCode),
+    country: toText(record.country),
 
-    addressDocumentUrl: toText(value.addressDocumentUrl),
+    addressDocumentUrl: toText(record.addressDocumentUrl),
 
-    status: toText(value.status),
-    rejectionReason: toText(value.rejectionReason),
+    status: toText(record.status),
+    rejectionReason: toText(record.rejectionReason),
 
-    submittedAt: toText(value.submittedAt),
-    reviewedAt: toText(value.reviewedAt),
-    reviewedBy: toNumber(value.reviewedBy),
+    submittedAt: toText(record.submittedAt),
+    reviewedAt: toText(record.reviewedAt),
+    reviewedBy: toNumber(record.reviewedBy),
 
-    createdAt: toText(value.createdAt),
-    updatedAt: toText(value.updatedAt),
+    createdAt: toText(record.createdAt),
+    updatedAt: toText(record.updatedAt),
   };
 }
 

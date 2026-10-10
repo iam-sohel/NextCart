@@ -1,156 +1,153 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import Link from "next/link";
-
-import {
-  Box,
-  Card,
-  CardActionArea,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Box, Card, Stack, Typography } from "@mui/material";
 
 import categories from "@/data/categories";
 
 /**
- * HAVLOOK — Category strip.
- *
- * Presentation layer only: renders the existing backend-driven category data
- * as a premium horizontal navigation strip. White surface card with circular
- * image tiles, orange hover accents, and hidden-scrollbar mobile scrolling
- * (no document-level overflow).
+ * NextCart customer storefront category navigation.
+ * Uses the existing category data and route structure.
  */
 export default function CategoryBar() {
   return (
     <Box
-      role="region"
-      aria-label="Product categories"
-      tabIndex={0}
+      component="nav"
+      aria-label="Shop by category"
       sx={{
         bgcolor: "background.paper",
         border: "1px solid",
         borderColor: "divider",
-        borderRadius: 3,
+        borderRadius: { xs: 2, sm: 3 },
         px: { xs: 1.25, sm: 2.5 },
-        py: { xs: 1.5, sm: 2 },
-        boxShadow: 1,
+        py: { xs: 1.25, sm: 2 },
+        boxShadow: { xs: 0, sm: 1 },
         overflowX: "auto",
-        // Contain the scroll so the strip never widens the document.
+        overflowY: "hidden",
         maxWidth: "100%",
-        // Soft right-edge fade signals that more categories lie beyond
-        // the visible edge without adding extra controls.
-        maskImage:
-          "linear-gradient(to right, black calc(100% - 48px), transparent 100%)",
-        WebkitMaskImage:
-          "linear-gradient(to right, black calc(100% - 48px), transparent 100%)",
-
+        WebkitOverflowScrolling: "touch",
+        scrollbarWidth: "thin",
+        scrollbarColor: "transparent transparent",
         "&::-webkit-scrollbar": {
-          display: "none",
+          height: 4,
         },
-
-        scrollbarWidth: "none",
-
-        "&:focus-visible": {
+        "&::-webkit-scrollbar-thumb": {
+          backgroundColor: "transparent",
+          borderRadius: 4,
+        },
+        "&:hover::-webkit-scrollbar-thumb": {
+          backgroundColor: "action.disabled",
+        },
+        "& .category-link": {
+          display: "block",
+          flexShrink: 0,
+          color: "inherit",
+          textDecoration: "none",
+          borderRadius: 3,
+        },
+        "& .category-link:focus-visible": {
           outline: "2px solid",
           outlineColor: "primary.main",
-          outlineOffset: 2,
+          outlineOffset: 3,
         },
       }}
     >
       <Stack
         direction="row"
-        spacing={{ xs: 1.5, sm: 2 }}
+        spacing={{ xs: 1, sm: 2 }}
         sx={{
-          minWidth: "max-content",
-          justifyContent: {
-            xs: "flex-start",
-            sm: "space-between",
-          },
+          width: "max-content",
+          minWidth: "100%",
+          justifyContent: { xs: "flex-start", sm: "space-between" },
+          pb: 0.5,
         }}
       >
         {categories.map((category) => (
           <Link
             key={category.slug}
             href={`/category/${category.slug}`}
-            style={{
-              textDecoration: "none",
-              color: "inherit",
-              flexShrink: 0,
-            }}
+            className="category-link"
+            aria-label={`Shop ${category.title}`}
           >
             <Card
               elevation={0}
               sx={{
-                width: { xs: 88, sm: 112 },
+                width: { xs: 82, sm: 108 },
+                height: "100%",
                 borderRadius: 3,
-                backgroundColor: "transparent",
-                transition: "transform 0.2s ease",
-
+                bgcolor: "transparent",
+                transition: "transform 180ms ease",
                 "&:hover": {
-                  transform: "translateY(-4px)",
-
-                  "& .category-tile": {
-                    borderColor: "primary.main",
-                    bgcolor: "primary.main",
-                    color: "primary.contrastText",
+                  transform: "translateY(-3px)",
+                },
+                "&:hover .category-tile, &:focus-visible .category-tile": {
+                  borderColor: "primary.main",
+                  bgcolor: "primary.main",
+                  color: "primary.contrastText",
+                },
+                "@media (prefers-reduced-motion: reduce)": {
+                  transition: "none",
+                  "&:hover": {
+                    transform: "none",
                   },
                 },
               }}
             >
-              <CardActionArea
+              <Stack
+                spacing={1}
                 sx={{
-                  borderRadius: 3,
+                  height: "100%",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  py: { xs: 1, sm: 1.25 },
+                  px: 0.5,
                 }}
               >
                 <Stack
-                  spacing={1.25}
+                  className="category-tile"
                   sx={{
+                    width: { xs: 54, sm: 62 },
+                    height: { xs: 54, sm: 62 },
+                    flexShrink: 0,
                     alignItems: "center",
-                    py: { xs: 1, sm: 1.5 },
-                    px: 1,
+                    justifyContent: "center",
+                    borderRadius: "50%",
+                    bgcolor: "grey.100",
+                    border: "1px solid",
+                    borderColor: "transparent",
+                    color: "text.primary",
+                    transition: "background-color 180ms ease, border-color 180ms ease",
+                    "@media (prefers-reduced-motion: reduce)": {
+                      transition: "none",
+                    },
                   }}
                 >
-                  <Stack
-                    className="category-tile"
-                    sx={{
-                      width: { xs: 56, sm: 64 },
-                      height: { xs: 56, sm: 64 },
-                      alignItems: "center",
-                      justifyContent: "center",
-                      borderRadius: "50%",
-                      bgcolor: "grey.100",
-                      border: "1px solid",
-                      borderColor: "transparent",
-                      color: "text.primary",
-                      transition: "all 0.2s ease",
-                    }}
-                  >
-                    <Image
-                      src={category.image}
-                      alt={category.title}
-                      width={40}
-                      height={40}
-                      style={{
-                        objectFit: "contain",
-                      }}
-                    />
-                  </Stack>
-
-                  <Typography
-                    sx={{
-                      fontWeight: 600,
-                      color: "text.primary",
-                      textAlign: "center",
-                      fontSize: { xs: "0.75rem", sm: "0.8125rem" },
-                      lineHeight: 1.25,
-                      letterSpacing: "-0.01em",
-                    }}
-                  >
-                    {category.title}
-                  </Typography>
+                  <Image
+                    src={category.image}
+                    alt=""
+                    width={40}
+                    height={40}
+                    sizes="40px"
+                    style={{ objectFit: "contain" }}
+                  />
                 </Stack>
-              </CardActionArea>
+
+                <Typography
+                  component="span"
+                  sx={{
+                    width: "100%",
+                    fontWeight: 600,
+                    color: "text.primary",
+                    textAlign: "center",
+                    fontSize: { xs: "0.75rem", sm: "0.8125rem" },
+                    lineHeight: 1.3,
+                    overflowWrap: "anywhere",
+                  }}
+                >
+                  {category.title}
+                </Typography>
+              </Stack>
             </Card>
           </Link>
         ))}

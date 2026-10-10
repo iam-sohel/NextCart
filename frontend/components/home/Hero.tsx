@@ -9,6 +9,7 @@ import {
   Stack,
 } from "@mui/material";
 import LocalOfferIcon from "@mui/icons-material/LocalOffer";
+import { formatPrice, computeDiscountPercent } from "@/utils/formatPrice";
 
 import { getProductImage } from "@/utils/productImages";
 import type { Product } from "@/types/product";
@@ -28,20 +29,17 @@ interface Props {
  * Next.js Link component through the component prop.
  */
 export default function Hero({ product }: Props) {
-  const offerPrice = product.price.toLocaleString("en-IN");
+  const title = product.title?.trim() || "Discover something you'll love";
+  const description =
+    product.description?.trim() ||
+    "Explore this product and discover more from our collection.";
 
-  const originalPrice = (
-    product.originalPrice ?? product.price
-  ).toLocaleString("en-IN");
-
-  const discountPct =
-    product.originalPrice && product.originalPrice > product.price
-      ? Math.round(
-          ((product.originalPrice - product.price) /
-            product.originalPrice) *
-            100,
-        )
-      : 0;
+  const offerPrice = formatPrice(product.price);
+  const originalPrice = formatPrice(product.originalPrice ?? product.price);
+  const discountPct = computeDiscountPercent(
+    product.originalPrice,
+    product.price,
+  );
 
   const image = getProductImage(product);
 
@@ -140,7 +138,7 @@ export default function Hero({ product }: Props) {
               overflow: "hidden",
             }}
           >
-            {product.title}
+            {title}
           </Typography>
 
           <Typography
@@ -158,7 +156,7 @@ export default function Hero({ product }: Props) {
               overflow: "hidden",
             }}
           >
-            {product.description}
+            {description}
           </Typography>
 
           <Stack
@@ -186,7 +184,7 @@ export default function Hero({ product }: Props) {
                 color: "#FFFFFF",
               }}
             >
-              ₹{offerPrice}
+              {offerPrice}
             </Typography>
 
             {product.originalPrice &&
@@ -198,7 +196,7 @@ export default function Hero({ product }: Props) {
                   textDecoration: "line-through",
                 }}
               >
-                ₹{originalPrice}
+                {originalPrice}
               </Typography>
               )}
 
@@ -292,7 +290,7 @@ export default function Hero({ product }: Props) {
         >
           <Image
             src={image}
-            alt={product.title}
+            alt={title}
             fill
             priority
             sizes="(max-width: 900px) 100vw, 540px"

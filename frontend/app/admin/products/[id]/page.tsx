@@ -27,70 +27,44 @@ import {
 
 import {
   getAdminProductDetails,
+  type AdminProductDetails,
+  type AdminProductImage,
+  type AdminProductVariant,
 } from "@/services/adminProductService";
 
-interface ProductDetails {
-  id: number;
-  name: string;
-  slug: string;
-  description: string;
-  categoryId: number;
-  subCategoryId: number;
-  brandId: number;
-  information?: any;
-  specifications?: any[];
-  images?: any[];
-  variants?: any[];
-}
+type ProductDetails = AdminProductDetails;
 
-function toNumber(value: any): number {
+function toNumber(value: unknown): number {
   const numberValue = Number(value ?? 0);
-
-  return Number.isFinite(numberValue)
-    ? numberValue
-    : 0;
+  return Number.isFinite(numberValue) ? numberValue : 0;
 }
 
-function getImageUrl(image: any): string {
+function getImageUrl(image: AdminProductImage): string {
+  return image.imageUrl ?? image.url ?? image.src ?? image.image ?? "";
+}
+
+function getVariantName(variant: AdminProductVariant): string {
   return (
-    image?.imageUrl ??
-    image?.url ??
-    image?.src ??
-    image?.image ??
-    ""
+    variant.name ??
+    variant.variantName ??
+    variant.title ??
+    variant.sku ??
+    `Variant #${variant.id ?? "—"}`
   );
 }
 
-function getVariantName(variant: any): string {
-  return (
-    variant?.name ??
-    variant?.variantName ??
-    variant?.title ??
-    variant?.sku ??
-    `Variant #${variant?.id ?? "—"}`
-  );
+function getVariantSku(variant: AdminProductVariant): string {
+  return variant.sku ?? variant.SKU ?? "—";
 }
 
-function getVariantSku(variant: any): string {
-  return (
-    variant?.sku ??
-    variant?.SKU ??
-    "—"
-  );
-}
-
-function getVariantPrice(variant: any): string {
+function getVariantPrice(variant: AdminProductVariant): string {
   const price =
-    variant?.sellingPrice ??
-    variant?.price ??
-    variant?.unitSellingPrice ??
-    variant?.mrp;
+    variant.price?.sellingPrice ??
+    variant.sellingPrice ??
+    variant.price?.mrp ??
+    variant.mrp;
 
-  if (
-    price === undefined ||
-    price === null ||
-    price === ""
-  ) {
+  if (price === undefined || price === null || price === "") {
     return "—";
   }
 
@@ -100,9 +74,30 @@ function getVariantPrice(variant: any): string {
     return "—";
   }
 
-  return `₹${amount.toLocaleString(
-    "en-IN"
-  )}`;
+  const currency = variant.price?.currency ?? "INR";
+
+  if (currency === "INR") {
+    return `₹${amount.toLocaleString("en-IN")}`;
+  }
+
+  return `${currency} ${amount.toLocaleString("en-IN")}`;
+}
+
+function getVariantAttributes(variant: AdminProductVariant): string {
+  const attributes = (variant.attributes ?? [])
+    .map((attribute) => {
+      const name = attribute.attributeName?.trim();
+      const value = attribute.attributeValue?.trim();
+
+      if (!name && !value) return null;
+      if (!name) return value;
+      if (!value) return name;
+
+      return `${name}: ${value}`;
+    })
+    .filter((value): value is string => Boolean(value));
+
+  return attributes.join(" • ") || "—";
 }
 
 export default function AdminProductDetailsPage() {
@@ -481,7 +476,7 @@ export default function AdminProductDetailsPage() {
                     wordBreak: "break-word",
                   }}
                 >
-                  {product.slug || "—"}
+                  {product.slug || "â€”"}
                 </Typography>
               </Box>
             </Stack>
@@ -641,7 +636,7 @@ export default function AdminProductDetailsPage() {
                     }}
                   >
                     {String(
-                      value ?? "—"
+                      value ?? "â€”"
                     )}
                   </Typography>
                 </Grid>
@@ -701,11 +696,7 @@ export default function AdminProductDetailsPage() {
                         variant="body2"
                         color="text.secondary"
                       >
-                        {specification
-                          ?.name ??
-                          specification
-                            ?.key ??
-                          "Specification"}
+                        {specification.specificationName ?? specification.name ?? specification.key ?? "Specification"}
                       </Typography>
                     </Grid>
 
@@ -721,13 +712,7 @@ export default function AdminProductDetailsPage() {
                           overflowWrap: "anywhere",
                         }}
                       >
-                        {String(
-                          specification
-                            ?.value ??
-                            specification
-                              ?.description ??
-                            "—"
-                        )}
+                        {String(specification.specificationValue ?? specification.value ?? specification.description ?? "—")}
                       </Typography>
                     </Grid>
                   </Grid>
@@ -824,7 +809,7 @@ export default function AdminProductDetailsPage() {
                         >
                           ID:{" "}
                           {variant?.id ??
-                            "—"}
+                            "â€”"}
                         </Typography>
                       </Grid>
 
@@ -921,31 +906,7 @@ export default function AdminProductDetailsPage() {
                               "break-word",
                           }}
                         >
-                          {Object.entries(
-                            variant
-                          )
-                            .filter(
-                              ([key]) =>
-                                ![
-                                  "id",
-                                  "sku",
-                                  "status",
-                                  "name",
-                                  "variantName",
-                                  "title",
-                                ].includes(
-                                  key
-                                )
-                            )
-                            .slice(0, 3)
-                            .map(
-                              ([key, value]) =>
-                                `${key}: ${String(
-                                  value ?? "—"
-                                )}`
-                            )
-                            .join(" • ") ||
-                            "—"}
+                          {getVariantAttributes(variant)}
                         </Typography>
                       </Grid>
                     </Grid>

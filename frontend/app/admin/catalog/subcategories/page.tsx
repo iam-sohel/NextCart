@@ -118,6 +118,9 @@ export default function AdminSubCategoriesPage() {
      * loads server data and updates the component state.
      */
     useEffect(() => {
+        // Intentional: load server data when pagination or page size changes.
+        // loadData updates state after the asynchronous requests complete.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         void loadData();
     }, [loadData]);
 

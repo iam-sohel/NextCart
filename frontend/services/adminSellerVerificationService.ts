@@ -55,13 +55,15 @@ function toText(value: unknown): string | null {
 }
 
 function normalizeVerification(
-  value: any
+  value: unknown
 ): AdminSellerVerification | null {
-  if (!value || typeof value !== "object") {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
     return null;
   }
 
-  const id = toNumber(value.id);
+  const record = value as Record<string, unknown>;
+
+  const id = toNumber(record.id);
 
   if (!id || id <= 0) {
     return null;
@@ -69,22 +71,22 @@ function normalizeVerification(
 
   return {
     id,
-    overallStatus: String(value.overallStatus ?? ""),
-    emailStatus: String(value.emailStatus ?? ""),
-    emailResult: toText(value.emailResult),
-    mobileStatus: String(value.mobileStatus ?? ""),
-    mobileResult: toText(value.mobileResult),
-    panStatus: String(value.panStatus ?? ""),
-    panResult: toText(value.panResult),
-    gstinStatus: String(value.gstinStatus ?? ""),
-    gstinResult: toText(value.gstinResult),
-    startedAt: toText(value.startedAt),
-    completedAt: toText(value.completedAt),
-    reviewedAt: toText(value.reviewedAt),
-    reviewedBy: toNumber(value.reviewedBy),
-    rejectionReason: toText(value.rejectionReason),
-    createdAt: toText(value.createdAt),
-    updatedAt: toText(value.updatedAt),
+    overallStatus: String(record.overallStatus ?? ""),
+    emailStatus: String(record.emailStatus ?? ""),
+    emailResult: toText(record.emailResult),
+    mobileStatus: String(record.mobileStatus ?? ""),
+    mobileResult: toText(record.mobileResult),
+    panStatus: String(record.panStatus ?? ""),
+    panResult: toText(record.panResult),
+    gstinStatus: String(record.gstinStatus ?? ""),
+    gstinResult: toText(record.gstinResult),
+    startedAt: toText(record.startedAt),
+    completedAt: toText(record.completedAt),
+    reviewedAt: toText(record.reviewedAt),
+    reviewedBy: toNumber(record.reviewedBy),
+    rejectionReason: toText(record.rejectionReason),
+    createdAt: toText(record.createdAt),
+    updatedAt: toText(record.updatedAt),
   };
 }
 

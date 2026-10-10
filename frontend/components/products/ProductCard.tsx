@@ -13,6 +13,8 @@ import {
   Button,
   Chip,
   IconButton,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 
 import StarIcon from "@mui/icons-material/Star";
@@ -57,7 +59,17 @@ export default function ProductCard({
   bestseller = false,
   newArrival = false,
 }: ProductCardProps) {
-  const [resolvedImage, setResolvedImage] = useState<string>(image);
+  const [failedImage, setFailedImage] = useState<string | null>(null);
+  const [wishlistBusy, setWishlistBusy] = useState(false);
+  const [notice, setNotice] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error";
+  }>({ open: false, message: "", severity: "success" });
+
+  // Derive the image from the current prop so a product change never
+  // keeps the previous product's fallback state.
+  const resolvedImage = failedImage === image ? UNIVERSAL_FALLBACK : image;
 
   const router = useRouter();
 
@@ -83,23 +95,46 @@ export default function ProductCard({
     router.push(`/products/${slug}`);
   };
 
-  const handleWishlistToggle = () => {
-    // Not yet hydrated: the persisted session hasn't been read yet,
-    // so "no token" does not mean "logged out". Ignore this click and
-    // let the component re-render once hydration decides the state.
-    if (!authReady) {
-      return;
-    }
+  const handleWishlistToggle = async () => {
+    // Wait until persisted authentication state has hydrated.
+    if (!authReady || wishlistBusy) return;
 
     if (!token) {
       router.push(`/login?reason=login-required&return=/wishlist`);
       return;
     }
 
-    if (isWishlisted) {
-      void removeFromWishlistAction(id);
-    } else {
-      void addToWishlistAction(id);
+    setWishlistBusy(true);
+
+    try {
+      const result = isWishlisted
+        ? await removeFromWishlistAction(id)
+        : await addToWishlistAction(id);
+
+      if (!result.ok) {
+        setNotice({
+          open: true,
+          message: result.message || "Wishlist update failed. Please try again.",
+          severity: "error",
+        });
+        return;
+      }
+
+      setNotice({
+        open: true,
+        message: isWishlisted
+          ? "Removed from your wishlist."
+          : "Added to your wishlist.",
+        severity: "success",
+      });
+    } catch {
+      setNotice({
+        open: true,
+        message: "We couldn't update your wishlist. Please try again.",
+        severity: "error",
+      });
+    } finally {
+      setWishlistBusy(false);
     }
   };
 
@@ -111,8 +146,8 @@ export default function ProductCard({
    * image doesn't break the product grid.
    */
   const handleImageError = () => {
-    if (resolvedImage !== UNIVERSAL_FALLBACK) {
-      setResolvedImage(UNIVERSAL_FALLBACK);
+    if (image !== UNIVERSAL_FALLBACK) {
+      setFailedImage(image);
     }
   };
 
@@ -137,6 +172,11 @@ export default function ProductCard({
 
         "&:hover .product-card-image": {
           transform: "scale(1.06)",
+        },
+        "@media (prefers-reduced-motion: reduce)": {
+          transition: "none",
+          "&:hover": { transform: "none", boxShadow: "none" },
+          "&:hover .product-card-image": { transform: "none" },
         },
       }}
     >
@@ -163,11 +203,14 @@ export default function ProductCard({
               className="product-card-image"
               sx={{
                 position: "relative",
-                width: { xs: 150, sm: 170 },
+                width: { xs: "78%", sm: 170 },
                 maxWidth: 170,
                 height: { xs: 140, sm: 170 },
                 maxHeight: 170,
                 transition: "transform .35s ease",
+                "@media (prefers-reduced-motion: reduce)": {
+                  transition: "none",
+                },
               }}
             >
               <Image
@@ -238,7 +281,8 @@ export default function ProductCard({
 
         {/* Wishlist */}
         <IconButton
-          onClick={handleWishlistToggle}
+          onClick={() => void handleWishlistToggle()}
+          disabled={!authReady || wishlistBusy}
           aria-label={
             isWishlisted
               ? "Remove from wishlist"
@@ -253,8 +297,11 @@ export default function ProductCard({
             border: "1px solid",
             borderColor: "divider",
             boxShadow: 1,
-            width: 34,
-            height: 34,
+            width: 40,
+            height: 40,
+            "&.Mui-disabled": {
+              opacity: 0.65,
+            },
 
             "&:hover": {
               bgcolor: "error.light",
@@ -428,6 +475,22 @@ export default function ProductCard({
           Add to Cart
         </Button>
       </CardContent>
+    <Snackbar
+      open={notice.open}
+      autoHideDuration={3500}
+      onClose={() => setNotice((current) => ({ ...current, open: false }))}
+      anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+    >
+      <Alert
+        severity={notice.severity}
+        variant="filled"
+        onClose={() => setNotice((current) => ({ ...current, open: false }))}
+        role="status"
+        sx={{ width: "100%" }}
+      >
+        {notice.message}
+      </Alert>
+    </Snackbar>
     </Card>
   );
 }

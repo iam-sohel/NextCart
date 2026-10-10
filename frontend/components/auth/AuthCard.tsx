@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import BrandLogo from "@/components/layout/BrandLogo";
 
 import { Box, Card, CardContent, Container, Stack, Typography } from "@mui/material";

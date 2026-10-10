@@ -1,5 +1,29 @@
 import { apiRequest } from "@/lib/api";
 
+function asRecord(value: unknown): Record<string, unknown> {
+  if (
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value)
+  ) {
+    return value as Record<string, unknown>;
+  }
+
+  return {};
+}
+
+function asText(value: unknown, fallback = ""): string {
+  return typeof value === "string" ? value : fallback;
+}
+
+function asNullableText(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+function asOptionalBoolean(value: unknown): boolean | undefined {
+  return typeof value === "boolean" ? value : undefined;
+}
+
 export interface AdminOrderItem {
   id: number;
   productVariantId: number;
@@ -53,7 +77,7 @@ export interface AdminOrderPage {
   last?: boolean;
 }
 
-function unwrap<T>(response: any): T {
+function unwrap<T>(response: unknown): T {
   if (
     response &&
     typeof response === "object" &&
@@ -79,7 +103,7 @@ function throwIfFailed(
   }
 }
 
-function toNumber(value: any): number {
+function toNumber(value: unknown): number {
   const numberValue = Number(value ?? 0);
 
   return Number.isFinite(numberValue)
@@ -88,100 +112,103 @@ function toNumber(value: any): number {
 }
 
 function normalizeOrderItem(
-  value: any
+  value: unknown
 ): AdminOrderItem {
+  const record = asRecord(value);
   return {
-    id: toNumber(value?.id),
+    id: toNumber(record.id),
     productVariantId: toNumber(
-      value?.productVariantId
+      record.productVariantId
     ),
-    productName: value?.productName ?? "",
-    sku: value?.sku ?? "",
-    quantity: toNumber(value?.quantity),
-    unitMrp: toNumber(value?.unitMrp),
+    productName: asText(record.productName),
+    sku: asText(record.sku),
+    quantity: toNumber(record.quantity),
+    unitMrp: toNumber(record.unitMrp),
     unitSellingPrice: toNumber(
-      value?.unitSellingPrice
+      record.unitSellingPrice
     ),
     discountAmount: toNumber(
-      value?.discountAmount
+      record.discountAmount
     ),
-    lineTotal: toNumber(value?.lineTotal),
+    lineTotal: toNumber(record.lineTotal),
   };
 }
 
 function normalizeOrder(
-  value: any
+  value: unknown
 ): AdminOrder {
+  const record = asRecord(value);
   return {
-    id: toNumber(value?.id),
-    orderNumber: value?.orderNumber ?? "",
-    status: value?.status ?? "",
+    id: toNumber(record.id),
+    orderNumber: asText(record.orderNumber),
+    status: asText(record.status),
 
-    paymentMethod: value?.paymentMethod ?? "",
-    paymentStatus: value?.paymentStatus ?? "",
+    paymentMethod: asText(record.paymentMethod),
+    paymentStatus: asText(record.paymentStatus),
     paymentExpiresAt:
-      value?.paymentExpiresAt ?? null,
+      asNullableText(record.paymentExpiresAt),
 
     shippingFullName:
-      value?.shippingFullName ?? "",
+      asText(record.shippingFullName),
     shippingPhoneNumber:
-      value?.shippingPhoneNumber ?? "",
+      asText(record.shippingPhoneNumber),
     shippingStreetAddress:
-      value?.shippingStreetAddress ?? "",
+      asText(record.shippingStreetAddress),
     shippingLandmark:
-      value?.shippingLandmark ?? "",
+      asText(record.shippingLandmark),
     shippingCity:
-      value?.shippingCity ?? "",
+      asText(record.shippingCity),
     shippingState:
-      value?.shippingState ?? "",
+      asText(record.shippingState),
     shippingPostalCode:
-      value?.shippingPostalCode ?? "",
+      asText(record.shippingPostalCode),
     shippingCountry:
-      value?.shippingCountry ?? "",
+      asText(record.shippingCountry),
 
-    subtotal: toNumber(value?.subtotal),
+    subtotal: toNumber(record.subtotal),
     discountAmount: toNumber(
-      value?.discountAmount
+      record.discountAmount
     ),
     shippingCharge: toNumber(
-      value?.shippingCharge
+      record.shippingCharge
     ),
-    taxAmount: toNumber(value?.taxAmount),
+    taxAmount: toNumber(record.taxAmount),
     totalAmount: toNumber(
-      value?.totalAmount
+      record.totalAmount
     ),
-    currency: value?.currency ?? "INR",
+    currency: asText(record.currency, "INR"),
 
-    items: Array.isArray(value?.items)
-      ? value.items.map(normalizeOrderItem)
+    items: Array.isArray(record.items)
+      ? record.items.map(normalizeOrderItem)
       : [],
 
-    createdAt: value?.createdAt ?? "",
-    updatedAt: value?.updatedAt ?? "",
+    createdAt: asText(record.createdAt),
+    updatedAt: asText(record.updatedAt),
   };
 }
 
 function normalizePage(
-  value: any
+  value: unknown
 ): AdminOrderPage {
-  const content = Array.isArray(value?.content)
-    ? value.content.map(normalizeOrder)
+  const record = asRecord(value);
+  const content = Array.isArray(record.content)
+    ? record.content.map(normalizeOrder)
     : [];
 
   return {
     content,
-    page: toNumber(value?.page),
+    page: toNumber(record.page),
     size:
-      toNumber(value?.size) ||
+      toNumber(record.size) ||
       content.length,
     totalElements: toNumber(
-      value?.totalElements
+      record.totalElements
     ),
     totalPages: toNumber(
-      value?.totalPages
+      record.totalPages
     ),
-    first: value?.first,
-    last: value?.last,
+    first: asOptionalBoolean(record.first),
+    last: asOptionalBoolean(record.last),
   };
 }
 
@@ -210,7 +237,7 @@ export async function listAdminOrders(
   throwIfFailed(response, "Unable to load orders.");
 
   return normalizePage(
-    unwrap<any>(response)
+    unwrap<unknown>(response)
   );
 }
 
@@ -227,7 +254,7 @@ export async function getAdminOrder(
   throwIfFailed(response, "Unable to load order.");
 
   return normalizeOrder(
-    unwrap<any>(response)
+    unwrap<unknown>(response)
   );
 }
 
@@ -249,6 +276,6 @@ export async function updateAdminOrderStatus(
   throwIfFailed(response, "Unable to update order status.");
 
   return normalizeOrder(
-    unwrap<any>(response)
+    unwrap<unknown>(response)
   );
 }
