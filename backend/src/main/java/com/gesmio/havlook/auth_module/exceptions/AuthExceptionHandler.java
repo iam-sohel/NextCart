@@ -2,6 +2,7 @@ package com.gesmio.havlook.auth_module.exceptions;
 
 import com.gesmio.havlook.common.dto.CommonResponseDto;
 
+import com.gesmio.havlook.user_module.exception.UserAlreadyExistsException;
 import jakarta.validation.ConstraintViolationException;
 
 import org.springframework.http.HttpStatus;
@@ -12,7 +13,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@RestControllerAdvice(basePackages = "com.gesmio.Havlook.auth_module.controller")
+@RestControllerAdvice(basePackages = "com.gesmio.havlook.auth_module.controller")
 public class AuthExceptionHandler {
 
     // =========================================================
@@ -127,5 +128,18 @@ public class AuthExceptionHandler {
     public ResponseEntity<CommonResponseDto<Void>> handleInvalidJson(HttpMessageNotReadableException ex) {
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponseDto<>(false, "Invalid request body", null, "INVALID_REQUEST_BODY"));
+    }
+    @ExceptionHandler(UserAlreadyExistsException.class)
+    public ResponseEntity<CommonResponseDto<Void>> handleUserAlreadyExists(
+            UserAlreadyExistsException ex) {
+
+        CommonResponseDto<Void> response = new CommonResponseDto<>(
+                false,
+                ex.getMessage(),
+                null,
+                "USER_ALREADY_EXISTS"
+        );
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 }

@@ -60,13 +60,12 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public CreatePaymentResponseDTO createRazorpayOrder(
-            String userEmail,
+            String userId,
             CreatePaymentRequestDTO requestDto) {
 
-        validateEmail(userEmail);
         validateCreateRequest(requestDto);
 
-        User user = getUser(userEmail);
+        User user = getUser(userId);
 
         OrderEntity order =
                 orderRepository
@@ -236,13 +235,12 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public PaymentResponseDTO verifyPayment(
-            String userEmail,
+            String userId,
             VerifyPaymentRequestDTO requestDto) {
 
-        validateEmail(userEmail);
         validateVerifyRequest(requestDto);
 
-        User user = getUser(userEmail);
+        User user = getUser(userId);
 
         /*
          * ORDER LOCK FIRST
@@ -437,13 +435,12 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional(readOnly = true)
     public PaymentResponseDTO getPaymentStatusByOrderId(
-            String userEmail,
+            String userId,
             Long orderId) {
 
-        validateEmail(userEmail);
         validateOrderId(orderId);
 
-        User user = getUser(userEmail);
+        User user = getUser(userId);
 
         OrderEntity order =
                 orderRepository
@@ -479,13 +476,12 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public PaymentResponseDTO reconcilePayment(
-            String userEmail,
+            String userId,
             Long orderId) {
 
-        validateEmail(userEmail);
         validateOrderId(orderId);
 
-        User user = getUser(userEmail);
+        User user = getUser(userId);
 
         /*
          * ORDER LOCK FIRST
@@ -658,13 +654,12 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public PaymentResponseDTO refundPayment(
-            String userEmail,
+            String userId,
             Long orderId) {
 
-        validateEmail(userEmail);
         validateOrderId(orderId);
 
-        User user = getUser(userEmail);
+        User user = getUser(userId);
 
         /*
          * ORDER LOCK FIRST
@@ -1845,36 +1840,28 @@ public class PaymentServiceImpl implements PaymentService {
     // USER
     // =========================================================
 
-    private User getUser(
-            String email) {
-
-        return userRepository
-                .findByEmailIgnoreCase(email)
-                .orElseThrow(() ->
-                        new PaymentNotFoundException(
-                                "User not found"
-                        )
-                );
-    }
-
-
-    // =========================================================
-    // EMAIL VALIDATION
-    // =========================================================
-
-    private void validateEmail(
-            String email) {
-
-        if (email == null ||
-                email.isBlank()) {
-
+    private User getUser(String userId) {
+        if (userId == null || userId.isBlank()) {
             throw new PaymentValidationException(
-                    "User email is required"
+                    "Authenticated user ID is required"
             );
         }
+
+        final Long id;
+
+        try {
+            id = Long.valueOf(userId.trim());
+        } catch (NumberFormatException exception) {
+            throw new PaymentValidationException(
+                    "Invalid authenticated user ID"
+            );
+        }
+
+        return userRepository.findById(id)
+                .orElseThrow(() ->
+                        new PaymentNotFoundException("User not found")
+                );
     }
-
-
     // =========================================================
     // CREATE REQUEST VALIDATION
     // =========================================================

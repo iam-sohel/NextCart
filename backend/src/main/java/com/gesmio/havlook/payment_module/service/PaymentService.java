@@ -9,27 +9,27 @@ import com.gesmio.havlook.payment_module.dto.VerifyPaymentRequestDTO;
 public interface PaymentService {
 
     CreatePaymentResponseDTO createRazorpayOrder(
-            String userEmail,
+            String userId,
             CreatePaymentRequestDTO requestDto
     );
 
     PaymentResponseDTO verifyPayment(
-            String userEmail,
+            String userId,
             VerifyPaymentRequestDTO requestDto
     );
 
     PaymentResponseDTO getPaymentStatusByOrderId(
-            String userEmail,
+            String userId,
             Long orderId
     );
 
     PaymentResponseDTO reconcilePayment(
-            String userEmail,
+            String userId,
             Long orderId
     );
 
     PaymentResponseDTO refundPayment(
-            String userEmail,
+            String userId,
             Long orderId
     );
 

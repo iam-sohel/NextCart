@@ -71,9 +71,6 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
 
-        System.out.println("========== REGISTER API HIT ==========");
-        System.out.println("Email: " + request.getEmail());
-        System.out.println("======================================");
 
         validateRegisterRequest(request);
 
@@ -1212,18 +1209,7 @@ public class AuthServiceImpl implements AuthService {
 
         String normalizedRole = roleName.trim();
 
-        System.out.println("========== ROLE DEBUG ==========");
-        System.out.println("Requested role = [" + normalizedRole + "]");
 
-        System.out.println(
-                "Database roles = " +
-                        roleRepository.findAll()
-                                .stream()
-                                .map(role -> "[" + role.getId() + " : " + role.getName() + "]")
-                                .toList()
-        );
-
-        System.out.println("================================");
 
         return roleRepository
                 .findByNameIgnoreCase(normalizedRole)

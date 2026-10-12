@@ -912,62 +912,7 @@ public class SellerKycServiceImpl implements SellerKycService {
                     "false"
             );
 
-            // -------------------------------------------------
-            // SAFE DEBUG
-            // -------------------------------------------------
 
-            System.out.println(
-                    "========== SUPABASE STORAGE DEBUG =========="
-            );
-
-            System.out.println(
-                    "Supabase URL : " + baseUrl
-            );
-
-            System.out.println(
-                    "Bucket       : [" + bucket + "]"
-            );
-
-            System.out.println(
-                    "API key type : "
-                            + (
-                            apiKey.startsWith("sb_secret_")
-                                    ? "NEW SECRET KEY"
-                                    : "UNKNOWN"
-                    )
-            );
-
-            System.out.println(
-                    "API key present : "
-                            + !apiKey.isBlank()
-            );
-
-            System.out.println(
-                    "API key length : "
-                            + apiKey.length()
-            );
-
-            System.out.println(
-                    "Authorization key present : "
-                            + !authorizationKey.isBlank()
-            );
-
-            System.out.println(
-                    "Authorization key JWT : "
-                            + (
-                            authorizationKey
-                                    .split("\\.", -1)
-                                    .length == 3
-                    )
-            );
-
-            System.out.println(
-                    "Object path  : " + objectPath
-            );
-
-            System.out.println(
-                    "============================================"
-            );
 
             // -------------------------------------------------
             // FILE BYTES
