@@ -1,9 +1,8 @@
 "use client";
 
 import { Box, Container } from "@mui/material";
-
-import ProductCarousel from "@/components/products/ProductCarousel";
 import SectionTitle from "./sectiontitle";
+import ProductCarousel from "@/components/products/ProductCarousel";
 import type { Product } from "@/types/product";
 
 interface Props {
@@ -11,12 +10,13 @@ interface Props {
 }
 
 /**
- * Electronics strip — receives a pre-filtered subset of the backend
- * catalogue in electronics categories.
+ * HAVLOOK — Electronics strip.
  *
- * Presentation only: same white-surface treatment as the other home
- * sections, with the shared section heading. Filtering/data logic is
- * untouched.
+ * Receives a pre-filtered subset of the backend catalogue
+ * in electronics categories. Presentation only: same
+ * white-surface treatment as the other home sections,
+ * with the shared section heading. Filtering/data logic
+ * is untouched.
  */
 export default function ElectronicsSection({ products }: Props) {
   if (products.length === 0) {

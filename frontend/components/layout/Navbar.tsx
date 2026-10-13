@@ -144,6 +144,7 @@ export default function Navbar() {
       },
       "&.Mui-focused fieldset": {
         borderColor: "primary.main",
+        borderWidth: "2px",
       },
     },
     "& .MuiInputBase-input": {
@@ -154,9 +155,9 @@ export default function Navbar() {
       color: "text.secondary",
       opacity: 1,
     },
-  } as const;
+} as const;
 
-  /* Orange action inside the search field — the header's primary affordance. */
+/* Orange action inside the search field — the header's primary affordance. */
   const searchAdornment = (
     <InputAdornment position="end" sx={{ pr: 0.75 }}>
       <IconButton

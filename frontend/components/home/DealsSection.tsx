@@ -2,7 +2,7 @@
 
 import { Box, Container } from "@mui/material";
 import SectionTitle from "./sectiontitle";
-import ProductCarousel from "../products/ProductCarousel";
+import ProductCarousel from "@/components/products/ProductCarousel";
 import type { Product } from "@/types/product";
 
 interface Props {
@@ -10,8 +10,10 @@ interface Props {
 }
 
 /**
- * Top Deals strip — receives a pre-filtered subset of the backend
- * catalogue (any product with a non-zero `discount`). The original
+ * HAVLOOK — Top Deals strip.
+ *
+ * Receives a pre-filtered subset of the backend catalogue
+ * (any product with a non-zero `discount`). The original
  * visual is preserved exactly.
  */
 export default function DealsSection({ products }: Props) {

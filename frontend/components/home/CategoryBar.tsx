@@ -19,9 +19,9 @@ export default function CategoryBar() {
         bgcolor: "background.paper",
         border: "1px solid",
         borderColor: "divider",
-        borderRadius: { xs: 2, sm: 3 },
-        px: { xs: 1.25, sm: 2.5 },
-        py: { xs: 1.25, sm: 2 },
+        borderRadius: 3,
+        px: { xs: 1, sm: 2 },
+        py: { xs: 1, sm: 1.75 },
         boxShadow: { xs: 0, sm: 1 },
         overflowX: "auto",
         overflowY: "hidden",
@@ -55,7 +55,7 @@ export default function CategoryBar() {
     >
       <Stack
         direction="row"
-        spacing={{ xs: 1, sm: 2 }}
+        spacing={{ xs: 0.75, sm: 1.5 }}
         sx={{
           width: "max-content",
           minWidth: "100%",
@@ -100,8 +100,8 @@ export default function CategoryBar() {
                   height: "100%",
                   alignItems: "center",
                   justifyContent: "center",
-                  py: { xs: 1, sm: 1.25 },
-                  px: 0.5,
+                  py: { xs: 1, sm: 1 },
+                  px: 0.35,
                 }}
               >
                 <Stack

@@ -8,13 +8,9 @@ import {
   Container,
   Link as MuiLink,
   Paper,
-  Select,
-  FormControl,
-  MenuItem,
   Typography,
 } from "@mui/material";
 import CategoryIcon from "@mui/icons-material/Category";
-import SortIcon from "@mui/icons-material/Sort";
 
 export default function ProductsPage() {
   return (
@@ -34,16 +30,16 @@ export default function ProductsPage() {
         }}
       >
         {/* ============================================================
-          LAYOUT CONTAINER
-          Slightly wider than the homepage content columns on desktop so
-          the catalogue reads as a first-class page rather than a narrow
-          sub-section, while still keeping comfortable mobile padding.
-          ============================================================ */}
+            LAYOUT CONTAINER
+            Slightly wider than the homepage content columns on desktop so
+            the catalogue reads as a first-class page rather than a narrow
+            sub-section, while still keeping comfortable mobile padding.
+            ============================================================ */}
         <Container maxWidth="xl" sx={{ px: { xs: 2, sm: 2.5, md: 3 } }}>
           {/* ----------------------------------------
-                  BREADCRUMB
-                  Home / Products — subtle, responsive, semantic.
-                  ---------------------------------------- */}
+              BREADCRUMB
+              Home / Products — subtle, responsive, semantic.
+              ============================================================ */}
           <Breadcrumbs
             separator="/"
             sx={{
@@ -82,11 +78,10 @@ export default function ProductsPage() {
           </Breadcrumbs>
 
           {/* ----------------------------------------
-                  CATALOGUE HEADER
-                  Products / discover-subheading.
-                  Matches the homepage section-heading weight without
-                  importing the non-navigating SectionTitle component.
-                  ---------------------------------------- */}
+              CATALOGUE HEADER
+              Products — matches the homepage section-heading weight without
+              importing the non-navigating SectionTitle component.
+              ============================================================ */}
           <Box sx={{ mb: { xs: 3, md: 4 }, maxWidth: 720 }}>
             <Typography
               variant="h3"
@@ -123,138 +118,53 @@ export default function ProductsPage() {
             </Typography>
           </Box>
 
-          {/* ----------------------------------------
-                  PRODUCT GRID SURFACE + TOOLBAR
-                  The grid stays exactly as ProductGrid renders it.
-                  We wrap it in a white surface card with a polished,
-                  non-functional toolbar: catalogue context on the left,
-                  a Sort control on the right. The Sort control is visual
-                  only — no fake sorting is implemented on this page.
-                  ---------------------------------------- */}
-          <Paper
-            elevation={0}
-            sx={{
-              borderRadius: 3,
-              border: "1px solid",
-              borderColor: "divider",
-              bgcolor: "background.paper",
-              boxShadow: 1,
-            }}
-          >
-            {/* Toolbar */}
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                flexWrap: "wrap",
-                gap: 1.5,
-                px: { xs: 2.5, sm: 3, md: 3.5 },
-                py: { xs: 2, sm: 2.25, md: 2.5 },
-                borderBottom: "1px solid",
-                borderColor: "divider",
-              }}
-            >
-              {/* Left — catalogue context */}
-              <Box
+{/* ----------------------------------------
+              PRODUCT GRID SURFACE WITH TOOLBAR
+              Wraps ProductGrid in a white surface card with a polished
+              toolbar: catalogue context on the left.
+              ============================================================ */}
+              <Paper
+                elevation={0}
                 sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  color: "text.secondary",
-                  fontSize: "0.8125rem",
-                  fontWeight: 500,
+                  borderRadius: 3,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  bgcolor: "background.paper",
+                  boxShadow: 1,
                 }}
               >
-                <CategoryIcon
+                {/* Catalogue context */}
+                <Box
                   sx={{
-                    fontSize: 16,
-                    color: "primary.main",
-                    flexShrink: 0,
-                  }}
-                />
-
-                <Typography
-                  component="span"
-                  sx={{
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  All Products
-                </Typography>
-              </Box>
-
-              {/* Right — sort control (visual only) */}
-              <FormControl
-                size="small"
-                sx={{
-                  minWidth: { xs: 130, sm: 140 },
-                  flexShrink: 0,
-                }}
-              >
-                <Select
-                  value=""
-                  displayEmpty
-                  aria-label="Sort products"
-                  sx={{
-                    bgcolor: "background.paper",
-                    borderRadius: 2,
-                    fontWeight: 600,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    color: "text.secondary",
                     fontSize: "0.8125rem",
-                    minHeight: 36,
-                    "& .MuiSelect-select": {
-                      py: 0.5,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 0.75,
-                      color: "text.secondary",
-                      fontWeight: 600,
-                      fontSize: "0.8125rem",
-                      "&$disabled": {
-                        color: "text.secondary",
-                      },
-                    },
-                    "&:hover .MuiSelect-select": {
-                      bgcolor: "action.hover",
-                    },
-                    "&.Mui-focused .MuiSelect-select": {
-                      borderColor: "primary.main",
-                    },
+                    fontWeight: 500,
                   }}
                 >
-                  <MenuItem value="" disabled>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 0.75,
-                      }}
-                    >
-                      <SortIcon
-                        sx={{
-                          fontSize: 16,
-                          color: "text.secondary",
-                        }}
-                      />
-                      Sort by
-                    </Box>
-                  </MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
+                  <CategoryIcon
+                    sx={{
+                      fontSize: 16,
+                      color: "primary.main",
+                      flexShrink: 0,
+                    }}
+                  />
 
-            {/* Product grid — unchanged rendering/data layer */}
-            <Box
-              sx={{
-                px: { xs: 2.5, sm: 3, md: 3.5 },
-                pb: { xs: 3.5, sm: 4, md: 5 },
-              }}
-            >
+                  <Typography
+                    component="span"
+                    sx={{
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    All Products
+                  </Typography>
+                </Box>
               <ProductGrid />
-            </Box>
-          </Paper>
+              </Paper>
         </Container>
       </Box>
 

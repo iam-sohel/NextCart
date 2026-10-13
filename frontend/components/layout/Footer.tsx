@@ -11,6 +11,8 @@ export default function Footer() {
         color: "secondary.contrastText",
         py: 4,
         textAlign: "center",
+        borderTop: "1px solid",
+        borderColor: "divider",
       }}
     >
       <Typography>

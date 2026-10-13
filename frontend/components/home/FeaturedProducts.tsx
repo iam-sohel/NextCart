@@ -12,8 +12,10 @@ interface Props {
 }
 
 /**
- * Featured Products strip. Receives a pre-filtered subset of the
- * backend catalogue (`featured === true`) from the home page.
+ * HAVLOOK — Featured Products strip.
+ *
+ * Receives a pre-filtered subset of the backend catalogue
+ * (`featured === true`) from the home page.
  *
  * Presentation only: clean white surface, shared section heading, and
  * the existing responsive product grid (2-up on mobile preserved).

@@ -2,7 +2,7 @@
 
 import { Box, Container } from "@mui/material";
 import SectionTitle from "./sectiontitle";
-import ProductCarousel from "../products/ProductCarousel";
+import ProductCarousel from "@/components/products/ProductCarousel";
 import type { Product } from "@/types/product";
 
 interface Props {
@@ -10,9 +10,13 @@ interface Props {
 }
 
 /**
- * Fashion strip — receives a pre-filtered subset of the backend
- * catalogue in fashion categories. The original visual is preserved
- * exactly.
+ * HAVLOOK — Fashion strip.
+ *
+ * Receives a pre-filtered subset of the backend catalogue
+ * in fashion categories. Presentation only: same
+ * white-surface treatment as the other home sections,
+ * with the shared section heading. Filtering/data logic
+ * is untouched.
  */
 export default function FashionSection({ products }: Props) {
   if (products.length === 0) {
