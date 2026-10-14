@@ -25,123 +25,93 @@ public class SellerInventoryController {
 
     private final InventoryService inventoryService;
 
-    // =========================================================
-    // CREATE INVENTORY ITEM
-    // =========================================================
-
     @PostMapping
     public ResponseEntity<CommonResponseDto<InventoryResponse>>
     createInventory(
             Authentication authentication,
-            @RequestBody InventoryCreateRequest request
-    ) {
+            @RequestBody InventoryCreateRequest request) {
 
         Long userId = getUserId(authentication);
 
         InventoryResponse response =
-                inventoryService.createInventory(
-                        userId,
-                        request
-                );
+                inventoryService.createInventory(userId, request);
 
         return ResponseEntity.ok(
                 new CommonResponseDto<>(
                         true,
                         "Inventory item created successfully",
-                        response
-                )
-        );
+                        response));
     }
-
-    // =========================================================
-    // GET INVENTORY BY WAREHOUSE
-    // =========================================================
 
     @GetMapping("/warehouse/{warehouseId}")
     public ResponseEntity<CommonResponseDto<InventoryResponse>>
     getInventoryByWarehouse(
             Authentication authentication,
-            @PathVariable Long warehouseId
-    ) {
+            @PathVariable Long warehouseId) {
 
         Long userId = getUserId(authentication);
 
         InventoryResponse response =
                 inventoryService.getInventoryByWarehouse(
                         userId,
-                        warehouseId
-                );
+                        warehouseId);
 
         return ResponseEntity.ok(
                 new CommonResponseDto<>(
                         true,
                         "Inventory fetched successfully",
-                        response
-                )
-        );
+                        response));
     }
-
-    // =========================================================
-    // GET INVENTORY ITEMS BY PRODUCT VARIANT
-    // =========================================================
 
     @GetMapping("/product-variant/{productVariantId}")
     public ResponseEntity<
-            CommonResponseDto<List<InventoryItemResponse>>
-            >
+            CommonResponseDto<List<InventoryItemResponse>>>
     getInventoryItemsByProductVariant(
-            @PathVariable Long productVariantId
-    ) {
+            Authentication authentication,
+            @PathVariable Long productVariantId) {
+
+        Long userId = getUserId(authentication);
 
         List<InventoryItemResponse> response =
-                inventoryService.getInventoryItemsByProductVariantId(
-                        productVariantId
-                );
+                inventoryService
+                        .getInventoryItemsByProductVariantIdForSeller(
+                                userId,
+                                productVariantId);
 
         return ResponseEntity.ok(
                 new CommonResponseDto<>(
                         true,
                         "Inventory items fetched successfully",
-                        response
-                )
-        );
+                        response));
     }
 
-    // =========================================================
-    // GET TOTAL AVAILABLE STOCK
-    // =========================================================
-
-    @GetMapping("/product-variant/{productVariantId}/available-stock")
+    @GetMapping(
+            "/product-variant/{productVariantId}/available-stock")
     public ResponseEntity<CommonResponseDto<Integer>>
     getTotalAvailableStock(
-            @PathVariable Long productVariantId
-    ) {
+            Authentication authentication,
+            @PathVariable Long productVariantId) {
+
+        Long userId = getUserId(authentication);
 
         Integer stock =
-                inventoryService.getTotalAvailableStock(
-                        productVariantId
-                );
+                inventoryService.getTotalAvailableStockForSeller(
+                        userId,
+                        productVariantId);
 
         return ResponseEntity.ok(
                 new CommonResponseDto<>(
                         true,
                         "Available stock fetched successfully",
-                        stock
-                )
-        );
+                        stock));
     }
-
-    // =========================================================
-    // UPDATE INVENTORY ITEM
-    // =========================================================
 
     @PutMapping("/items/{inventoryItemId}")
     public ResponseEntity<CommonResponseDto<InventoryResponse>>
     updateInventoryItem(
             Authentication authentication,
             @PathVariable Long inventoryItemId,
-            @RequestBody InventoryUpdateRequest request
-    ) {
+            @RequestBody InventoryUpdateRequest request) {
 
         Long userId = getUserId(authentication);
 
@@ -149,80 +119,54 @@ public class SellerInventoryController {
                 inventoryService.updateInventoryItem(
                         userId,
                         inventoryItemId,
-                        request
-                );
+                        request);
 
         return ResponseEntity.ok(
                 new CommonResponseDto<>(
                         true,
                         "Inventory item updated successfully",
-                        response
-                )
-        );
+                        response));
     }
-
-    // =========================================================
-    // DELETE INVENTORY ITEM
-    // =========================================================
 
     @DeleteMapping("/items/{inventoryItemId}")
     public ResponseEntity<CommonResponseDto<Void>>
     deleteInventoryItem(
             Authentication authentication,
-            @PathVariable Long inventoryItemId
-    ) {
+            @PathVariable Long inventoryItemId) {
 
         Long userId = getUserId(authentication);
 
         inventoryService.deleteInventoryItem(
                 userId,
-                inventoryItemId
-        );
+                inventoryItemId);
 
         return ResponseEntity.ok(
                 new CommonResponseDto<>(
                         true,
                         "Inventory item deleted successfully",
-                        null
-                )
-        );
+                        null));
     }
 
-    // =========================================================
-    // GET USER ID FROM JWT
-    // =========================================================
-
-    private Long getUserId(
-            Authentication authentication
-    ) {
+    private Long getUserId(Authentication authentication) {
 
         if (authentication == null
                 || !authentication.isAuthenticated()) {
 
             throw new IllegalStateException(
-                    "Authentication required"
-            );
+                    "Authentication required");
         }
 
-        Object principal =
-                authentication.getPrincipal();
+        Object principal = authentication.getPrincipal();
 
         if (principal instanceof CustomUserDetails userDetails) {
-
             return userDetails.getUserId();
         }
 
         try {
-
-            return Long.parseLong(
-                    authentication.getName()
-            );
-
+            return Long.parseLong(authentication.getName());
         } catch (NumberFormatException ex) {
-
             throw new IllegalStateException(
-                    "Unable to determine authenticated user"
-            );
+                    "Unable to determine authenticated user");
         }
     }
 }

@@ -14,6 +14,8 @@ import com.gesmio.havlook.discount_module.DiscountType;
 import com.gesmio.havlook.discount_module.ProductVariantDiscountEntity;
 import com.gesmio.havlook.discount_module.ProductVariantDiscountRepository;
 
+import com.gesmio.havlook.delivery_module.service.DeliveryService;
+
 import com.gesmio.havlook.order_module.dto.OrderCreateRequestDTO;
 import com.gesmio.havlook.order_module.dto.OrderItemResponseDTO;
 import com.gesmio.havlook.order_module.dto.OrderResponseDTO;
@@ -61,8 +63,6 @@ public class OrderServiceImpl implements OrderService {
                     RoundingMode.HALF_UP
             );
 
-    private static final BigDecimal SHIPPING_CHARGE = ZERO;
-
     private static final BigDecimal TAX_AMOUNT = ZERO;
 
     private static final int PAYMENT_WINDOW_MINUTES = 15;
@@ -85,6 +85,8 @@ public class OrderServiceImpl implements OrderService {
     private final ProductVariantPriceRepository productVariantPriceRepository;
 
     private final ProductVariantDiscountRepository productVariantDiscountRepository;
+
+    private final DeliveryService deliveryService;
 
 
     // =========================================================
@@ -328,7 +330,7 @@ public class OrderServiceImpl implements OrderService {
                         )
 
                         .shippingCharge(
-                                SHIPPING_CHARGE
+                                pricing.shippingCharge()
                         )
 
                         .taxAmount(
@@ -1146,11 +1148,27 @@ public class OrderServiceImpl implements OrderService {
         }
 
 
+        /*
+         * Delivery fee is calculated on the discounted
+         * merchandise subtotal. The client never supplies
+         * or controls the delivery fee.
+         */
+        BigDecimal discountedSubtotal =
+                money(
+                        subtotal.subtract(totalDiscount)
+                );
+
+        BigDecimal shippingCharge =
+                money(
+                        deliveryService.calculateDeliveryFee(
+                                discountedSubtotal
+                        )
+                );
+
         BigDecimal totalAmount =
                 money(
-                        subtotal
-                                .subtract(totalDiscount)
-                                .add(SHIPPING_CHARGE)
+                        discountedSubtotal
+                                .add(shippingCharge)
                                 .add(TAX_AMOUNT)
                 );
 
@@ -1167,6 +1185,7 @@ public class OrderServiceImpl implements OrderService {
                 pricedItems,
                 subtotal,
                 totalDiscount,
+                shippingCharge,
                 totalAmount,
                 currency.toUpperCase()
         );
@@ -2114,6 +2133,7 @@ public class OrderServiceImpl implements OrderService {
             List<PricedCartItem> items,
             BigDecimal subtotal,
             BigDecimal discountAmount,
+            BigDecimal shippingCharge,
             BigDecimal totalAmount,
             String currency
     ) {

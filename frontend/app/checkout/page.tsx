@@ -81,7 +81,7 @@ export default function CheckoutPage() {
   const addresses = useAddressStore((s) => s.items);
 
   const [selectedAddressId, setSelectedAddressId] = useState<
-    number | null
+      number | null
   >(null);
 
   const [fullName, setFullName] = useState("");
@@ -92,7 +92,7 @@ export default function CheckoutPage() {
   const [pincode, setPincode] = useState("");
 
   const [paymentMethod, setPaymentMethod] = useState<
-    "COD" | "ONLINE"
+      "COD" | "ONLINE"
   >("COD");
 
   const [error, setError] = useState("");
@@ -114,10 +114,10 @@ export default function CheckoutPage() {
    * Derive the selected address during render.
    */
   const effectiveSelectedAddressId = addresses.some(
-    (address) => address.id === selectedAddressId
+      (address) => address.id === selectedAddressId
   )
-    ? selectedAddressId
-    : addresses.find((address) => address.isDefault === true)?.id ??
+      ? selectedAddressId
+      : addresses.find((address) => address.isDefault === true)?.id ??
       addresses[0]?.id ??
       null;
 
@@ -126,7 +126,7 @@ export default function CheckoutPage() {
    *
    * Justification for the scoped suppression below: the address list loads
    * asynchronously and the user can switch the selected address at any time,
-   * while the form fields remain user-editable afterwards. There is no
+   * while the form fields remain user-editable . There is no
    * render-time derivation that preserves both behaviors, so syncing on
    * selection change via an effect is the correct pattern here.
    */
@@ -136,7 +136,7 @@ export default function CheckoutPage() {
     }
 
     const selectedAddress = addresses.find(
-      (address) => address.id === effectiveSelectedAddressId
+        (address) => address.id === effectiveSelectedAddressId
     );
 
     if (!selectedAddress) {
@@ -157,194 +157,197 @@ export default function CheckoutPage() {
    * Handle selection of a saved address.
    */
   const handleAddressSelect = useCallback(
-    (addressId: number) => {
-      setError("");
-      setSelectedAddressId(addressId);
-    },
-    []
+      (addressId: number) => {
+        setError("");
+        setSelectedAddressId(addressId);
+      },
+      []
   );
 
   /**
    * Handle payment method selection.
    */
   const handlePaymentMethodChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const value = event.target.value;
+      (event: React.ChangeEvent<HTMLInputElement>) => {
+        const value = event.target.value;
 
-      if (value === "COD" || value === "ONLINE") {
-        setError("");
-        setPaymentMethod(value);
-      }
-    },
-    []
+        if (value === "COD" || value === "ONLINE") {
+          setError("");
+          setPaymentMethod(value);
+        }
+      },
+      []
   );
 
   /**
-   * Backend cart total used for the current checkout summary.
+   * Checkout preview only. The backend remains authoritative when creating
+   * the order and calculating the final payment amount.
    *
-   * The final online payment amount is still obtained from the backend
-   * Razorpay order creation response.
+   * `serverGrandTotal` is the cart merchandise subtotal returned by the
+   * cart API. Delivery is previewed here using the configured business rule.
    */
-  const total = serverGrandTotal;
+  const subtotal = Number(serverGrandTotal || 0);
+  const shippingCharge = subtotal < 249 ? 25 : 49;
+  const total = subtotal + shippingCharge;
 
   /**
    * Synchronize the cart after a successful order/payment.
    */
-const finishSuccessfulOrder = useCallback(
-    async (orderId: number, orderNumber?: string) => {
-      // Validate the identifier before changing cart state.
-      if (!Number.isInteger(orderId) || orderId <= 0) {
-        setError(
-          "Order was created, but the order ID was not returned."
-        );
-        return;
-      }
+  const finishSuccessfulOrder = useCallback(
+      async (orderId: number, orderNumber?: string) => {
+        // Validate the identifier before changing cart state.
+        if (!Number.isInteger(orderId) || orderId <= 0) {
+          setError(
+              "Order was created, but the order ID was not returned."
+          );
+          return;
+        }
 
-      let cartSyncFailed = false;
+        let cartSyncFailed = false;
 
-      try {
-        await clearCart();
-      } catch {
-        // Order creation/payment verification already succeeded.
-        // A cart cleanup error must not block order confirmation.
-        cartSyncFailed = true;
-      }
+        try {
+          await clearCart();
+        } catch {
+          // Order creation/payment verification already succeeded.
+          // A cart cleanup error must not block order confirmation.
+          cartSyncFailed = true;
+        }
 
-      const orderIdentifier = orderNumber
-        ? `orderNumber=${encodeURIComponent(orderNumber)}`
-        : `orderId=${encodeURIComponent(String(orderId))}`;
+        const orderIdentifier = orderNumber
+            ? `orderNumber=${encodeURIComponent(orderNumber)}`
+            : `orderId=${encodeURIComponent(String(orderId))}`;
 
-      const redirectUrl = `/order-success?${orderIdentifier}${
-        cartSyncFailed ? "&cartSync=failed" : ""
-      }`;
+        const redirectUrl = `/order-success?${orderIdentifier}${
+            cartSyncFailed ? "&cartSync=failed" : ""
+        }`;
 
-      router.push(redirectUrl);
-    },
-    [clearCart, router]
+        router.push(redirectUrl);
+      },
+      [clearCart, router]
   );
 
   /**
    * Open Razorpay Checkout for an already-created HavLook order.
    */
   const startOnlinePayment = useCallback(
-    async (orderId: number, orderNumber: string) => {
-      /**
-       * Load Razorpay's browser SDK only when online payment is actually used.
-       */
-      const razorpayLoaded = await loadRazorpay();
+      async (orderId: number, orderNumber: string) => {
+        /**
+         * Load Razorpay's browser SDK only when online payment is actually used.
+         */
+        const razorpayLoaded = await loadRazorpay();
 
-      if (!razorpayLoaded) {
-        throw new Error(
-          "Unable to load the payment gateway. Please check your internet connection and try again."
-        );
-      }
+        if (!razorpayLoaded) {
+          throw new Error(
+              "Unable to load the payment gateway. Please check your internet connection and try again."
+          );
+        }
 
-      /**
-       * Ask our backend to create the Razorpay order.
-       *
-       * IMPORTANT:
-       * The backend calculates the amount.
-       * `amount` returned here is already in paise.
-       */
-      const paymentOrderResult = await createPayment({
-        orderId,
-      });
+        /**
+         * Ask our backend to create the Razorpay order.
+         *
+         * IMPORTANT:
+         * The backend calculates the amount.
+         * `amount` returned here is already in paise.
+         */
+        const paymentOrderResult = await createPayment({
+          orderId,
+        });
 
-      if (!paymentOrderResult.ok) {
-        throw new Error(
-          paymentOrderResult.message ||
-            "Unable to initialize online payment."
-        );
-      }
+        if (!paymentOrderResult.ok) {
+          throw new Error(
+              paymentOrderResult.message ||
+              "Unable to initialize online payment."
+          );
+        }
 
-      const paymentOrder = paymentOrderResult.data;
+        const paymentOrder = paymentOrderResult.data;
 
-      if (
-        !paymentOrder.razorpayOrderId ||
-        !paymentOrder.keyId ||
-        !paymentOrder.amount ||
-        !paymentOrder.currency
-      ) {
-        throw new Error(
-          "The payment gateway returned an incomplete payment configuration."
-        );
-      }
+        if (
+            !paymentOrder.razorpayOrderId ||
+            !paymentOrder.keyId ||
+            !paymentOrder.amount ||
+            !paymentOrder.currency
+        ) {
+          throw new Error(
+              "The payment gateway returned an incomplete payment configuration."
+          );
+        }
 
-      /**
-       * Open Razorpay.
-       *
-       * The backend amount is already in paise.
-       * Do NOT multiply by 100 here.
-       */
-      openRazorpay({
-        key: paymentOrder.keyId,
-        amount: paymentOrder.amount,
-        currency: paymentOrder.currency,
-        name: "HavLook",
-        description: `Payment for order ${orderNumber}`,
-        order_id: paymentOrder.razorpayOrderId,
+        /**
+         * Open Razorpay.
+         *
+         * The backend amount is already in paise.
+         * Do NOT multiply by 100 here.
+         */
+        openRazorpay({
+          key: paymentOrder.keyId,
+          amount: paymentOrder.amount,
+          currency: paymentOrder.currency,
+          name: "HavLook",
+          description: `Payment for order ${orderNumber}`,
+          order_id: paymentOrder.razorpayOrderId,
 
-        handler: async (
-          response: RazorpayPaymentResponse
-        ) => {
-          try {
-            setError("");
+          handler: async (
+              response: RazorpayPaymentResponse
+          ) => {
+            try {
+              setError("");
 
+              /**
+               * Verify the payment on our backend.
+               *
+               * Never trust the browser as the final payment authority.
+               */
+              const verificationResult = await verifyPayment({
+                orderId,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+              });
+
+              if (!verificationResult.ok) {
+                setSubmitting(false);
+                setError(
+                    verificationResult.message ||
+                    "Payment verification failed. Your order has not been confirmed."
+                );
+                return;
+              }
+
+              /**
+               * Backend has confirmed the payment.
+               * Only now is it safe to clear the cart.
+               */
+              await finishSuccessfulOrder(orderId, orderNumber);
+            } catch (verificationError) {
+              setSubmitting(false);
+
+              const message =
+                  verificationError instanceof Error
+                      ? verificationError.message
+                      : "Payment verification failed. Please check your order status.";
+
+              setError(message);
+            }
+          },
+
+          modal: {
             /**
-             * Verify the payment on our backend.
+             * Razorpay was closed without completing payment.
              *
-             * Never trust the browser as the final payment authority.
+             * The order remains pending on the backend.
+             * We deliberately do NOT clear the cart or redirect to success.
              */
-            const verificationResult = await verifyPayment({
-              orderId,
-              razorpayOrderId: response.razorpay_order_id,
-              razorpayPaymentId: response.razorpay_payment_id,
-              razorpaySignature: response.razorpay_signature,
-            });
-
-            if (!verificationResult.ok) {
+            ondismiss: () => {
               setSubmitting(false);
               setError(
-                verificationResult.message ||
-                  "Payment verification failed. Your order has not been confirmed."
+                  "Payment was cancelled or the payment window was closed. Your order is still pending."
               );
-              return;
-            }
-
-            /**
-             * Backend has confirmed the payment.
-             * Only now is it safe to clear the cart.
-             */
-            await finishSuccessfulOrder(orderId, orderNumber);
-          } catch (verificationError) {
-            setSubmitting(false);
-
-            const message =
-              verificationError instanceof Error
-                ? verificationError.message
-                : "Payment verification failed. Please check your order status.";
-
-            setError(message);
-          }
-        },
-
-        modal: {
-          /**
-           * Razorpay was closed without completing payment.
-           *
-           * The order remains pending on the backend.
-           * We deliberately do NOT clear the cart or redirect to success.
-           */
-          ondismiss: () => {
-            setSubmitting(false);
-            setError(
-              "Payment was cancelled or the payment window was closed. Your order is still pending."
-            );
+            },
           },
-        },
-      });
-    },
-    [finishSuccessfulOrder]
+        });
+      },
+      [finishSuccessfulOrder]
   );
 
   /**
@@ -356,12 +359,12 @@ const finishSuccessfulOrder = useCallback(
     }
 
     if (
-      !fullName.trim() ||
-      !phone.trim() ||
-      !addressLine.trim() ||
-      !city.trim() ||
-      !state.trim() ||
-      !pincode.trim()
+        !fullName.trim() ||
+        !phone.trim() ||
+        !addressLine.trim() ||
+        !city.trim() ||
+        !state.trim() ||
+        !pincode.trim()
     ) {
       setError("Please fill in all address fields.");
       return;
@@ -397,20 +400,20 @@ const finishSuccessfulOrder = useCallback(
        * the values currently entered in the form.
        */
       const selectedAddress =
-        selectedAddressId !== null
-          ? addresses.find(
-              (address) => address.id === selectedAddressId
-            )
-          : undefined;
+          selectedAddressId !== null
+              ? addresses.find(
+                  (address) => address.id === selectedAddressId
+              )
+              : undefined;
 
       const matchesSelectedAddress =
-        Boolean(selectedAddress) &&
-        selectedAddress?.fullName === fullName.trim() &&
-        selectedAddress?.phoneNumber === phone.trim() &&
-        selectedAddress?.streetAddress === addressLine.trim() &&
-        selectedAddress?.city === city.trim() &&
-        selectedAddress?.state === state.trim() &&
-        selectedAddress?.postalCode === pincode.trim();
+          Boolean(selectedAddress) &&
+          selectedAddress?.fullName === fullName.trim() &&
+          selectedAddress?.phoneNumber === phone.trim() &&
+          selectedAddress?.streetAddress === addressLine.trim() &&
+          selectedAddress?.city === city.trim() &&
+          selectedAddress?.state === state.trim() &&
+          selectedAddress?.postalCode === pincode.trim();
 
       if (matchesSelectedAddress && selectedAddress) {
         /**
@@ -436,7 +439,7 @@ const finishSuccessfulOrder = useCallback(
 
         if (!createRes.ok) {
           throw new Error(
-            createRes.message ||
+              createRes.message ||
               "Unable to save the delivery address."
           );
         }
@@ -470,12 +473,12 @@ const finishSuccessfulOrder = useCallback(
       const orderId = Number(result.data.id);
 
       if (
-        !orderNumber ||
-        !Number.isInteger(orderId) ||
-        orderId <= 0
+          !orderNumber ||
+          !Number.isInteger(orderId) ||
+          orderId <= 0
       ) {
         setError(
-          "The order may have been created, but its confirmation details are incomplete. Check your orders before retrying."
+            "The order may have been created, but its confirmation details are incomplete. Check your orders before retrying."
         );
         setSubmitting(false);
         return;
@@ -488,9 +491,9 @@ const finishSuccessfulOrder = useCallback(
        * to verify.
        */
       if (paymentMethod === "COD") {
-  await finishSuccessfulOrder(orderId, orderNumber);
-  return;
-}
+        await finishSuccessfulOrder(orderId, orderNumber);
+        return;
+      }
 
       /**
        * ONLINE:
@@ -503,9 +506,9 @@ const finishSuccessfulOrder = useCallback(
       await startOnlinePayment(orderId, orderNumber);
     } catch (err) {
       const message =
-        err instanceof Error
-          ? err.message
-          : "Checkout failed. Please try again.";
+          err instanceof Error
+              ? err.message
+              : "Checkout failed. Please try again.";
 
       setError(message);
       setSubmitting(false);
@@ -532,567 +535,37 @@ const finishSuccessfulOrder = useCallback(
    */
   if (items.length === 0) {
     return (
-      <>
-        <Header />
+        <>
+          <Header />
 
-        <Container
-          maxWidth="md"
-          sx={{
-            py: 10,
-            textAlign: "center",
-          }}
-        >
-          <Typography
-            variant="h4"
-            sx={{
-              fontWeight: 700,
-            }}
-          >
-            Your Cart is Empty
-          </Typography>
-
-          <Typography
-            sx={{
-              mt: 2,
-              color: "text.secondary",
-            }}
-          >
-            Add items to your cart before checking out.
-          </Typography>
-
-          <Button
-            component={Link}
-            href="/"
-            fullWidth
-            variant="contained"
-            size="large"
-            sx={{
-              mt: 4,
-              py: 1.5,
-              borderRadius: 2,
-            }}
-          >
-            Continue Shopping
-          </Button>
-        </Container>
-
-        <Footer />
-      </>
-    );
-  }
-
-  /**
-   * Authentication hydration state.
-   */
-  if (checking) {
-    return (
-      <>
-        <Header />
-
-        <Container
-          maxWidth="md"
-          sx={{
-            py: 10,
-            textAlign: "center",
-          }}
-        >
-          <Typography
-            variant="h5"
-            sx={{
-              fontWeight: 700,
-            }}
-          >
-            Checking your account...
-          </Typography>
-
-          <Typography
-            sx={{
-              mt: 1,
-              color: "text.secondary",
-            }}
-          >
-            Please wait.
-          </Typography>
-        </Container>
-
-        <Footer />
-      </>
-    );
-  }
-
-  return (
-    <>
-      <Header />
-
-      <Container
-        maxWidth="xl"
-        sx={{
-          py: 5,
-        }}
-      >
-        <Typography
-          variant="h4"
-          sx={{
-            fontWeight: 700,
-            mb: 4,
-          }}
-        >
-          Checkout
-        </Typography>
-
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: {
-              xs: "1fr",
-              md: "2fr 1fr",
-            },
-            gap: 4,
-          }}
-        >
-          {/* Delivery Address + Payment */}
-          <Box>
-            <Card
+          <Container
+              maxWidth="md"
               sx={{
-                borderRadius: 3,
-                mb: 3,
+                py: 10,
+                textAlign: "center",
               }}
-            >
-              <CardContent>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    fontWeight: 700,
-                    mb: 2,
-                  }}
-                >
-                  Delivery Address
-                </Typography>
-
-                {/* Saved Addresses */}
-                {addresses.length > 0 && (
-                  <Box sx={{ mb: 3 }}>
-                    <Typography
-                      variant="subtitle2"
-                      sx={{
-                        fontWeight: 700,
-                        mb: 1.5,
-                      }}
-                    >
-                      Saved Addresses
-                    </Typography>
-
-                    <RadioGroup
-                      value={
-                        selectedAddressId !== null
-                          ? String(selectedAddressId)
-                          : ""
-                      }
-                      onChange={(event) =>
-                        handleAddressSelect(
-                          Number(event.target.value)
-                        )
-                      }
-                    >
-                      <Box
-                        sx={{
-                          display: "grid",
-                          gap: 1.5,
-                        }}
-                      >
-                        {addresses.map((address) => (
-                          <Box
-                            key={address.id}
-                            sx={{
-                              border: 1,
-                              borderColor:
-                                selectedAddressId === address.id
-                                  ? "primary.main"
-                                  : "divider",
-                              borderRadius: 2,
-                              p: 1.5,
-                              transition:
-                                "border-color 0.2s ease",
-                            }}
-                          >
-                            <FormControlLabel
-                              value={String(address.id)}
-                              control={<Radio />}
-                              sx={{
-                                width: "100%",
-                                m: 0,
-                                alignItems: "flex-start",
-                              }}
-                              label={
-                                <Box sx={{ pt: 0.25 }}>
-                                  <Box
-                                    sx={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 1,
-                                      flexWrap: "wrap",
-                                    }}
-                                  >
-                                    <Typography
-                                      variant="body2"
-                                      sx={{
-                                        fontWeight: 700,
-                                      }}
-                                    >
-                                      {address.fullName}
-                                    </Typography>
-
-                                    {address.isDefault && (
-                                      <Typography
-                                        variant="caption"
-                                        sx={{
-                                          color:
-                                            "primary.main",
-                                          fontWeight: 700,
-                                        }}
-                                      >
-                                        Default
-                                      </Typography>
-                                    )}
-                                  </Box>
-
-                                  <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                  >
-                                    {address.phoneNumber}
-                                  </Typography>
-
-                                  <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                  >
-                                    {address.streetAddress},{" "}
-                                    {address.city},{" "}
-                                    {address.state} -{" "}
-                                    {address.postalCode}
-                                  </Typography>
-                                </Box>
-                              }
-                            />
-                          </Box>
-                        ))}
-                      </Box>
-                    </RadioGroup>
-                  </Box>
-                )}
-
-                <Divider sx={{ mb: 3 }} />
-
-                <Typography
-                  variant="subtitle2"
-                  sx={{
-                    fontWeight: 700,
-                    mb: 2,
-                  }}
-                >
-                  {addresses.length > 0
-                    ? "Delivery Details"
-                    : "Add Delivery Address"}
-                </Typography>
-
-                <Grid container spacing={2}>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField
-                      fullWidth
-                      label="Full Name"
-                      value={fullName}
-                      onChange={(event) =>
-                        setFullName(event.target.value)
-                      }
-                    />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField
-                      fullWidth
-                      label="Phone Number"
-                      value={phone}
-                      onChange={(event) =>
-                        setPhone(event.target.value)
-                      }
-                    />
-                  </Grid>
-
-                  <Grid size={{ xs: 12 }}>
-                    <TextField
-                      fullWidth
-                      label="Address"
-                      value={addressLine}
-                      onChange={(event) =>
-                        setAddressLine(event.target.value)
-                      }
-                    />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 4 }}>
-                    <TextField
-                      fullWidth
-                      label="City"
-                      value={city}
-                      onChange={(event) =>
-                        setCity(event.target.value)
-                      }
-                    />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 4 }}>
-                    <TextField
-                      fullWidth
-                      label="State"
-                      value={state}
-                      onChange={(event) =>
-                        setState(event.target.value)
-                      }
-                    />
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 4 }}>
-                    <TextField
-                      fullWidth
-                      label="Pincode"
-                      value={pincode}
-                      onChange={(event) =>
-                        setPincode(event.target.value)
-                      }
-                    />
-                  </Grid>
-                </Grid>
-              </CardContent>
-            </Card>
-
-            {/* Payment */}
-            <Card
-              sx={{
-                borderRadius: 3,
-              }}
-            >
-              <CardContent>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    fontWeight: 700,
-                    mb: 2,
-                  }}
-                >
-                  Payment Method
-                </Typography>
-
-                <RadioGroup
-                  value={paymentMethod}
-                  onChange={handlePaymentMethodChange}
-                >
-                  <FormControlLabel
-                    value="COD"
-                    control={<Radio />}
-                    label="Cash on Delivery"
-                  />
-
-                  <FormControlLabel
-                    value="ONLINE"
-                    control={<Radio />}
-                    label="Card / UPI"
-                  />
-                </RadioGroup>
-
-                {paymentMethod === "ONLINE" && (
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{
-                      mt: 1,
-                    }}
-                  >
-                    Pay securely using Razorpay with Card, UPI,
-                    Net Banking or supported payment methods.
-                  </Typography>
-                )}
-              </CardContent>
-            </Card>
-          </Box>
-
-          {/* Order Summary */}
-          <Card
-            sx={{
-              height: "fit-content",
-              borderRadius: 3,
-              position: {
-                xs: "static",
-                md: "sticky",
-              },
-              top: 90,
-            }}
           >
-            <CardContent>
-              <Typography
-                variant="h5"
+            <Typography
+                variant="h4"
                 sx={{
                   fontWeight: 700,
                 }}
-              >
-                Order Summary
-              </Typography>
+            >
+              Your Cart is Empty
+            </Typography>
 
-              <Divider sx={{ my: 3 }} />
-
-              {items.map((item) => (
-                <Box
-                  key={item.id}
-                  sx={{
-                    display: "flex",
-                    gap: 2,
-                    mb: 2,
-                    alignItems: "center",
-                  }}
-                >
-                  {item.image ? (
-                    <Image
-                      src={item.image}
-                      alt={item.title}
-                      width={50}
-                      height={50}
-                      style={{
-                        objectFit: "cover",
-                        borderRadius: 4,
-                      }}
-                    />
-                  ) : (
-                    <Box
-                      sx={{
-                        width: 50,
-                        height: 50,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        bgcolor: "grey.100",
-                        borderRadius: 1,
-                        color: "text.secondary",
-                        fontSize: 11,
-                        flexShrink: 0,
-                      }}
-                    >
-                      No image
-                    </Box>
-                  )}
-
-                  <Box
-                    sx={{
-                      flex: 1,
-                      minWidth: 0,
-                    }}
-                  >
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontWeight: 600,
-                      }}
-                    >
-                      {item.title}
-                    </Typography>
-
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                    >
-                      {"Qty: " + item.quantity}
-                    </Typography>
-                  </Box>
-
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      fontWeight: 600,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {"₹" +
-                      (item.price * item.quantity).toLocaleString(
-                        "en-IN"
-                      )}
-                  </Typography>
-                </Box>
-              ))}
-
-              <Divider sx={{ my: 2 }} />
-
-              <Box
+            <Typography
                 sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  mb: 2,
+                  mt: 2,
+                  color: "text.secondary",
                 }}
-              >
-                <Typography>Subtotal</Typography>
+            >
+              Add items to your cart before checking out.
+            </Typography>
 
-                <Typography
-                  sx={{
-                    fontWeight: 600,
-                  }}
-                >
-                  {"₹" +
-                    Number(total || 0).toLocaleString("en-IN")}
-                </Typography>
-              </Box>
-
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  mb: 2,
-                }}
-              >
-                <Typography>Shipping</Typography>
-
-                <Typography color="success.main">
-                  FREE
-                </Typography>
-              </Box>
-
-              <Divider sx={{ my: 3 }} />
-
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                }}
-              >
-                <Typography
-                  variant="h6"
-                  sx={{
-                    fontWeight: 700,
-                  }}
-                >
-                  Total
-                </Typography>
-
-                <Typography
-                  variant="h6"
-                  sx={{
-                    fontWeight: 700,
-                  }}
-                >
-                  {"₹" +
-                    Number(total || 0).toLocaleString("en-IN")}
-                </Typography>
-              </Box>
-
-              {error && (
-                <Alert
-                  severity="error"
-                  sx={{
-                    mt: 3,
-                  }}
-                >
-                  {error}
-                </Alert>
-              )}
-
-              <Button
+            <Button
+                component={Link}
+                href="/"
                 fullWidth
                 variant="contained"
                 size="large"
@@ -1101,27 +574,567 @@ const finishSuccessfulOrder = useCallback(
                   py: 1.5,
                   borderRadius: 2,
                 }}
-                onClick={handlePlaceOrder}
-                disabled={
-                  submitting ||
-                  checking ||
-                  !authed
-                }
-              >
-                {submitting
-                  ? paymentMethod === "ONLINE"
-                    ? "Processing Payment..."
-                    : "Placing Order..."
-                  : paymentMethod === "ONLINE"
-                    ? "Pay Now"
-                    : "Place Order"}
-              </Button>
-            </CardContent>
-          </Card>
-        </Box>
-      </Container>
+            >
+              Continue Shopping
+            </Button>
+          </Container>
 
-      <Footer />
-    </>
+          <Footer />
+        </>
+    );
+  }
+
+  /**
+   * Authentication hydration state.
+   */
+  if (checking) {
+    return (
+        <>
+          <Header />
+
+          <Container
+              maxWidth="md"
+              sx={{
+                py: 10,
+                textAlign: "center",
+              }}
+          >
+            <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 700,
+                }}
+            >
+              Checking your account...
+            </Typography>
+
+            <Typography
+                sx={{
+                  mt: 1,
+                  color: "text.secondary",
+                }}
+            >
+              Please wait.
+            </Typography>
+          </Container>
+
+          <Footer />
+        </>
+    );
+  }
+
+  return (
+      <>
+        <Header />
+
+        <Container
+            maxWidth="xl"
+            sx={{
+              py: 5,
+            }}
+        >
+          <Typography
+              variant="h4"
+              sx={{
+                fontWeight: 700,
+                mb: 4,
+              }}
+          >
+            Checkout
+          </Typography>
+
+          <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: {
+                  xs: "1fr",
+                  md: "2fr 1fr",
+                },
+                gap: 4,
+              }}
+          >
+            {/* Delivery Address + Payment */}
+            <Box>
+              <Card
+                  sx={{
+                    borderRadius: 3,
+                    mb: 3,
+                  }}
+              >
+                <CardContent>
+                  <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 700,
+                        mb: 2,
+                      }}
+                  >
+                    Delivery Address
+                  </Typography>
+
+                  {/* Saved Addresses */}
+                  {addresses.length > 0 && (
+                      <Box sx={{ mb: 3 }}>
+                        <Typography
+                            variant="subtitle2"
+                            sx={{
+                              fontWeight: 700,
+                              mb: 1.5,
+                            }}
+                        >
+                          Saved Addresses
+                        </Typography>
+
+                        <RadioGroup
+                            value={
+                              selectedAddressId !== null
+                                  ? String(selectedAddressId)
+                                  : ""
+                            }
+                            onChange={(event) =>
+                                handleAddressSelect(
+                                    Number(event.target.value)
+                                )
+                            }
+                        >
+                          <Box
+                              sx={{
+                                display: "grid",
+                                gap: 1.5,
+                              }}
+                          >
+                            {addresses.map((address) => (
+                                <Box
+                                    key={address.id}
+                                    sx={{
+                                      border: 1,
+                                      borderColor:
+                                          selectedAddressId === address.id
+                                              ? "primary.main"
+                                              : "divider",
+                                      borderRadius: 2,
+                                      p: 1.5,
+                                      transition:
+                                          "border-color 0.2s ease",
+                                    }}
+                                >
+                                  <FormControlLabel
+                                      value={String(address.id)}
+                                      control={<Radio />}
+                                      sx={{
+                                        width: "100%",
+                                        m: 0,
+                                        alignItems: "flex-start",
+                                      }}
+                                      label={
+                                        <Box sx={{ pt: 0.25 }}>
+                                          <Box
+                                              sx={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: 1,
+                                                flexWrap: "wrap",
+                                              }}
+                                          >
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                  fontWeight: 700,
+                                                }}
+                                            >
+                                              {address.fullName}
+                                            </Typography>
+
+                                            {address.isDefault && (
+                                                <Typography
+                                                    variant="caption"
+                                                    sx={{
+                                                      color:
+                                                          "primary.main",
+                                                      fontWeight: 700,
+                                                    }}
+                                                >
+                                                  Default
+                                                </Typography>
+                                            )}
+                                          </Box>
+
+                                          <Typography
+                                              variant="body2"
+                                              color="text.secondary"
+                                          >
+                                            {address.phoneNumber}
+                                          </Typography>
+
+                                          <Typography
+                                              variant="body2"
+                                              color="text.secondary"
+                                          >
+                                            {address.streetAddress},{" "}
+                                            {address.city},{" "}
+                                            {address.state} -{" "}
+                                            {address.postalCode}
+                                          </Typography>
+                                        </Box>
+                                      }
+                                  />
+                                </Box>
+                            ))}
+                          </Box>
+                        </RadioGroup>
+                      </Box>
+                  )}
+
+                  <Divider sx={{ mb: 3 }} />
+
+                  <Typography
+                      variant="subtitle2"
+                      sx={{
+                        fontWeight: 700,
+                        mb: 2,
+                      }}
+                  >
+                    {addresses.length > 0
+                        ? "Delivery Details"
+                        : "Add Delivery Address"}
+                  </Typography>
+
+                  <Grid container spacing={2}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <TextField
+                          fullWidth
+                          label="Full Name"
+                          value={fullName}
+                          onChange={(event) =>
+                              setFullName(event.target.value)
+                          }
+                      />
+                    </Grid>
+
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <TextField
+                          fullWidth
+                          label="Phone Number"
+                          value={phone}
+                          onChange={(event) =>
+                              setPhone(event.target.value)
+                          }
+                      />
+                    </Grid>
+
+                    <Grid size={{ xs: 12 }}>
+                      <TextField
+                          fullWidth
+                          label="Address"
+                          value={addressLine}
+                          onChange={(event) =>
+                              setAddressLine(event.target.value)
+                          }
+                      />
+                    </Grid>
+
+                    <Grid size={{ xs: 12, sm: 4 }}>
+                      <TextField
+                          fullWidth
+                          label="City"
+                          value={city}
+                          onChange={(event) =>
+                              setCity(event.target.value)
+                          }
+                      />
+                    </Grid>
+
+                    <Grid size={{ xs: 12, sm: 4 }}>
+                      <TextField
+                          fullWidth
+                          label="State"
+                          value={state}
+                          onChange={(event) =>
+                              setState(event.target.value)
+                          }
+                      />
+                    </Grid>
+
+                    <Grid size={{ xs: 12, sm: 4 }}>
+                      <TextField
+                          fullWidth
+                          label="Pincode"
+                          value={pincode}
+                          onChange={(event) =>
+                              setPincode(event.target.value)
+                          }
+                      />
+                    </Grid>
+                  </Grid>
+                </CardContent>
+              </Card>
+
+              {/* Payment */}
+              <Card
+                  sx={{
+                    borderRadius: 3,
+                  }}
+              >
+                <CardContent>
+                  <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 700,
+                        mb: 2,
+                      }}
+                  >
+                    Payment Method
+                  </Typography>
+
+                  <RadioGroup
+                      value={paymentMethod}
+                      onChange={handlePaymentMethodChange}
+                  >
+                    <FormControlLabel
+                        value="COD"
+                        control={<Radio />}
+                        label="Cash on Delivery"
+                    />
+
+                    <FormControlLabel
+                        value="ONLINE"
+                        control={<Radio />}
+                        label="Card / UPI"
+                    />
+                  </RadioGroup>
+
+                  {paymentMethod === "ONLINE" && (
+                      <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{
+                            mt: 1,
+                          }}
+                      >
+                        Pay securely using Razorpay with Card, UPI,
+                        Net Banking or supported payment methods.
+                      </Typography>
+                  )}
+                </CardContent>
+              </Card>
+            </Box>
+
+            {/* Order Summary */}
+            <Card
+                sx={{
+                  height: "fit-content",
+                  borderRadius: 3,
+                  position: {
+                    xs: "static",
+                    md: "sticky",
+                  },
+                  top: 90,
+                }}
+            >
+              <CardContent>
+                <Typography
+                    variant="h5"
+                    sx={{
+                      fontWeight: 700,
+                    }}
+                >
+                  Order Summary
+                </Typography>
+
+                <Divider sx={{ my: 3 }} />
+
+                {items.map((item) => (
+                    <Box
+                        key={item.id}
+                        sx={{
+                          display: "flex",
+                          gap: 2,
+                          mb: 2,
+                          alignItems: "center",
+                        }}
+                    >
+                      {item.image ? (
+                          <Image
+                              src={item.image}
+                              alt={item.title}
+                              width={50}
+                              height={50}
+                              style={{
+                                objectFit: "cover",
+                                borderRadius: 4,
+                              }}
+                          />
+                      ) : (
+                          <Box
+                              sx={{
+                                width: 50,
+                                height: 50,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                bgcolor: "grey.100",
+                                borderRadius: 1,
+                                color: "text.secondary",
+                                fontSize: 11,
+                                flexShrink: 0,
+                              }}
+                          >
+                            No image
+                          </Box>
+                      )}
+
+                      <Box
+                          sx={{
+                            flex: 1,
+                            minWidth: 0,
+                          }}
+                      >
+                        <Typography
+                            variant="body2"
+                            sx={{
+                              fontWeight: 600,
+                            }}
+                        >
+                          {item.title}
+                        </Typography>
+
+                        <Typography
+                            variant="caption"
+                            color="text.secondary"
+                        >
+                          {"Qty: " + item.quantity}
+                        </Typography>
+                      </Box>
+
+                      <Typography
+                          variant="body2"
+                          sx={{
+                            fontWeight: 600,
+                            whiteSpace: "nowrap",
+                          }}
+                      >
+                        {"₹" +
+                            (item.price * item.quantity).toLocaleString(
+                                "en-IN"
+                            )}
+                      </Typography>
+                    </Box>
+                ))}
+
+                <Divider sx={{ my: 2 }} />
+
+                <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      mb: 2,
+                    }}
+                >
+                  <Typography>Subtotal</Typography>
+
+                  <Typography
+                      sx={{
+                        fontWeight: 600,
+                      }}
+                  >
+                    {"₹" +
+                        subtotal.toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                  </Typography>
+                </Box>
+
+                <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      mb: 2,
+                    }}
+                >
+                  <Typography>Shipping</Typography>
+
+                  <Typography sx={{ fontWeight: 600 }}>
+                    {"₹" +
+                        shippingCharge.toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                  </Typography>
+                </Box>
+
+                <Divider sx={{ my: 3 }} />
+
+                <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                    }}
+                >
+                  <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 700,
+                      }}
+                  >
+                    Total
+                  </Typography>
+
+                  <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 700,
+                      }}
+                  >
+                    {"₹" +
+                        total.toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                  </Typography>
+                </Box>
+
+                {error && (
+                    <Alert
+                        severity="error"
+                        sx={{
+                          mt: 3,
+                        }}
+                    >
+                      {error}
+                    </Alert>
+                )}
+
+                <Button
+                    fullWidth
+                    variant="contained"
+                    size="large"
+                    sx={{
+                      mt: 4,
+                      py: 1.5,
+                      borderRadius: 2,
+                    }}
+                    onClick={handlePlaceOrder}
+                    disabled={
+                        submitting ||
+                        checking ||
+                        !authed
+                    }
+                >
+                  {submitting
+                      ? paymentMethod === "ONLINE"
+                          ? "Processing Payment..."
+                          : "Placing Order..."
+                      : paymentMethod === "ONLINE"
+                          ? "Pay Now"
+                          : "Place Order"}
+                </Button>
+              </CardContent>
+            </Card>
+          </Box>
+        </Container>
+
+        <Footer />
+      </>
   );
 }

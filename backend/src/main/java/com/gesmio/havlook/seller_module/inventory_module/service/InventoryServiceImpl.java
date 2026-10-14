@@ -97,6 +97,18 @@ public class InventoryServiceImpl implements InventoryService {
                                 )
                         );
 
+        // Verify that the product variant belongs to this seller.
+        if (productVariant.getProductEntity() == null
+                || productVariant.getProductEntity().getSeller() == null
+                || productVariant.getProductEntity().getSeller().getId() == null
+                || !productVariant.getProductEntity().getSeller().getId()
+                .equals(seller.getId())) {
+
+            throw new InventoryProductVariantNotFoundException(
+                    "Product variant not found or does not belong to seller"
+            );
+        }
+
         if (inventoryItemRepository
                 .existsByInventoryIdAndProductVariantId(
                         inventory.getId(),
@@ -703,8 +715,8 @@ public class InventoryServiceImpl implements InventoryService {
 
             if (locked != null
                     && safeStock(
-                            locked.getAvailableStock()
-                    ) >= quantity) {
+                    locked.getAvailableStock()
+            ) >= quantity) {
 
                 return locked;
             }
@@ -744,8 +756,8 @@ public class InventoryServiceImpl implements InventoryService {
 
             if (locked != null
                     && safeStock(
-                            locked.getReservedStock()
-                    ) >= quantity) {
+                    locked.getReservedStock()
+            ) >= quantity) {
 
                 return locked;
             }
@@ -788,9 +800,10 @@ public class InventoryServiceImpl implements InventoryService {
 
         if (warehouse == null
                 || warehouse.getSeller() == null
+                || warehouse.getSeller().getId() == null
                 || !warehouse.getSeller()
-                        .getId()
-                        .equals(seller.getId())) {
+                .getId()
+                .equals(seller.getId())) {
 
             throw new InventoryWarehouseException(
                     "Warehouse does not belong to seller"
@@ -976,5 +989,71 @@ public class InventoryServiceImpl implements InventoryService {
                 .stream()
                 .map(this::mapItem)
                 .toList();
+    }
+
+    // =========================================================
+    // GET INVENTORY ITEMS BY PRODUCT VARIANT FOR SELLER
+    // =========================================================
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<InventoryItemResponse>
+    getInventoryItemsByProductVariantIdForSeller(
+            Long userId,
+            Long productVariantId
+    ) {
+
+        validateId(
+                productVariantId,
+                "Product variant id"
+        );
+
+        Seller seller = getSellerByUserId(userId);
+
+        return inventoryItemRepository
+                .findByProductVariantAndSeller(
+                        productVariantId,
+                        seller.getId()
+                )
+                .stream()
+                .map(this::mapItem)
+                .toList();
+    }
+
+    // =========================================================
+    // GET TOTAL AVAILABLE STOCK FOR SELLER
+    // =========================================================
+
+    @Override
+    @Transactional(readOnly = true)
+    public Integer getTotalAvailableStockForSeller(
+            Long userId,
+            Long productVariantId
+    ) {
+
+        validateId(
+                productVariantId,
+                "Product variant id"
+        );
+
+        Seller seller = getSellerByUserId(userId);
+
+        Long totalStock = inventoryItemRepository
+                .sumAvailableStockByProductVariantAndSeller(
+                        productVariantId,
+                        seller.getId()
+                );
+
+        if (totalStock == null) {
+            return 0;
+        }
+
+        if (totalStock > Integer.MAX_VALUE) {
+            throw new InventoryStockException(
+                    "Total available stock exceeds maximum allowed value"
+            );
+        }
+
+        return totalStock.intValue();
     }
 }

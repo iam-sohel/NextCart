@@ -9,110 +9,92 @@ import java.util.List;
 
 public interface InventoryService {
 
-    // =========================================================
-    // SELLER INVENTORY MANAGEMENT
-    // =========================================================
+    // Seller inventory management
 
     InventoryResponse createInventory(
             Long userId,
-            InventoryCreateRequest request
-    );
+            InventoryCreateRequest request);
 
     InventoryResponse getInventoryByWarehouse(
             Long userId,
-            Long warehouseId
-    );
+            Long warehouseId);
 
     InventoryResponse updateInventoryItem(
             Long userId,
             Long inventoryItemId,
-            InventoryUpdateRequest request
-    );
+            InventoryUpdateRequest request);
 
     void deleteInventoryItem(
             Long userId,
-            Long inventoryItemId
-    );
+            Long inventoryItemId);
 
-    // =========================================================
-    // INVENTORY LOOKUP
-    // =========================================================
+    // Existing global inventory lookup methods.
+    // Preserve these for existing internal callers.
 
     List<InventoryItemResponse> getInventoryItemsByProductVariantId(
-            Long productVariantId
-    );
+            Long productVariantId);
 
     Integer getTotalAvailableStock(
-            Long productVariantId
-    );
+            Long productVariantId);
 
-    // =========================================================
-    // WAREHOUSE-AWARE STOCK OPERATIONS
-    // =========================================================
+    // Seller-scoped inventory lookup methods.
+
+    List<InventoryItemResponse>
+    getInventoryItemsByProductVariantIdForSeller(
+            Long userId,
+            Long productVariantId);
+
+    Integer getTotalAvailableStockForSeller(
+            Long userId,
+            Long productVariantId);
+
+    // Warehouse-aware stock operations
 
     void addStock(
             Long warehouseId,
             Long productVariantId,
-            Integer quantity
-    );
+            Integer quantity);
 
     void reserveStock(
             Long warehouseId,
             Long productVariantId,
-            Integer quantity
-    );
+            Integer quantity);
 
     void releaseStock(
             Long warehouseId,
             Long productVariantId,
-            Integer quantity
-    );
+            Integer quantity);
 
     void deductStock(
             Long warehouseId,
             Long productVariantId,
-            Integer quantity
-    );
+            Integer quantity);
 
     void restoreStock(
             Long warehouseId,
             Long productVariantId,
-            Integer quantity
-    );
+            Integer quantity);
 
-    // =========================================================
-    // BACKWARD-COMPATIBLE METHODS
-    // =========================================================
-    //
-    // Existing OrderService currently uses these methods.
-    // Do NOT remove them yet.
-    //
-    // These methods internally select an appropriate inventory
-    // item for the product variant.
-    // =========================================================
+    // Backward-compatible methods used by OrderService.
+    // Do not remove without checking all existing callers.
 
     void addStock(
             Long productVariantId,
-            Integer quantity
-    );
+            Integer quantity);
 
     void reserveStock(
             Long productVariantId,
-            Integer quantity
-    );
+            Integer quantity);
 
     void releaseStock(
             Long productVariantId,
-            Integer quantity
-    );
+            Integer quantity);
 
     void deductStock(
             Long productVariantId,
-            Integer quantity
-    );
+            Integer quantity);
 
     void restoreStock(
             Long productVariantId,
-            Integer quantity
-    );
+            Integer quantity);
 }
