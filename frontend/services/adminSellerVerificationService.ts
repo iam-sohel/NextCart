@@ -112,7 +112,8 @@ const ENDPOINTS = {
 } as const;
 
 export async function getAdminSellerVerification(
-  sellerId: number
+  sellerId: number,
+  signal?: AbortSignal,
 ): Promise<ApiResult<AdminSellerVerification>> {
   if (!validSellerId(sellerId)) {
     return {
@@ -126,6 +127,7 @@ export async function getAdminSellerVerification(
     Envelope<AdminSellerVerification> | AdminSellerVerification
   >(ENDPOINTS.bySellerId(sellerId), {
     method: "GET",
+    signal,
   });
 
   if (!res.ok) return res;

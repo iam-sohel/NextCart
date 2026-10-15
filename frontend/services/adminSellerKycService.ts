@@ -150,7 +150,8 @@ const ENDPOINTS = {
 } as const;
 
 export async function getAdminSellerKyc(
-  sellerId: number
+  sellerId: number,
+  signal?: AbortSignal,
 ): Promise<ApiResult<AdminSellerKyc>> {
   if (!validSellerId(sellerId)) {
     return {
@@ -164,6 +165,7 @@ export async function getAdminSellerKyc(
     Envelope<AdminSellerKyc> | AdminSellerKyc
   >(ENDPOINTS.bySellerId(sellerId), {
     method: "GET",
+    signal,
   });
 
   if (!res.ok) return res;

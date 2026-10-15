@@ -182,12 +182,13 @@ export default function AdminSellersPage() {
       ),
     },
     {
-      key: "business",
-      header: "Business",
-      minWidth: 190,
+      key: "gst",
+      header: "GST",
+      minWidth: 150,
+      hideOnMobile: true,
       renderCell: (seller) => (
         <Typography variant="body2" sx={{ wordBreak: "break-word" }}>
-          {seller.businessName || "—"}
+          {seller.gstNumber || "—"}
         </Typography>
       ),
     },
@@ -209,17 +210,6 @@ export default function AdminSellersPage() {
       hideOnMobile: true,
       renderCell: (seller) => (
         <Typography variant="body2">{seller.phone || "—"}</Typography>
-      ),
-    },
-    {
-      key: "gst",
-      header: "GST",
-      minWidth: 150,
-      hideOnMobile: true,
-      renderCell: (seller) => (
-        <Typography variant="body2" sx={{ wordBreak: "break-word" }}>
-          {seller.gstNumber || "—"}
-        </Typography>
       ),
     },
     {
@@ -279,7 +269,7 @@ export default function AdminSellersPage() {
       ) : null}
 
       <Card sx={{ mb: 3 }}>
-        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+        <CardContent sx={{ p: { xs: 1, sm: 2 } }}>
           <Grid container spacing={2} sx={{ alignItems: "flex-end" }}>
             <Grid size={{ xs: 12, sm: 6 }}>
               <TextField

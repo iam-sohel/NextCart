@@ -188,7 +188,7 @@ export default function AdminCategoriesPage() {
   );
 
   return (
-    <Box sx={{ p: { xs: 2, md: 3 } }}>
+    <Box sx={{ p: { xs: 1, sm: 2 } }}>
       <PageHeader
         title="Categories"
         subtitle="Manage product categories for the HavLook catalog."

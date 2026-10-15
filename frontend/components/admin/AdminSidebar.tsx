@@ -274,19 +274,20 @@ function AdminSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                         onClick={onNavigate}
                         selected={active}
                         aria-current={active ? "page" : undefined}
-                        sx={{
-                          borderRadius: 2,
-                          minHeight: 46,
-                          px: 1.5,
-                          mb: 0.5,
-                          "&.Mui-selected": {
-                            bgcolor: "action.selected",
-                            "&:hover": { bgcolor: "action.selected" },
-                            "& .MuiListItemText-primary": {
-                              color: "primary.dark",
-                            },
-                          },
-                        }}
+sx={{
+                  borderRadius: 2,
+                  minHeight: 48,
+                  px: 1.5,
+                  mb: 0.5,
+                  "&.Mui-selected": {
+                    bgcolor: "action.selected",
+                    "&:hover": { bgcolor: "action.selected" },
+                    "&:focus-visible": { bgcolor: "action.selected" },
+                    "& .MuiListItemText-primary": {
+                      color: "primary.dark",
+                    },
+                  },
+                }}
                       >
                         <ListItemIcon
                           sx={{

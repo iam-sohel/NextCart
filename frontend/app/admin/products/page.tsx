@@ -195,7 +195,7 @@ export default function AdminProductsPage() {
           overflow: "hidden",
         }}
       >
-        <Box sx={{ p: { xs: 2, sm: 3 } }}>
+        <Box sx={{ p: { xs: 1, sm: 2 } }}>
           <TextField
             fullWidth
             size="small"

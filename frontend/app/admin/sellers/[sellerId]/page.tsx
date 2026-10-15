@@ -263,118 +263,105 @@ const [reviewing, setReviewing] = useState(false);
 
 
 
-  const load = useCallback(
-
-    async (signal?: AbortSignal) => {
-
-      setLoading(true);
-
-      setLoadError(null);
-
-      setVerificationWarning(null);
-
-      setKycWarning(null);
-
-
-
-      const sellerResult = await getAdminSeller(sellerId, signal);
-
-      if (signal?.aborted) return;
-
-
-
-      if (!sellerResult.ok) {
-
-        setSeller(null);
-
-        setVerification(null);
-
-        setLoading(false);
-
-        setLoadError(sellerResult.message);
-
-        return;
-
-      }
-
-
-
-      const verificationResult = await getAdminSellerVerification(
-
-  sellerResult.data.sellerId,
-
-);
-
-
-
-if (signal?.aborted) return;
-
-
-
-if (!verificationResult.ok) {
-
-  setVerification(null);
-
-
-
-  if (verificationResult.status !== 404) {
-
-    setVerificationWarning(verificationResult.message);
-
-  }
-
-} else {
-
-  setVerification(verificationResult.data);
-
-}
-
-
-
-const kycResult = await getAdminSellerKyc(
-
-  sellerResult.data.sellerId,
-
-);
-
-
-
-if (signal?.aborted) return;
-
-
-
-if (!kycResult.ok) {
-
-  setKyc(null);
-
-
-
-  if (kycResult.status !== 404) {
-
-    setKycWarning(kycResult.message);
-
-  }
-
-} else {
-
-  setKyc(kycResult.data);
-
-}
-
-
-
-      setSeller(sellerResult.data);
-
-      setLoading(false);
-
-    },
-
-    [sellerId],
-
-  );
-
-
-
+  const load = useCallback(
+    async (signal?: AbortSignal) => {
+      setLoading(true);
+      setLoadError(null);
+      setVerificationWarning(null);
+      setKycWarning(null);
+
+      try {
+        const sellerResult = await getAdminSeller(sellerId, signal);
+
+        if (signal?.aborted) return;
+
+        if (!sellerResult.ok) {
+          setSeller(null);
+          setVerification(null);
+          setKyc(null);
+          setLoadError(sellerResult.message);
+          return;
+        }
+
+        const currentSeller = sellerResult.data;
+        setSeller(currentSeller);
+
+        try {
+          const verificationResult = await getAdminSellerVerification(
+            currentSeller.sellerId,
+            signal,
+          );
+
+          if (signal?.aborted) return;
+
+          if (!verificationResult.ok) {
+            setVerification(null);
+
+            if (verificationResult.status !== 404) {
+              setVerificationWarning(verificationResult.message);
+            }
+          } else {
+            setVerification(verificationResult.data);
+          }
+        } catch (error: unknown) {
+          if (signal?.aborted) return;
+
+          setVerification(null);
+          setVerificationWarning(
+            error instanceof Error
+              ? error.message
+              : "Unable to load seller verification.",
+          );
+        }
+
+        if (signal?.aborted) return;
+
+        try {
+          const kycResult = await getAdminSellerKyc(
+            currentSeller.sellerId,
+            signal,
+          );
+
+          if (signal?.aborted) return;
+
+          if (!kycResult.ok) {
+            setKyc(null);
+
+            if (kycResult.status !== 404) {
+              setKycWarning(kycResult.message);
+            }
+          } else {
+            setKyc(kycResult.data);
+          }
+        } catch (error: unknown) {
+          if (signal?.aborted) return;
+
+          setKyc(null);
+          setKycWarning(
+            error instanceof Error
+              ? error.message
+              : "Unable to load seller KYC.",
+          );
+        }
+      } catch (error: unknown) {
+        if (signal?.aborted) return;
+
+        setSeller(null);
+        setVerification(null);
+        setKyc(null);
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : "Unable to load seller details.",
+        );
+      } finally {
+        if (!signal?.aborted) {
+          setLoading(false);
+        }
+      }
+    },
+    [sellerId],
+  );
   useEffect(() => {
 
     if (!token) return;
@@ -797,7 +784,7 @@ const handleReview = async () => {
       <Stack
         direction={{ xs: "column", sm: "row" }}
         spacing={1.5}
-        sx={{ mt: 2, mb: 3, alignItems: { xs: "stretch", sm: "center" } }}
+        sx={{ mt: 1, mb: 1.5, alignItems: { xs: "stretch", sm: "center" } }}
       >
         <Button
           variant="outlined"
@@ -822,7 +809,7 @@ const handleReview = async () => {
 
 
 
-      <Stack spacing={3}>
+      <Stack spacing={2}>
 
         {mutationError ? (
 
@@ -852,7 +839,7 @@ const handleReview = async () => {
 
           <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
 
-            <Typography variant="h5" sx={{ fontWeight: 700, mb: 2.5 }}>
+            <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
 
               Seller information
 
@@ -908,7 +895,7 @@ const handleReview = async () => {
 
               spacing={1.5}
 
-              sx={{ mt: 3 }}
+sx={{ mt: 1.5 }}
 
             >
 
@@ -972,7 +959,7 @@ const handleReview = async () => {
 
             </Typography>
 
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
+<Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
 
               This is the seller-verification workflow and is separate from the
 
@@ -1046,7 +1033,7 @@ const handleReview = async () => {
 
 
 
-                <Grid container spacing={3}>
+<Grid container spacing={{ xs: 2, md: 2.5 }}>
 
                   {(
 
@@ -1201,13 +1188,13 @@ const handleReview = async () => {
 
           </CardContent>
         </Card>
-        <Card>
-          <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+<Card>
+          <CardContent sx={{ p: { xs: 1, sm: 2 } }}>
             <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
               Seller KYC
             </Typography>
 
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
               Review the seller&apos;s submitted KYC information and supporting documents.
             </Typography>
 

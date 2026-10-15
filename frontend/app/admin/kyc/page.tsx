@@ -203,7 +203,7 @@ export default function AdminKycPage() {
       <Card>
         <CardContent
           sx={{
-            p: 0,
+            p: { xs: 1, sm: 2 },
           }}
         >
           <Box

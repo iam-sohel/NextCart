@@ -108,7 +108,7 @@ export default function AdminTopBar({ onOpenMobileNav }: AdminTopBarProps) {
           px: { xs: 1.5, sm: 2, md: 3 },
         }}
       >
-        <IconButton
+<IconButton
           onClick={onOpenMobileNav}
           aria-label="Open admin navigation"
           edge="start"
@@ -117,6 +117,8 @@ export default function AdminTopBar({ onOpenMobileNav }: AdminTopBarProps) {
             color: "text.primary",
             width: 44,
             height: 44,
+            p: 0.5,
+            "&:focus-visible": { outline: "2px solid", outlineColor: "primary.main", outlineOffset: 3 },
           }}
         >
           <MenuIcon />
