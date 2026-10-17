@@ -268,8 +268,31 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
 
         run: |
-          docker push \
-            "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          set -euo pipefail
+
+          IMAGE_URI="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+          set +e
+          CHECK_OUTPUT=$(aws ecr describe-images \
+            --repository-name "$ECR_REPOSITORY" \
+            --image-ids "imageTag=$IMAGE_TAG" \
+            2>&1)
+          CHECK_STATUS=$?
+          set -e
+
+          if [ "$CHECK_STATUS" -eq 0 ]; then
+            echo "Image tag already exists. Reusing $IMAGE_URI"
+            exit 0
+          fi
+
+          if ! grep -q "ImageNotFoundException" <<< "$CHECK_OUTPUT"; then
+            echo "ECR image check failed:"
+            echo "$CHECK_OUTPUT"
+            exit "$CHECK_STATUS"
+          fi
+
+          echo "Image tag not found. Pushing $IMAGE_URI"
+          docker push "$IMAGE_URI"
 
       # ------------------------------------------------------
       # PRINT PUBLISHED IMAGE
